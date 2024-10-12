@@ -20,20 +20,33 @@ use crate::{
     commands::Command,
 };
 
-use super::{ui, UIEvent, UserInputCommand};
+use super::{chat_mode, ui, UIEvent, UserInputCommand};
 
 const TICK_RATE: u64 = 250;
 
 /// Handles user and TUI interaction
 #[derive(Debug)]
 pub struct App {
+    /// The chat input
     pub input: String,
+
+    /// All known chats
     pub chats: Vec<Chat>,
+
+    /// UUID of the current chat
     pub current_chat: uuid::Uuid,
+
+    /// Holds the sender of UI events for later cloning if needed
     pub ui_tx: mpsc::UnboundedSender<UIEvent>,
+
+    /// Receives UI events (key presses, commands, etc)
     pub ui_rx: mpsc::UnboundedReceiver<UIEvent>,
+
+    /// Sends commands to the backend
     pub command_tx: Option<mpsc::UnboundedSender<Command>>,
-    pub should_quit: bool,
+
+    /// Mode the app is in, manages the which layout is rendered and if it should quit
+    pub mode: AppMode,
 
     // Scroll chat
     pub vertical_scroll_state: ScrollbarState,
@@ -41,6 +54,14 @@ pub struct App {
 
     // Tracks the current selected state in the UI
     pub chats_state: ListState,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub enum AppMode {
+    #[default]
+    Chat,
+    Logs,
+    Quit,
 }
 
 impl Default for App {
@@ -57,7 +78,7 @@ impl Default for App {
             ui_tx,
             ui_rx,
             command_tx: None,
-            should_quit: false,
+            mode: AppMode::default(),
             vertical_scroll_state: ScrollbarState::default(),
             vertical_scroll: 0,
             chats_state: ListState::default().with_selected(Some(0)),
@@ -75,7 +96,7 @@ impl App {
         UserInputCommand::iter().collect()
     }
 
-    fn send_ui_event(&self, msg: impl Into<UIEvent>) {
+    pub fn send_ui_event(&self, msg: impl Into<UIEvent>) {
         let event = msg.into();
         tracing::debug!("Sending ui event {event}");
         if let Err(err) = self.ui_tx.send(event) {
@@ -83,94 +104,22 @@ impl App {
         }
     }
 
-    fn current_chat_uuid(&self) -> Uuid {
-        self.current_chat
-    }
-
     fn on_key(&mut self, key: KeyEvent) {
         // Always quit on ctrl c
         if key.modifiers == crossterm::event::KeyModifiers::CONTROL
             && key.code == KeyCode::Char('c')
         {
-            self.should_quit = true;
+            self.mode = AppMode::Quit;
             return;
         }
 
-        match key.code {
-            KeyCode::Tab => self.send_ui_event(UIEvent::NextChat),
-            KeyCode::Down => {
-                self.vertical_scroll = self.vertical_scroll.saturating_add(1);
-                self.vertical_scroll_state = self
-                    .vertical_scroll_state
-                    .position(self.vertical_scroll as usize);
-            }
-            KeyCode::Up => {
-                self.vertical_scroll = self.vertical_scroll.saturating_sub(1);
-                self.vertical_scroll_state = self
-                    .vertical_scroll_state
-                    .position(self.vertical_scroll as usize);
-            }
-            KeyCode::Char(c) => {
-                self.input.push(c);
-            }
-            KeyCode::Backspace => {
-                self.input.pop();
-            }
-            KeyCode::Enter if !self.input.is_empty() => {
-                let message = if self.input.starts_with('/') {
-                    self.handle_input_command()
-                } else {
-                    // Currently just dispatch a user message command and answer the query
-                    // Later, perhaps maint a 'chat', add message to that chat, and then send
-                    // the whole thing
-                    self.dispatch_command(&Command::Chat {
-                        message: self.input.clone(),
-                        uuid: self.current_chat_uuid(),
-                    });
-
-                    ChatMessage::new_user(&self.input)
-                        .uuid(self.current_chat_uuid())
-                        .to_owned()
-                };
-
-                self.send_ui_event(message);
-
-                self.input.clear();
-            }
-            KeyCode::Esc => {
-                self.should_quit = true;
-            }
+        match self.mode {
+            AppMode::Chat => chat_mode::on_key(self, key),
             _ => {}
         }
     }
 
-    fn handle_input_command(&self) -> ChatMessageBuilder {
-        let Ok(cmd) = self.input[1..].parse::<UserInputCommand>() else {
-            return ChatMessage::new_system("Unknown command")
-                .uuid(self.current_chat_uuid())
-                .to_owned();
-        };
-
-        if let Some(cmd) = cmd.to_command(self.current_chat_uuid()) {
-            // If the backend supports it, forward the command
-            self.dispatch_command(&cmd);
-        } else if let Ok(cmd) = UIEvent::try_from(cmd) {
-            self.send_ui_event(cmd);
-        } else {
-            tracing::error!("Could not convert ui command to backend command nor ui event {cmd}");
-            return ChatMessage::new_system("Unknown command")
-                .uuid(self.current_chat_uuid())
-                .to_owned();
-        }
-
-        ChatMessage::new_command(cmd.as_ref())
-            .uuid(self.current_chat_uuid())
-            .to_owned()
-
-        // Display the command as a message
-    }
-
-    fn dispatch_command(&self, cmd: &Command) {
+    pub fn dispatch_command(&self, cmd: &Command) {
         self.command_tx
             .as_ref()
             .expect("Command tx not set")
@@ -179,7 +128,7 @@ impl App {
     }
 
     fn add_chat_message(&mut self, message: ChatMessage) {
-        let chat = self.find_chat_mut(message.uuid().unwrap_or_else(|| self.current_chat_uuid()));
+        let chat = self.find_chat_mut(message.uuid().unwrap_or_else(|| self.current_chat));
         chat.add_message(message);
     }
 
@@ -207,7 +156,8 @@ impl App {
                     }
                     UIEvent::Command(cmd) => match cmd {
                         Command::Quit { .. } => {
-                            self.should_quit = true;
+                            // If the backends tells us to quit we also do it
+                            self.mode = AppMode::Quit;
                         }
 
                         _ => {
@@ -224,7 +174,7 @@ impl App {
                 }
             }
 
-            if self.should_quit {
+            if self.mode == AppMode::Quit {
                 break;
             }
         }
@@ -249,7 +199,7 @@ impl App {
     }
 
     pub(crate) fn current_chat(&self) -> &Chat {
-        self.find_chat(self.current_chat_uuid())
+        self.find_chat(self.current_chat)
     }
 
     fn add_chat(&mut self, mut new_chat: Chat) {

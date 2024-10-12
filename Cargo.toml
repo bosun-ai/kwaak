@@ -20,7 +20,7 @@ toml = "0.8.19"
 serde = { version = "1.0.210", features = ["derive"] }
 secrecy = { version = "0.10.2", features = ["serde"] }
 tracing = "0.1.40"
-async-openai = "0.24.1"
+async-openai = "0.25.0"
 dirs = "5.0.1"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 tracing-appender = "0.2.3"
@@ -30,6 +30,7 @@ tui-markdown = { git = "https://github.com/timonv/tui-markdown.git", branch = "c
 ] }
 uuid = { version = "1.10.0", features = ["v4"] }
 derive_builder = "0.20.2"
+tui-logger = { version = "0.13.2", features = ["tracing-support"] }
 
 [lints.rust]
 unsafe_code = "forbid"
