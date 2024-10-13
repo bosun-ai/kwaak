@@ -31,6 +31,8 @@ tui-markdown = { git = "https://github.com/timonv/tui-markdown.git", branch = "c
 uuid = { version = "1.10.0", features = ["v4"] }
 derive_builder = "0.20.2"
 tui-logger = { version = "0.13.2", features = ["tracing-support"] }
+# Only needed for tui-logger filtering
+log = "0.4"
 
 [lints.rust]
 unsafe_code = "forbid"

@@ -2593,6 +2593,7 @@ dependencies = [
  "derive_builder",
  "derive_more",
  "dirs",
+ "log",
  "ratatui",
  "secrecy 0.10.3",
  "serde",

@@ -2,12 +2,16 @@ use anyhow::Result;
 use std::io;
 use std::time::Duration;
 use strum::IntoEnumIterator as _;
+use tui_logger::TuiWidgetState;
 use uuid::Uuid;
 
-use ratatui::{
-    widgets::{ListState, ScrollbarState},
-    Terminal,
-};
+// use ratatui::{
+//     layout::Rect,
+//     style::{Modifier, Style},
+//     widgets::{ListState, ScrollbarState, Tabs},
+//     Terminal,
+// };
+use ratatui::{prelude::*, widgets::*};
 
 use crossterm::event::{self, KeyCode, KeyEvent};
 
@@ -20,12 +24,11 @@ use crate::{
     commands::Command,
 };
 
-use super::{chat_mode, ui, UIEvent, UserInputCommand};
+use super::{chat_mode, logs_mode, UIEvent, UserInputCommand};
 
 const TICK_RATE: u64 = 250;
 
 /// Handles user and TUI interaction
-#[derive(Debug)]
 pub struct App {
     /// The chat input
     pub input: String,
@@ -52,8 +55,17 @@ pub struct App {
     pub vertical_scroll_state: ScrollbarState,
     pub vertical_scroll: u16,
 
-    // Tracks the current selected state in the UI
+    /// Tracks the current selected state in the UI
     pub chats_state: ListState,
+
+    /// Tab names
+    pub tab_names: Vec<&'static str>,
+
+    /// Index of selected tab
+    pub selected_tab: usize,
+
+    /// States when viewing logs
+    pub log_state: TuiWidgetState,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -62,6 +74,40 @@ pub enum AppMode {
     Chat,
     Logs,
     Quit,
+}
+
+impl AppMode {
+    fn on_key(self, app: &mut App, key: KeyEvent) {
+        match self {
+            AppMode::Chat => chat_mode::on_key(app, key),
+            AppMode::Logs => logs_mode::on_key(app, key),
+            AppMode::Quit => (),
+        }
+    }
+
+    fn ui(self, f: &mut ratatui::Frame, area: Rect, app: &mut App) {
+        match self {
+            AppMode::Chat => chat_mode::ui(f, area, app),
+            AppMode::Logs => logs_mode::ui(f, area, app),
+            AppMode::Quit => (),
+        }
+    }
+
+    fn tab_index(&self) -> Option<usize> {
+        match self {
+            AppMode::Chat => Some(0),
+            AppMode::Logs => Some(1),
+            AppMode::Quit => None,
+        }
+    }
+
+    fn from_index(index: usize) -> Option<Self> {
+        match index {
+            0 => Some(AppMode::Chat),
+            1 => Some(AppMode::Logs),
+            _ => None,
+        }
+    }
 }
 
 impl Default for App {
@@ -82,6 +128,12 @@ impl Default for App {
             vertical_scroll_state: ScrollbarState::default(),
             vertical_scroll: 0,
             chats_state: ListState::default().with_selected(Some(0)),
+            tab_names: vec!["[F1] Chats", "[F2] Logs"],
+            log_state: TuiWidgetState::new()
+                .set_default_display_level(log::LevelFilter::Off)
+                .set_level_for_target("kwaak", log::LevelFilter::Info)
+                .set_level_for_target("swiftide", log::LevelFilter::Info),
+            selected_tab: 0,
         }
     }
 }
@@ -113,10 +165,14 @@ impl App {
             return;
         }
 
-        match self.mode {
-            AppMode::Chat => chat_mode::on_key(self, key),
-            _ => {}
+        if let KeyCode::F(index) = key.code {
+            let index = index - 1;
+            if let Some(mode) = AppMode::from_index(index as usize) {
+                return self.change_mode(mode);
+            }
         }
+
+        self.mode.on_key(self, key);
     }
 
     pub fn dispatch_command(&self, cmd: &Command) {
@@ -128,7 +184,7 @@ impl App {
     }
 
     fn add_chat_message(&mut self, message: ChatMessage) {
-        let chat = self.find_chat_mut(message.uuid().unwrap_or_else(|| self.current_chat));
+        let chat = self.find_chat_mut(message.uuid().unwrap_or(self.current_chat));
         chat.add_message(message);
     }
 
@@ -140,7 +196,11 @@ impl App {
 
         loop {
             // Draw the UI
-            terminal.draw(|f| ui::ui(f, self))?;
+            terminal.draw(|f| {
+                let base_area = self.draw_base_ui(f);
+
+                self.mode.ui(f, base_area, self);
+            })?;
 
             // Handle events
             if let Some(event) = self.recv_messages().await {
@@ -157,7 +217,7 @@ impl App {
                     UIEvent::Command(cmd) => match cmd {
                         Command::Quit { .. } => {
                             // If the backends tells us to quit we also do it
-                            self.mode = AppMode::Quit;
+                            self.change_mode(AppMode::Quit);
                         }
 
                         _ => {
@@ -170,7 +230,8 @@ impl App {
                     UIEvent::NewChat => {
                         self.add_chat(Chat::default());
                     }
-                    UIEvent::NextChat => self.set_next_chat(),
+                    UIEvent::NextChat => self.next_chat(),
+                    UIEvent::ChangeMode(mode) => self.change_mode(mode),
                 }
             }
 
@@ -210,7 +271,7 @@ impl App {
         self.chats_state.select_last();
     }
 
-    fn set_next_chat(&mut self) {
+    fn next_chat(&mut self) {
         #[allow(clippy::skip_while_next)]
         let Some(next_idx) = self
             .chats
@@ -226,12 +287,38 @@ impl App {
             return;
         };
 
+        // TODO: Just use math, current + 1 % len
+
         if let Some(chat) = self.chats.get(next_idx) {
             self.chats_state.select(Some(next_idx));
             self.current_chat = chat.uuid;
         } else {
             self.chats_state.select(Some(0));
             self.current_chat = self.chats[0].uuid;
+        }
+    }
+
+    fn draw_base_ui(&self, f: &mut Frame) -> Rect {
+        let [tabs_area, main_area] =
+            Layout::vertical([Constraint::Length(3), Constraint::Min(0)]).areas(f.area());
+
+        Tabs::new(self.tab_names.iter().copied())
+            .block(
+                Block::default()
+                    .borders(Borders::BOTTOM)
+                    .padding(Padding::top(1)),
+            )
+            .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
+            .select(self.selected_tab)
+            .render(tabs_area, f.buffer_mut());
+
+        main_area
+    }
+
+    fn change_mode(&mut self, mode: AppMode) {
+        self.mode = mode;
+        if let Some(tab_index) = mode.tab_index() {
+            self.selected_tab = tab_index;
         }
     }
 }
@@ -267,13 +354,42 @@ mod tests {
         app.add_chat(chat);
         assert_eq!(app.current_chat, second_uuid);
 
-        app.set_next_chat();
+        app.next_chat();
         dbg!(app.current_chat);
         dbg!(app.chats.iter().map(|chat| chat.uuid).collect::<Vec<_>>());
 
         assert_eq!(app.current_chat, first_uuid);
 
-        app.set_next_chat();
+        app.next_chat();
         assert_eq!(app.current_chat, second_uuid);
+    }
+
+    #[test]
+    fn test_app_mode_from_index() {
+        assert_eq!(AppMode::from_index(0), Some(AppMode::Chat));
+        assert_eq!(AppMode::from_index(1), Some(AppMode::Logs));
+        assert_eq!(AppMode::from_index(2), None);
+    }
+
+    #[test]
+    fn test_app_mode_tab_index() {
+        assert_eq!(AppMode::Chat.tab_index(), Some(0));
+        assert_eq!(AppMode::Logs.tab_index(), Some(1));
+        assert_eq!(AppMode::Quit.tab_index(), None);
+    }
+
+    #[test]
+    fn test_change_mode() {
+        let mut app = App::default();
+        assert_eq!(app.mode, AppMode::Chat);
+        assert_eq!(app.selected_tab, 0);
+
+        app.change_mode(AppMode::Logs);
+        assert_eq!(app.mode, AppMode::Logs);
+        assert_eq!(app.selected_tab, 1);
+
+        app.change_mode(AppMode::Quit);
+        assert_eq!(app.mode, AppMode::Quit);
+        assert_eq!(app.selected_tab, 1);
     }
 }

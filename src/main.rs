@@ -1,9 +1,15 @@
-use std::io;
+use std::{
+    io::{self, stdout},
+    panic::{set_hook, take_hook},
+};
 
 use anyhow::Result;
 use config::Config;
 use frontend::App;
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::{
+    backend::{Backend, CrosstermBackend},
+    Terminal,
+};
 
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
@@ -25,6 +31,7 @@ mod util;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    init_panic_hook();
     // Load configuration
     let config = Config::load().await?;
     let repository = repository::Repository::from_config(config);
@@ -37,11 +44,7 @@ async fn main() -> Result<()> {
     ::tracing::info!("Loaded configuration: {:?}", repository.config());
 
     // Setup terminal
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
+    let mut terminal = init_tui()?;
 
     // Start the application
     let mut app = App::default();
@@ -62,18 +65,33 @@ async fn main() -> Result<()> {
 
     // TODO: Add panic unwind hook to alwqays restore terminal
     // Restore terminal
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
+    restore_tui()?;
     terminal.show_cursor()?;
 
     if let Err(error) = app_result {
         ::tracing::error!(?error, "Application error");
     }
 
+    Ok(())
+}
+pub fn init_panic_hook() {
+    let original_hook = take_hook();
+    set_hook(Box::new(move |panic_info| {
+        // intentionally ignore errors here since we're already in a panic
+        let _ = restore_tui();
+        original_hook(panic_info);
+    }));
+}
+
+pub fn init_tui() -> io::Result<Terminal<impl Backend>> {
+    enable_raw_mode()?;
+    execute!(stdout(), EnterAlternateScreen)?;
+    Terminal::new(CrosstermBackend::new(stdout()))
+}
+
+pub fn restore_tui() -> io::Result<()> {
+    disable_raw_mode()?;
+    execute!(stdout(), LeaveAlternateScreen)?;
     Ok(())
 }
 

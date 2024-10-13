@@ -118,6 +118,7 @@ impl CommandHandler {
 
     /// TODO: Most commands should probably be handled in a tokio task
     /// Maybe generalize tasks to make ui updates easier?
+    #[tracing::instrument(skip(repository, tx))]
     async fn handle_command(
         repository: &Repository,
         tx: &mpsc::UnboundedSender<UIEvent>,

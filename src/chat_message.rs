@@ -4,12 +4,26 @@ use uuid::Uuid;
 use crate::commands::Command;
 
 /// Represents a chat message that can be stored in a [`Chat`]
-#[derive(Debug, Clone, Default, Builder)]
+#[derive(Clone, Default, Builder)]
 #[builder(setter(into, strip_option), build_fn(skip))]
 pub struct ChatMessage {
     role: ChatRole,
     content: String,
     uuid: Option<Uuid>,
+}
+
+// Debug with truncated content
+impl std::fmt::Debug for ChatMessage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ChatMessage")
+            .field("role", &self.role)
+            .field(
+                "content",
+                &self.content[..std::cmp::min(10, self.content.len())].to_string(),
+            )
+            .field("uuid", &self.uuid)
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, strum::EnumString, strum::Display, strum::AsRefStr)]

@@ -1,5 +1,4 @@
 mod app;
-mod ui;
 mod ui_command;
 mod ui_event;
 

@@ -5,7 +5,7 @@ use crate::{
     commands::Command,
 };
 
-use super::UserInputCommand;
+use super::{app::AppMode, UserInputCommand};
 
 // Event handling
 #[derive(Debug, Clone, strum::Display)]
@@ -17,6 +17,7 @@ pub enum UIEvent {
     ChatMessage(ChatMessage),
     NewChat,
     NextChat,
+    ChangeMode(AppMode),
 }
 
 impl From<ChatMessage> for UIEvent {
