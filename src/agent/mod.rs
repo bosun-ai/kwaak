@@ -1,5 +1,6 @@
 mod docker_tool_executor;
 mod env_setup;
+mod tool_summarizer;
 mod tools;
 mod v1;
 

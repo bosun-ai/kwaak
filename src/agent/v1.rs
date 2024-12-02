@@ -4,6 +4,7 @@ use anyhow::Result;
 use swiftide::{
     agents::{system_prompt::SystemPrompt, Agent, DefaultContext},
     chat_completion::{self, ChatCompletion, Tool},
+    traits::SimplePrompt,
 };
 use tavily::Tavily;
 
@@ -11,7 +12,10 @@ use crate::{
     commands::CommandResponder, git::github::GithubSession, indexing, repository::Repository,
 };
 
-use super::{docker_tool_executor::DockerExecutor, env_setup::EnvSetup, tools};
+use super::{
+    docker_tool_executor::DockerExecutor, env_setup::EnvSetup, tool_summarizer::ToolSummarizer,
+    tools,
+};
 
 async fn generate_initial_context(
     repository: &Repository,
@@ -28,18 +32,18 @@ async fn generate_initial_context(
         "#,
         project_name = repository.config().project_name,
         lang = repository.config().language,
-        tools = tools.iter().map(|tool| tool.name()).collect::<Vec<_>>().join(", "),
+        tools = tools.iter().map(Tool::name).collect::<Vec<_>>().join(", "),
     };
-    let retrieved_context = indexing::query(&repository, &context_query).await?;
+    let retrieved_context = indexing::query(repository, &context_query).await?;
     let formatted_context = format!("Additional information:\n\n{retrieved_context}");
     Ok(formatted_context)
 }
 
-async fn configure_tools(
+fn configure_tools(
     repository: &Repository,
     github_session: &Arc<GithubSession>,
 ) -> Result<Vec<Box<dyn Tool>>> {
-    let query_pipeline = indexing::build_query_pipeline(&repository)?;
+    let query_pipeline = indexing::build_query_pipeline(repository)?;
 
     let mut tools = vec![
         tools::read_file(),
@@ -49,7 +53,7 @@ async fn configure_tools(
         tools::shell_command(),
         tools::search_code(),
         tools::ExplainCode::new(query_pipeline).boxed(),
-        tools::CreatePullRequest::new(&github_session).boxed(),
+        tools::CreatePullRequest::new(github_session).boxed(),
         tools::RunTests::new(&repository.config().commands.test).boxed(),
         tools::RunCoverage::new(&repository.config().commands.coverage).boxed(),
     ];
@@ -74,10 +78,12 @@ pub async fn build_agent(
 
     let query_provider: Box<dyn ChatCompletion> =
         repository.config().query_provider().try_into()?;
+    let fast_query_provider: Box<dyn SimplePrompt> =
+        repository.config().indexing_provider().try_into()?;
 
     let repository = Arc::new(repository.clone());
     let github_session = Arc::new(GithubSession::from_repository(&repository)?);
-    let tools = configure_tools(&repository, &github_session).await?;
+    let tools = configure_tools(&repository, &github_session)?;
 
     // Run executor and initial context in parallel
     let (executor, initial_context) = tokio::try_join!(
@@ -115,6 +121,10 @@ pub async fn build_agent(
             "Verify assumptions you make about the code by researching the actual code first",
             "If you are stuck, consider using git to undo your changes"
         ]).build()?;
+
+    // NOTE: Kinda inefficient, copying over tools for the summarizer
+    let tool_summarizer =
+        ToolSummarizer::new(fast_query_provider, &["run_tests", "run_coverage"], &tools);
 
     let agent = Agent::builder()
         .context(context)
@@ -157,6 +167,7 @@ pub async fn build_agent(
                 Ok(())
             })
         })
+        .after_tool(tool_summarizer.summarize_hook())
         .llm(&query_provider)
         .build()?;
 
