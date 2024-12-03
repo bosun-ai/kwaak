@@ -57,10 +57,11 @@ pub async fn write_file(
 
     let output = context.exec_cmd(&cmd).await?;
 
+    let success_message = format!("File written succesfully to {file_name}");
     match output {
-        CommandOutput::Shell { success, .. } if success => Ok("File written succesfully".into()),
+        CommandOutput::Shell { success, .. } if success => Ok(success_message.into()),
         CommandOutput::Shell { stderr, .. } => Ok(ToolOutput::Fail(stderr)),
-        CommandOutput::Ok | CommandOutput::Text(..) => Ok("File written succesfully".into()),
+        CommandOutput::Ok | CommandOutput::Text(..) => Ok(success_message.into()),
     }
 }
 

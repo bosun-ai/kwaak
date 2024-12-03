@@ -13,6 +13,7 @@ use ratatui::{
     Terminal,
 };
 
+use ::tracing::instrument;
 use ::tracing::Instrument as _;
 use crossterm::{
     execute,
@@ -28,9 +29,9 @@ mod config;
 mod frontend;
 mod git;
 mod indexing;
+mod kwaak_tracing;
 mod repository;
 mod storage;
-mod tracing;
 mod util;
 
 #[tokio::main]
@@ -50,48 +51,52 @@ async fn main() -> Result<()> {
     std::fs::create_dir_all(repository.config().cache_dir())?;
     std::fs::create_dir_all(repository.config().log_dir())?;
 
-    crate::tracing::init(&repository)?;
+    crate::kwaak_tracing::init(&repository)?;
 
     let span = ::tracing::span!(::tracing::Level::INFO, "main");
     match args.mode {
-        cli::ModeArgs::RunAgent => {
-            indexing::index_repository(&repository).await?;
-
-            let mut command_responder = CommandResponder::default();
-            let responder_for_agent = command_responder.clone();
-
-            let handle = tokio::spawn(async move {
-                while let Some(response) = command_responder.recv().await {
-                    match response {
-                        CommandResponse::Chat(message) => {
-                            if let Some(original) = message.original() {
-                                println!("{original}");
-                            }
-                        }
-                        CommandResponse::ActivityUpdate(.., message) => {
-                            println!(">> {message}");
-                        }
-                    }
-                }
-            });
-
-            let mut agent = agent::build_agent(
-                &repository,
-                &args
-                    .initial_message
-                    .expect("Expected initial query for the agent"),
-                responder_for_agent,
-            )
-            .await?;
-
-            agent.run().instrument(span).await?;
-            handle.abort();
-            Ok(())
-        }
+        cli::ModeArgs::RunAgent => start_agent(&repository, &args).await,
         cli::ModeArgs::Tui => start_tui(&repository).instrument(span).await,
     }
 }
 
+#[instrument]
+async fn start_agent(repository: &repository::Repository, args: &cli::Args) -> Result<()> {
+    indexing::index_repository(repository).await?;
+
+    let mut command_responder = CommandResponder::default();
+    let responder_for_agent = command_responder.clone();
+
+    let handle = tokio::spawn(async move {
+        while let Some(response) = command_responder.recv().await {
+            match response {
+                CommandResponse::Chat(message) => {
+                    if let Some(original) = message.original() {
+                        println!("{original}");
+                    }
+                }
+                CommandResponse::ActivityUpdate(.., message) => {
+                    println!(">> {message}");
+                }
+            }
+        }
+    });
+
+    let mut agent = agent::build_agent(
+        repository,
+        args.initial_message
+            .as_deref()
+            .expect("Expected initial query for the agent"),
+        responder_for_agent,
+    )
+    .await?;
+
+    agent.run().await?;
+    handle.abort();
+    Ok(())
+}
+
+#[instrument]
 async fn start_tui(repository: &repository::Repository) -> Result<()> {
     ::tracing::info!("Loaded configuration: {:?}", repository.config());
 
