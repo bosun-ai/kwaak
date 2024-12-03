@@ -97,7 +97,7 @@ pub async fn git(context: &dyn AgentContext, command: &str) -> Result<ToolOutput
     )
 )]
 pub async fn search_code(context: &dyn AgentContext, query: &str) -> Result<ToolOutput, ToolError> {
-    let cmd = Command::Shell(format!("rg {query}"));
+    let cmd = Command::Shell(format!("rg '{query}'"));
     let output = context.exec_cmd(&cmd).await?;
     Ok(output.into())
 }
