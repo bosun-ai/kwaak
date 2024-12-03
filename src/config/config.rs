@@ -37,7 +37,7 @@ pub struct Config {
     pub tool_executor: SupportedToolExecutors,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub enum SupportedToolExecutors {
     #[default]

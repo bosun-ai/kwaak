@@ -8,6 +8,7 @@ use swiftide::traits::CommandOutput;
 use swiftide::traits::ToolExecutor;
 use swiftide::traits::ToolExecutor as _;
 
+use crate::config::SupportedToolExecutors;
 use crate::git::github::GithubSession;
 use crate::repository::Repository;
 
@@ -35,6 +36,10 @@ impl EnvSetup<'_> {
 
     #[tracing::instrument(skip_all)]
     pub async fn exec_setup_commands(&self) -> Result<()> {
+        // Only run these commands if we are running inside a docker container
+        if self.repository.config().tool_executor != SupportedToolExecutors::Docker {
+            return Ok(());
+        }
         let CommandOutput::Shell {
             stdout: origin_url, ..
         } = self
