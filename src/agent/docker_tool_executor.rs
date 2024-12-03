@@ -56,6 +56,13 @@ impl Default for DockerExecutor {
 impl DockerExecutor {
     pub fn from_repository(repository: &Repository) -> DockerExecutor {
         let mut executor = DockerExecutor::default();
+        let dockerfile = &repository.config().docker.dockerfile;
+
+        if std::fs::metadata(dockerfile).is_err() {
+            error!("Dockerfile not found at {}", dockerfile.display());
+            // TODO: Clean me up
+            panic!("Running in docker requires a Dockerfile");
+        }
         executor.with_context_path(&repository.config().docker.context);
         executor.with_image_name(&repository.config().project_name);
 
