@@ -1,6 +1,6 @@
 language = "rust"
 tavily_api_key = "env:TAVILY_API_KEY"
-tool_executor = "local"
+tool_executor = "docker"
 
 [commands]
 test = "cargo test --no-fail-fast --color=never"
