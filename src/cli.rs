@@ -10,11 +10,15 @@ pub struct Args {
     pub config_path: PathBuf,
 
     /// Run kwaak as a tui (default) or run an agent directly
-    #[arg(short, long, default_value_t = ModeArgs::Tui)]
+    #[arg(short, long, default_value = "tui")]
     pub mode: ModeArgs,
     /// When running the agent directly, the initial message to send to the agent
     #[arg(short, long, required_if_eq("mode", "run-agent"))]
     pub initial_message: Option<String>,
+
+    /// Print the configuration and exit
+    #[arg(long)]
+    pub print_config: bool,
 }
 
 #[derive(clap::ValueEnum, Clone, Debug, Default, strum::Display, strum::EnumString)]

@@ -43,6 +43,11 @@ async fn main() -> Result<()> {
     let config = Config::load(&args.config_path).await?;
     let repository = repository::Repository::from_config(config);
 
+    if args.print_config {
+        println!("{}", toml::to_string_pretty(repository.config())?);
+        return Ok(());
+    }
+
     std::fs::create_dir_all(repository.config().cache_dir())?;
     std::fs::create_dir_all(repository.config().log_dir())?;
 
