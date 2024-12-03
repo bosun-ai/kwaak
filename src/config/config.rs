@@ -38,6 +38,7 @@ pub struct Config {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
 pub enum SupportedToolExecutors {
     #[default]
     Docker,
