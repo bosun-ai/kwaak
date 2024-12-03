@@ -55,7 +55,7 @@ async fn main() -> Result<()> {
 
     let span = ::tracing::span!(::tracing::Level::INFO, "main");
     match args.mode {
-        cli::ModeArgs::RunAgent => start_agent(&repository, &args).await,
+        cli::ModeArgs::RunAgent => start_agent(&repository, &args).instrument(span).await,
         cli::ModeArgs::Tui => start_tui(&repository).instrument(span).await,
     }
 }
