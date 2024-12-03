@@ -18,7 +18,7 @@ pub fn init(repository: &Repository) -> Result<()> {
 
     // Logs the file layer will capture
     let env_filter_layer = EnvFilter::builder()
-        .with_default_directive(LevelFilter::WARN.into())
+        .with_default_directive(LevelFilter::INFO.into())
         .from_env_lossy()
         .add_directive("h2=error".parse().unwrap())
         .add_directive("tower=error".parse().unwrap())
@@ -40,6 +40,7 @@ pub fn init(repository: &Repository) -> Result<()> {
     ];
 
     if cfg!(feature = "otel") {
+        dbg!("OpenTelemetry tracing enabled");
         let provider = otel_provider();
         let tracer = provider.tracer("kwaak");
         opentelemetry::global::set_tracer_provider(provider);
