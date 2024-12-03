@@ -12,7 +12,6 @@ use crate::config::SupportedToolExecutors;
 use crate::git::github::GithubSession;
 use crate::repository::Repository;
 
-use super::docker_tool_executor::RunningDockerExecutor;
 
 pub struct EnvSetup<'a> {
     #[allow(dead_code)]

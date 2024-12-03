@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use swiftide::{
     agents::hooks::AfterToolFn,
-    chat_completion::{errors::ToolError, Tool, ToolCall, ToolOutput},
-    prompt::{Prompt, PromptTemplate},
+    chat_completion::{Tool, ToolCall, ToolOutput},
+    prompt::Prompt,
     traits::SimplePrompt,
 };
 use tracing::Instrument as _;
