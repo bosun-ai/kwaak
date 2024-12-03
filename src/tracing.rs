@@ -19,8 +19,7 @@ pub fn init(repository: &Repository) -> Result<()> {
     // Logs the file layer will capture
     let env_filter_layer = EnvFilter::builder()
         .with_default_directive(LevelFilter::WARN.into())
-        .try_from_env()
-        .expect("Failed to parse filter from env")
+        .from_env_lossy()
         .add_directive("h2=error".parse().unwrap())
         .add_directive("tower=error".parse().unwrap())
         .add_directive("tui_markdown=error".parse().unwrap());
