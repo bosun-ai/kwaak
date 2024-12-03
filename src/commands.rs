@@ -52,9 +52,9 @@ pub enum CommandResponse {
     ActivityUpdate(Uuid, String),
 }
 
-#[derive(Clone)]
 pub struct CommandResponder {
     tx: mpsc::UnboundedSender<CommandResponse>,
+    rx: Option<mpsc::UnboundedReceiver<CommandResponse>>,
     uuid: Uuid,
 }
 
@@ -74,6 +74,41 @@ impl CommandResponder {
         let _ = self
             .tx
             .send(CommandResponse::ActivityUpdate(self.uuid, state.into()));
+    }
+
+    pub async fn recv(&mut self) -> Option<CommandResponse> {
+        let rx = self.rx.as_mut().expect("Expected a receiver");
+        rx.recv().await
+    }
+
+    pub fn with_uuid(self, uuid: Uuid) -> Self {
+        CommandResponder {
+            tx: self.tx,
+            rx: self.rx,
+            uuid,
+        }
+    }
+}
+
+impl Default for CommandResponder {
+    fn default() -> Self {
+        let (tx, rx) = mpsc::unbounded_channel();
+        CommandResponder {
+            tx,
+            rx: Some(rx),
+            uuid: Uuid::default(),
+        }
+    }
+}
+
+/// Cheap clone that uninitializes the receiver
+impl Clone for CommandResponder {
+    fn clone(&self) -> Self {
+        CommandResponder {
+            tx: self.tx.clone(),
+            rx: None,
+            uuid: self.uuid,
+        }
     }
 }
 
@@ -242,8 +277,7 @@ impl CommandHandler {
             return Ok(agent.clone());
         }
 
-        let (tx, mut rx) = mpsc::unbounded_channel::<CommandResponse>();
-        let command_responder = CommandResponder { tx, uuid };
+        let mut command_responder = CommandResponder::default().with_uuid(uuid);
 
         let ui_tx_clone = self.ui_tx.clone().expect("expected ui tx");
 
@@ -251,8 +285,9 @@ impl CommandHandler {
         // Then the majority of this can be moved to i.e. agents/running_agent
         // Design wise: Agents should not know about UI, command handler and UI should not know
         // about agent internals
+        let responder_for_agent = command_responder.clone();
         let handle = task::spawn(async move {
-            while let Some(response) = rx.recv().await {
+            while let Some(response) = command_responder.recv().await {
                 match response {
                     CommandResponse::Chat(msg) => {
                         let _ = ui_tx_clone.send(msg.into());
@@ -263,7 +298,7 @@ impl CommandHandler {
                 }
             }
         });
-        let agent = agent::build_agent(&self.repository, query, command_responder).await?;
+        let agent = agent::build_agent(&self.repository, query, responder_for_agent).await?;
 
         let running_agent = RunningAgent {
             agent: Arc::new(Mutex::new(agent)),

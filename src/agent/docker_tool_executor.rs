@@ -272,6 +272,10 @@ impl RunningDockerExecutor {
 
 impl Drop for RunningDockerExecutor {
     fn drop(&mut self) {
+        tracing::warn!(
+            "Stopping container {container_id}",
+            container_id = self.container_id
+        );
         let result = tokio::task::block_in_place(|| {
             tokio::runtime::Handle::current().block_on(async {
                 self.docker

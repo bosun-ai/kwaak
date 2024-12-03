@@ -4,6 +4,8 @@ use std::{
 };
 
 use anyhow::Result;
+use clap::Parser;
+use commands::{CommandResponder, CommandResponse};
 use config::Config;
 use frontend::App;
 use ratatui::{
@@ -16,10 +18,12 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use tokio::sync::mpsc;
 
 mod agent;
 mod chat;
 mod chat_message;
+mod cli;
 mod commands;
 mod config;
 mod frontend;
@@ -32,9 +36,11 @@ mod util;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let args = cli::Args::parse();
+
     init_panic_hook();
     // Load configuration
-    let config = Config::load().await?;
+    let config = Config::load(&args.config_path).await?;
     let repository = repository::Repository::from_config(config);
 
     std::fs::create_dir_all(repository.config().cache_dir())?;
@@ -43,10 +49,46 @@ async fn main() -> Result<()> {
     crate::tracing::init(&repository)?;
 
     let span = ::tracing::span!(::tracing::Level::INFO, "main");
-    start_app(&repository).instrument(span).await
+    match args.mode {
+        cli::ModeArgs::RunAgent => {
+            indexing::index_repository(&repository).await?;
+
+            let mut command_responder = CommandResponder::default();
+            let responder_for_agent = command_responder.clone();
+
+            let handle = tokio::spawn(async move {
+                while let Some(response) = command_responder.recv().await {
+                    match response {
+                        CommandResponse::Chat(message) => {
+                            if let Some(original) = message.original() {
+                                println!("{original}");
+                            }
+                        }
+                        CommandResponse::ActivityUpdate(.., message) => {
+                            println!(">> {message}");
+                        }
+                    }
+                }
+            });
+
+            let mut agent = agent::build_agent(
+                &repository,
+                &args
+                    .initial_message
+                    .expect("Expected initial query for the agent"),
+                responder_for_agent,
+            )
+            .await?;
+
+            agent.run().instrument(span).await?;
+            handle.abort();
+            Ok(())
+        }
+        cli::ModeArgs::Tui => start_tui(&repository).instrument(span).await,
+    }
 }
 
-async fn start_app(repository: &repository::Repository) -> Result<()> {
+async fn start_tui(repository: &repository::Repository) -> Result<()> {
     ::tracing::info!("Loaded configuration: {:?}", repository.config());
 
     // Setup terminal
@@ -90,6 +132,7 @@ pub fn init_panic_hook() {
     let original_hook = take_hook();
     set_hook(Box::new(move |panic_info| {
         // intentionally ignore errors here since we're already in a panic
+        ::tracing::error!("Panic: {:?}", panic_info);
         let _ = restore_tui();
 
         if cfg!(feature = "otel") {

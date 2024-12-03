@@ -32,6 +32,16 @@ pub struct Config {
     /// Optional: Use tavily as a search tool
     #[serde(default)]
     pub tavily_api_key: Option<ApiKey>,
+
+    #[serde(default)]
+    pub tool_executor: SupportedToolExecutors,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub enum SupportedToolExecutors {
+    #[default]
+    Docker,
+    Local,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,8 +75,8 @@ pub struct GithubConfiguration {
 
 impl Config {
     /// Loads the configuration file from the current path
-    pub(crate) async fn load() -> Result<Config> {
-        let file = tokio::fs::read("kwaak.toml")
+    pub(crate) async fn load(path: &Path) -> Result<Config> {
+        let file = tokio::fs::read(path)
             .await
             .context("Could not find `kwaak.toml` in current directory")?;
 

@@ -5,6 +5,7 @@ use anyhow::Result;
 use secrecy::ExposeSecret;
 use swiftide::traits::Command;
 use swiftide::traits::CommandOutput;
+use swiftide::traits::ToolExecutor;
 use swiftide::traits::ToolExecutor as _;
 
 use crate::git::github::GithubSession;
@@ -16,14 +17,14 @@ pub struct EnvSetup<'a> {
     #[allow(dead_code)]
     repository: &'a Repository,
     github_session: &'a GithubSession,
-    executor: &'a RunningDockerExecutor,
+    executor: &'a dyn ToolExecutor,
 }
 
 impl EnvSetup<'_> {
     pub fn new<'a>(
         repository: &'a Repository,
         github_session: &'a GithubSession,
-        executor: &'a RunningDockerExecutor,
+        executor: &'a dyn ToolExecutor,
     ) -> EnvSetup<'a> {
         EnvSetup {
             repository,

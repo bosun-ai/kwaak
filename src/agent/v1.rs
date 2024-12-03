@@ -2,14 +2,17 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use swiftide::{
-    agents::{system_prompt::SystemPrompt, Agent, DefaultContext},
+    agents::{
+        system_prompt::SystemPrompt, tools::local_executor::LocalExecutor, Agent, DefaultContext,
+    },
     chat_completion::{self, ChatCompletion, Tool},
-    traits::SimplePrompt,
+    traits::{SimplePrompt, ToolExecutor},
 };
 use tavily::Tavily;
 
 use crate::{
-    commands::CommandResponder, git::github::GithubSession, indexing, repository::Repository,
+    commands::CommandResponder, config::SupportedToolExecutors, git::github::GithubSession,
+    indexing, repository::Repository,
 };
 
 use super::{
@@ -68,6 +71,18 @@ fn configure_tools(
     Ok(tools)
 }
 
+async fn start_tool_executor(repository: &Repository) -> Result<Box<dyn ToolExecutor>> {
+    let boxed = match repository.config().tool_executor {
+        SupportedToolExecutors::Docker => {
+            Box::new(DockerExecutor::from_repository(repository).start().await?)
+                as Box<dyn ToolExecutor>
+        }
+        SupportedToolExecutors::Local => Box::new(LocalExecutor::new(".")) as Box<dyn ToolExecutor>,
+    };
+
+    Ok(boxed)
+}
+
 #[tracing::instrument(skip(repository, command_responder))]
 pub async fn build_agent(
     repository: &Repository,
@@ -87,12 +102,12 @@ pub async fn build_agent(
 
     // Run executor and initial context in parallel
     let (executor, initial_context) = tokio::try_join!(
-        DockerExecutor::from_repository(&repository).start(),
+        start_tool_executor(&repository),
         generate_initial_context(&repository, query, &tools)
     )?;
 
     // Run a series of commands inside the executor so that everything is available
-    let env_setup = EnvSetup::new(&repository, &github_session, &executor);
+    let env_setup = EnvSetup::new(&repository, &github_session, &*executor);
     env_setup.exec_setup_commands().await?;
 
     let context = DefaultContext::from_executor(executor);
