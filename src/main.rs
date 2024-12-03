@@ -82,16 +82,14 @@ async fn start_agent(repository: &repository::Repository, args: &cli::Args) -> R
         }
     });
 
-    let mut agent = agent::build_agent(
-        repository,
-        args.initial_message
-            .as_deref()
-            .expect("Expected initial query for the agent"),
-        responder_for_agent,
-    )
-    .await?;
+    let query = args
+        .initial_message
+        .as_deref()
+        .expect("Expected initial query for the agent")
+        .to_string();
+    let mut agent = agent::build_agent(repository, &query, responder_for_agent).await?;
 
-    agent.run().await?;
+    agent.query(&query).await?;
     handle.abort();
     Ok(())
 }
