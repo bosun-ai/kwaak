@@ -6,6 +6,7 @@ use swiftide::{
         system_prompt::SystemPrompt, tools::local_executor::LocalExecutor, Agent, DefaultContext,
     },
     chat_completion::{self, ChatCompletion, Tool},
+    prompt::Prompt,
     traits::{SimplePrompt, ToolExecutor},
 };
 use tavily::Tavily;
@@ -23,19 +24,45 @@ use super::{
 async fn generate_initial_context(
     repository: &Repository,
     query: &str,
+    original_system_prompt: &str,
     tools: &[Box<dyn Tool>],
 ) -> Result<String> {
+    let available_tools = tools
+        .iter()
+        .map(|tool| format!("- **{}**: {}", tool.name(), tool.tool_spec().description))
+        .collect::<Vec<String>>()
+        .join("\n");
+
+    // TODO: This would be a nice answer transformer in the query pipeline
     let context_query = indoc::formatdoc! {r#"
+        ## Role
+        You are helping an agent to get started on a task with an initial task and plan.
+
+        ## Task
         What is the purpose of the {project_name} that is written in {lang}? Provide a detailed answer to help me understand the context.
-        Also consider what else might be helpful to accomplish the following:
-        `{query}`
+
+        The agent starts with the following prompt:
+
+        ```markdown
+        {original_system_prompt}
+        ```
+
+        And has to complete the following task:
+        {query}
+
+
+        ## Additional information
         This context is provided for an ai agent that has to accomplish the above. Additionally, the agent has access to the following tools:
-        `{tools}`
-        Do not make assumptions, instruct to investigate instead.
+        `{available_tools}`
+
+        ## Constraints
+        - Do not make assumptions, instruct to investigate instead
+        - Respond only with the additional context and instructions
+        - Do not provide strict instructions, allow for flexibility
+        - Consider the constraints of the agent when formulating your response
         "#,
         project_name = repository.config().project_name,
         lang = repository.config().language,
-        tools = tools.iter().map(Tool::name).collect::<Vec<_>>().join(", "),
     };
     let retrieved_context = indexing::query(repository, &context_query).await?;
     let formatted_context = format!("Additional information:\n\n{retrieved_context}");
@@ -100,25 +127,7 @@ pub async fn build_agent(
     let github_session = Arc::new(GithubSession::from_repository(&repository)?);
     let tools = configure_tools(&repository, &github_session)?;
 
-    // Run executor and initial context in parallel
-    let (executor, initial_context) = tokio::try_join!(
-        start_tool_executor(&repository),
-        generate_initial_context(&repository, query, &tools)
-    )?;
-
-    // Run a series of commands inside the executor so that everything is available
-    let env_setup = EnvSetup::new(&repository, &github_session, &*executor);
-    env_setup.exec_setup_commands().await?;
-
-    let context = DefaultContext::from_executor(executor);
-
-    let command_responder = Arc::new(command_responder);
-    // Maybe I'm just too tired but feels off.
-    let tx_2 = command_responder.clone();
-    let tx_3 = command_responder.clone();
-    let tx_4 = command_responder.clone();
-
-    let system_prompt =
+    let system_prompt: Prompt =
     SystemPrompt::builder()
         .role("You are an atonomous ai agent tasked with helping a user with a code project. You can solve coding problems yourself and should try to always work towards a full solution.")
         .constraints([
@@ -136,7 +145,26 @@ pub async fn build_agent(
             "If you just want to run the tests, prefer running the tests over running coverage, as running tests is faster",
             "Verify assumptions you make about the code by researching the actual code first",
             "If you are stuck, consider using git to undo your changes"
-        ]).build()?;
+        ]).build()?.into();
+
+    // Run executor and initial context in parallel
+    let rendered_system_prompt = system_prompt.render().await?;
+    let (executor, initial_context) = tokio::try_join!(
+        start_tool_executor(&repository),
+        generate_initial_context(&repository, query, &rendered_system_prompt, &tools)
+    )?;
+
+    // Run a series of commands inside the executor so that everything is available
+    let env_setup = EnvSetup::new(&repository, &github_session, &*executor);
+    env_setup.exec_setup_commands().await?;
+
+    let context = DefaultContext::from_executor(executor);
+
+    let command_responder = Arc::new(command_responder);
+    // Maybe I'm just too tired but feels off.
+    let tx_2 = command_responder.clone();
+    let tx_3 = command_responder.clone();
+    let tx_4 = command_responder.clone();
 
     // NOTE: Kinda inefficient, copying over tools for the summarizer
     let tool_summarizer =

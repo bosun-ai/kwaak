@@ -73,6 +73,17 @@ impl<'a> ToolSummarizer<'a> {
             .collect::<Vec<String>>()
             .join("\n");
 
+        // NOTE: Argument to split up the agent into role dedicated agents
+        let additional_instructions = if tool_call.name() == "run_tests" {
+            indoc::formatdoc! {"
+                ## Additional instructions
+                * If the tests pass, additionally mention that coverage must be checked such that
+                  it actually improved, did not stay the same, and the file executed properly.
+            "}
+        } else {
+            String::new()
+        };
+
         indoc::formatdoc!(
             "
             # Goal
@@ -83,6 +94,8 @@ impl<'a> ToolSummarizer<'a> {
             Tool name: {tool_name}
             Tool description: {tool_description}
             Tool was called with arguments: {tool_args}
+
+            {additional_instructions}
     
             ## Tool output
             ```
@@ -101,7 +114,7 @@ impl<'a> ToolSummarizer<'a> {
 
             ## Requirements
             * Only propose improvements that can be fixed by the tools and functions that are
-                availalbe in the conversation. For instance, running a command to fix linting can also be fixed by writing to that file without errors.
+                available in the conversation. For instance, running a command to fix linting can also be fixed by writing to that file without errors.
             * If the tool output has repeating patterns, only include the pattern once and state
              that it happens multiple times.
             ", tool_name = tool.name(), tool_description = tool.tool_spec().description, tool_args = tool_call.args().unwrap_or_default(), tool_output = tool_output.content().unwrap_or_default()).into()
