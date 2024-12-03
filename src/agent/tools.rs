@@ -60,7 +60,7 @@ pub async fn write_file(
     match output {
         CommandOutput::Shell { success, .. } if success => Ok("File written succesfully".into()),
         CommandOutput::Shell { stderr, .. } => Ok(ToolOutput::Fail(stderr)),
-        CommandOutput::Ok | CommandOutput::Text(..) => unimplemented!(),
+        CommandOutput::Ok | CommandOutput::Text(..) => Ok("File written succesfully".into()),
     }
 }
 
