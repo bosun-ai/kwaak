@@ -15,7 +15,12 @@ pub struct GithubSession {
 }
 impl GithubSession {
     pub fn from_repository(repository: &Repository) -> Result<Self> {
-        let token = repository.config().github.token.clone();
+        let token = repository
+            .config()
+            .github
+            .token
+            .clone()
+            .ok_or(anyhow::anyhow!("No github token found in config"))?;
 
         let octocrab = Octocrab::builder()
             .personal_token(token.expose_secret())

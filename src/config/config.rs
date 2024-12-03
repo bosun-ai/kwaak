@@ -71,7 +71,7 @@ pub struct GithubConfiguration {
     #[serde(default = "default_main_branch")]
     pub main_branch: String,
 
-    pub token: ApiKey,
+    pub token: Option<ApiKey>,
 }
 
 impl Config {

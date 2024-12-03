@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{ops::Deref, sync::Arc};
 
 use anyhow::Result;
 use swiftide::{
@@ -71,7 +71,7 @@ async fn generate_initial_context(
 
 fn configure_tools(
     repository: &Repository,
-    github_session: &Arc<GithubSession>,
+    github_session: Option<&Arc<GithubSession>>,
 ) -> Result<Vec<Box<dyn Tool>>> {
     let query_pipeline = indexing::build_query_pipeline(repository)?;
 
@@ -83,10 +83,13 @@ fn configure_tools(
         tools::shell_command(),
         tools::search_code(),
         tools::ExplainCode::new(query_pipeline).boxed(),
-        tools::CreatePullRequest::new(github_session).boxed(),
         tools::RunTests::new(&repository.config().commands.test).boxed(),
         tools::RunCoverage::new(&repository.config().commands.coverage).boxed(),
     ];
+
+    if let Some(github_session) = github_session {
+        tools.push(tools::CreatePullRequest::new(github_session).boxed());
+    }
 
     if let Some(tavily_api_key) = &repository.config().tavily_api_key {
         // Client is a bit weird that it needs the api key twice
@@ -124,8 +127,13 @@ pub async fn build_agent(
         repository.config().indexing_provider().try_into()?;
 
     let repository = Arc::new(repository.clone());
-    let github_session = Arc::new(GithubSession::from_repository(&repository)?);
-    let tools = configure_tools(&repository, &github_session)?;
+
+    let github_session = match repository.config().github.token {
+        Some(_) => Some(Arc::new(GithubSession::from_repository(&repository)?)),
+        None => None,
+    };
+
+    let tools = configure_tools(&repository, github_session.as_ref())?;
 
     let system_prompt: Prompt =
     SystemPrompt::builder()
@@ -155,7 +163,7 @@ pub async fn build_agent(
     )?;
 
     // Run a series of commands inside the executor so that everything is available
-    let env_setup = EnvSetup::new(&repository, &github_session, &*executor);
+    let env_setup = EnvSetup::new(&repository, github_session.as_deref(), &*executor);
     env_setup.exec_setup_commands().await?;
 
     let context = DefaultContext::from_executor(executor);
