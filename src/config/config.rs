@@ -17,7 +17,7 @@ pub struct Config {
     #[serde(default = "default_project_name")]
     pub project_name: String,
     pub language: SupportedLanguages,
-    pub llm: LLMConfigurations,
+    pub llm: Box<LLMConfigurations>,
     pub commands: CommandConfiguration,
     #[serde(default = "default_cache_dir")]
     cache_dir: PathBuf,
@@ -74,21 +74,21 @@ impl Config {
     }
 
     pub fn indexing_provider(&self) -> &LLMConfiguration {
-        match &self.llm {
+        match &*self.llm {
             LLMConfigurations::Single(config) => config,
             LLMConfigurations::Multiple { indexing, .. } => indexing,
         }
     }
 
     pub fn embedding_provider(&self) -> &LLMConfiguration {
-        match &self.llm {
+        match &*self.llm {
             LLMConfigurations::Single(config) => config,
             LLMConfigurations::Multiple { embedding, .. } => embedding,
         }
     }
 
     pub fn query_provider(&self) -> &LLMConfiguration {
-        match &self.llm {
+        match &*self.llm {
             LLMConfigurations::Single(config) => config,
             LLMConfigurations::Multiple { query, .. } => query,
         }
@@ -139,10 +139,10 @@ mod tests {
             api_key,
             prompt_model,
             ..
-        }) = &config.llm
+        }) = &*config.llm
         {
             assert_eq!(api_key.expose_secret(), "test-key");
-            assert_eq!(prompt_model, &Some(OpenAIPromptModel::GPT4OMini));
+            assert_eq!(prompt_model, &OpenAIPromptModel::GPT4OMini);
         } else {
             panic!("Expected single OpenAI configuration");
         }
@@ -185,7 +185,7 @@ mod tests {
             indexing,
             embedding,
             query,
-        } = &config.llm
+        } = &*config.llm
         {
             if let LLMConfiguration::OpenAI {
                 api_key,
@@ -194,7 +194,7 @@ mod tests {
             } = indexing
             {
                 assert_eq!(api_key.expose_secret(), "test-key");
-                assert_eq!(prompt_model, &Some(OpenAIPromptModel::GPT4OMini));
+                assert_eq!(prompt_model, &OpenAIPromptModel::GPT4OMini);
             } else {
                 panic!("Expected OpenAI configuration for indexing");
             }
@@ -206,7 +206,7 @@ mod tests {
             } = query
             {
                 assert_eq!(api_key.expose_secret(), "other-test-key");
-                assert_eq!(prompt_model, &Some(OpenAIPromptModel::GPT4OMini));
+                assert_eq!(prompt_model, &OpenAIPromptModel::GPT4OMini);
             } else {
                 panic!("Expected OpenAI configuration for query");
             }
@@ -218,10 +218,7 @@ mod tests {
             } = embedding
             {
                 assert_eq!(api_key.expose_secret(), "other-test-key");
-                assert_eq!(
-                    embedding_model,
-                    &Some(OpenAIEmbeddingModel::TextEmbedding3Small)
-                );
+                assert_eq!(embedding_model, &OpenAIEmbeddingModel::TextEmbedding3Small);
             }
         } else {
             panic!("Expected multiple LLM configurations");

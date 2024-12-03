@@ -54,6 +54,12 @@ impl ApiKey {
     }
 }
 
+impl<T: AsRef<str>> From<T> for ApiKey {
+    fn from(secret: T) -> Self {
+        ApiKey(SecretString::from(secret.as_ref()))
+    }
+}
+
 impl<'de> Deserialize<'de> for ApiKey {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

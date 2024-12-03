@@ -21,7 +21,7 @@ pub fn build_lancedb(repository: &Repository) -> Result<LanceDBBuilder> {
                 .ok_or(anyhow::anyhow!("Failed to convert path to string"))?,
         )
         .with_vector(EmbeddedField::Combined)
-        .vector_size(embedding_provider.vector_size()?)
+        .vector_size(embedding_provider.vector_size())
         .table_name(&config.project_name)
         .to_owned())
 }

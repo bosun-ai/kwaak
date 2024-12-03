@@ -1,14 +1,16 @@
 use super::ApiKey;
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
 use swiftide::{
     chat_completion::ChatCompletion,
     integrations,
     traits::{EmbeddingModel, SimplePrompt},
 };
+use url::Url;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
+#[allow(clippy::large_enum_variant)] // Parent is always on the heap in config
 pub enum LLMConfigurations {
     Single(LLMConfiguration),
     Multiple {
@@ -24,8 +26,11 @@ pub enum LLMConfigurations {
 pub enum LLMConfiguration {
     OpenAI {
         api_key: ApiKey,
-        prompt_model: Option<OpenAIPromptModel>,
-        embedding_model: Option<OpenAIEmbeddingModel>,
+        #[serde(default)]
+        prompt_model: OpenAIPromptModel,
+        #[serde(default)]
+        embedding_model: OpenAIEmbeddingModel,
+        base_url: Option<Url>,
     },
     // Groq {
     //     api_key: SecretString,
@@ -46,29 +51,32 @@ pub enum LLMConfiguration {
 }
 
 impl LLMConfiguration {
-    pub(crate) fn vector_size(&self) -> Result<i32> {
+    pub(crate) fn vector_size(&self) -> i32 {
         match self {
             LLMConfiguration::OpenAI {
                 embedding_model, ..
-            } => {
-                let model = embedding_model
-                    .as_ref()
-                    .ok_or(anyhow::anyhow!("Missing embedding model"))?;
-                match model {
-                    OpenAIEmbeddingModel::TextEmbedding3Small => Ok(1536),
-                    OpenAIEmbeddingModel::TextEmbedding3Large => Ok(3072),
-                }
-            }
+            } => match embedding_model {
+                OpenAIEmbeddingModel::TextEmbedding3Small => 1536,
+                OpenAIEmbeddingModel::TextEmbedding3Large => 3072,
+            },
         }
     }
 }
 
 #[derive(
-    Debug, Clone, Deserialize, Serialize, PartialEq, strum_macros::EnumString, strum_macros::Display,
+    Debug,
+    Clone,
+    Deserialize,
+    Serialize,
+    PartialEq,
+    strum_macros::EnumString,
+    strum_macros::Display,
+    Default,
 )]
 pub enum OpenAIPromptModel {
     #[strum(serialize = "gpt-4o-mini")]
     #[serde(rename = "gpt-4o-mini")]
+    #[default]
     GPT4OMini,
     #[strum(serialize = "gpt-4o")]
     #[serde(rename = "gpt-4o")]
@@ -76,7 +84,14 @@ pub enum OpenAIPromptModel {
 }
 
 #[derive(
-    Debug, Clone, Deserialize, Serialize, strum_macros::EnumString, strum_macros::Display, PartialEq,
+    Debug,
+    Clone,
+    Deserialize,
+    Serialize,
+    strum_macros::EnumString,
+    strum_macros::Display,
+    PartialEq,
+    Default,
 )]
 pub enum OpenAIEmbeddingModel {
     #[strum(serialize = "text-embedding-3-small")]
@@ -84,8 +99,31 @@ pub enum OpenAIEmbeddingModel {
     TextEmbedding3Small,
     #[strum(serialize = "text-embedding-3-large")]
     #[serde(rename = "text-embedding-3-large")]
+    #[default]
     TextEmbedding3Large,
 }
+
+fn build_openai(
+    api_key: &ApiKey,
+    embedding_model: &OpenAIEmbeddingModel,
+    prompt_model: &OpenAIPromptModel,
+    base_url: Option<&Url>,
+) -> Result<integrations::openai::OpenAI> {
+    let mut config =
+        async_openai::config::OpenAIConfig::default().with_api_key(api_key.expose_secret());
+
+    if let Some(base_url) = base_url {
+        config = config.with_api_base(base_url.to_string());
+    };
+
+    integrations::openai::OpenAI::builder()
+        .client(async_openai::Client::with_config(config))
+        .default_prompt_model(prompt_model.to_string())
+        .default_embed_model(embedding_model.to_string())
+        .build()
+        .context("Failed to build OpenAI client")
+}
+
 impl TryInto<Box<dyn EmbeddingModel>> for &LLMConfiguration {
     type Error = anyhow::Error;
 
@@ -94,21 +132,14 @@ impl TryInto<Box<dyn EmbeddingModel>> for &LLMConfiguration {
             LLMConfiguration::OpenAI {
                 api_key,
                 embedding_model,
-                ..
-            } => Box::new(
-                integrations::openai::OpenAI::builder()
-                    .client(async_openai::Client::with_config(
-                        async_openai::config::OpenAIConfig::default()
-                            .with_api_key(api_key.expose_secret()),
-                    ))
-                    .default_embed_model(
-                        embedding_model
-                            .as_ref()
-                            .ok_or(anyhow::anyhow!("Missing prompt model"))?
-                            .to_string(),
-                    )
-                    .build()?,
-            ),
+                prompt_model,
+                base_url,
+            } => Box::new(build_openai(
+                api_key,
+                embedding_model,
+                prompt_model,
+                base_url.as_ref(),
+            )?),
         };
 
         Ok(boxed)
@@ -121,23 +152,17 @@ impl TryInto<Box<dyn SimplePrompt>> for &LLMConfiguration {
         let boxed = match self {
             LLMConfiguration::OpenAI {
                 api_key,
+                embedding_model,
                 prompt_model,
-                ..
-            } => Box::new(
-                integrations::openai::OpenAI::builder()
-                    .client(async_openai::Client::with_config(
-                        async_openai::config::OpenAIConfig::default()
-                            .with_api_key(api_key.expose_secret()),
-                    ))
-                    .default_prompt_model(
-                        prompt_model
-                            .as_ref()
-                            .ok_or(anyhow::anyhow!("Missing prompt model"))?
-                            .to_string(),
-                    )
-                    .build()?,
-            ),
+                base_url,
+            } => Box::new(build_openai(
+                api_key,
+                embedding_model,
+                prompt_model,
+                base_url.as_ref(),
+            )?),
         };
+
         Ok(boxed)
     }
 }
@@ -148,23 +173,17 @@ impl TryInto<Box<dyn ChatCompletion>> for &LLMConfiguration {
         let boxed = match self {
             LLMConfiguration::OpenAI {
                 api_key,
+                embedding_model,
                 prompt_model,
-                ..
-            } => Box::new(
-                integrations::openai::OpenAI::builder()
-                    .client(async_openai::Client::with_config(
-                        async_openai::config::OpenAIConfig::default()
-                            .with_api_key(api_key.expose_secret()),
-                    ))
-                    .default_prompt_model(
-                        prompt_model
-                            .as_ref()
-                            .ok_or(anyhow::anyhow!("Missing prompt model"))?
-                            .to_string(),
-                    )
-                    .build()?,
-            ),
+                base_url,
+            } => Box::new(build_openai(
+                api_key,
+                embedding_model,
+                prompt_model,
+                base_url.as_ref(),
+            )?),
         };
+
         Ok(boxed)
     }
 }
