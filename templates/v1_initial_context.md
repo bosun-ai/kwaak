@@ -15,6 +15,12 @@ The agent starts with the following prompt:
 And has to complete the following task:
 {{query}}
 
+For the agent to accomplish this task, provide the following context:
+
+- What files might be relevant to the agent?
+- Any directories the agent could explore?
+- Any issues the agent might encounter? Suggest how to resolve them or work around them.
+
 ## Additional information
 
 This context is provided for an ai agent that has to accomplish the above. Additionally, the agent has access to the following tools:
