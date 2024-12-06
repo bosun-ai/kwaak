@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use swiftide::{
     chat_completion::{errors::ToolError, ToolOutput},
     query::{search_strategies, states},
@@ -154,7 +154,7 @@ impl<'a> ExplainCode<'a> {
 
 #[derive(Tool, Clone, Debug)]
 #[tool(
-    description = "Creates or updates a pull request on Github. Always present the url of the pull request to the user after the tool call. Markdown links do not work",
+    description = "Creates or updates a pull request on Github. Always present the url of the pull request to the user after the tool call. Present the user with the url of the pull request after completion.",
     param(name = "title", description = "Title of the pull request"),
     param(name = "pull_request_body", description = "Body of the pull request")
 )]
@@ -198,19 +198,17 @@ impl CreateOrUpdatePullRequest {
                 &context.history().await
             )
             .await
-            .map_or_else(
-                |e| Ok::<String, ToolError>(e.to_string()),
+            .map(
                 |pr| {
-                    Ok(pr.html_url.map_or_else(
+                    pr.html_url.map_or_else(
                         || {
                             "No pull request url found, are you sure you commited and pushed your changes?"
                                 .to_string()
                         },
                         |url| url.to_string(),
-                    ))
+                    )
                 },
-            )
-            .unwrap();
+            ).context("Failed to create or update pull request")?;
 
         Ok(response.into())
     }
@@ -260,7 +258,7 @@ impl RunCoverage {
 
 #[derive(Tool, Clone)]
 #[tool(
-    description = "Search the web to answer a question",
+    description = "Search the web to answer a question. If you encounter an issue that cannot be resolved, use this tool to help getting an answer.",
     param(name = "query", description = "Search query")
 )]
 pub struct SearchWeb {

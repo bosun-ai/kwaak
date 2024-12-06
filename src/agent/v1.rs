@@ -42,7 +42,7 @@ async fn generate_initial_context(
     template_context.insert("query", query);
     template_context.insert("available_tools", &available_tools);
 
-    let initial_context_prompt = Templates::render("v1_initial_context", &template_context)?;
+    let initial_context_prompt = Templates::render("v1_initial_context.md", &template_context)?;
     let retrieved_context = indexing::query(repository, &initial_context_prompt).await?;
     let formatted_context = format!("Additional information:\n\n{retrieved_context}");
     Ok(formatted_context)

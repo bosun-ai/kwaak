@@ -85,7 +85,7 @@ impl GithubSession {
             .iter()
             .map(|m| {
                 let mut m = m.to_string();
-                m.truncate(80);
+                m.truncate(512);
                 m.trim().to_string()
             })
             .collect::<Vec<_>>();

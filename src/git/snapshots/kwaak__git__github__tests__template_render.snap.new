@@ -1,4 +1,10 @@
-{{description}}
+---
+source: src/git/github.rs
+assertion_line: 179
+expression: rendered
+snapshot_kind: text
+---
+description
 
 ---
 
@@ -7,8 +13,12 @@ _This pull request was created by [kwaak](https://github.com/bosun-ai/kwaak), a 
 <details>
 <summary>Message History</summary>
   ```text
-  {% for message in messages %}
-    {{message}}
-  {% endfor %}
+  
+    User: "user message"
+  
+    System: "user message"
+  
+    Summary: "user message"
+  
   ```
 </details>
