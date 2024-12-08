@@ -134,6 +134,7 @@ pub async fn build_agent(
             "Verify assumptions you make about the code by researching the actual code first",
             "If you are stuck, consider using git to undo your changes",
             "Focus on completing the task fully as requested by the user",
+            "Make sure you understand the project layout in terms of files and directories",
             "Keep a neutral tone, refrain from using superlatives and unnecessary adjectives",
         ]).build()?.into();
 
