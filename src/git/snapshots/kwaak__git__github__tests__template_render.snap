@@ -10,13 +10,34 @@ _This pull request was created by [kwaak](https://github.com/bosun-ai/kwaak), a 
 
 <details>
 <summary>Message History</summary>
-  ```text
-  
-    User: "user message"
-  
-    System: "user message"
-  
-    Summary: "user message"
-  
-  ```
+
+<details>
+  <summary>▶ User</summary>
+
+```markdown
+user message
+```
+</details>
+<details>
+  <summary>ℹ System</summary>
+
+```markdown
+system message
+```
+</details>
+<details>
+  <summary>✦ Assistant</summary>
+
+```markdown
+assistant message
+```
+</details>
+---
+<details>
+  <summary>>> Summary</summary>
+
+```markdown
+summary message
+```
+</details>
 </details>

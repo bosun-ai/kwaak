@@ -6,9 +6,19 @@ _This pull request was created by [kwaak](https://github.com/bosun-ai/kwaak), a 
 
 <details>
 <summary>Message History</summary>
-  ```text
-  {% for message in messages %}
-    {{message}}
-  {% endfor %}
-  ```
+
+{% for message in messages -%}
+<details>
+  <summary>{{message.role}}</summary>
+
+```markdown
+{{message.content}}
+```
+</details>
+{% if message.role is containing("Assistant") -%}
+
+---
+{% endif -%}
+{% endfor -%}
+
 </details>
