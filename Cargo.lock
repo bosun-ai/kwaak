@@ -5823,6 +5823,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "swiftide"
 version = "0.14.3"
+source = "git+https://github.com/bosun-ai/swiftide?branch=feat%2Fswiftide-agents#fd763fa4f6ac8fbe01d8061f3d92469dc9c91d03"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5839,6 +5840,7 @@ dependencies = [
 [[package]]
 name = "swiftide-agents"
 version = "0.14.3"
+source = "git+https://github.com/bosun-ai/swiftide?branch=feat%2Fswiftide-agents#fd763fa4f6ac8fbe01d8061f3d92469dc9c91d03"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5859,6 +5861,7 @@ dependencies = [
 [[package]]
 name = "swiftide-core"
 version = "0.14.3"
+source = "git+https://github.com/bosun-ai/swiftide?branch=feat%2Fswiftide-agents#fd763fa4f6ac8fbe01d8061f3d92469dc9c91d03"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5883,6 +5886,7 @@ dependencies = [
 [[package]]
 name = "swiftide-indexing"
 version = "0.14.3"
+source = "git+https://github.com/bosun-ai/swiftide?branch=feat%2Fswiftide-agents#fd763fa4f6ac8fbe01d8061f3d92469dc9c91d03"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5907,6 +5911,7 @@ dependencies = [
 [[package]]
 name = "swiftide-integrations"
 version = "0.14.3"
+source = "git+https://github.com/bosun-ai/swiftide?branch=feat%2Fswiftide-agents#fd763fa4f6ac8fbe01d8061f3d92469dc9c91d03"
 dependencies = [
  "anyhow",
  "arrow-array",
@@ -5941,6 +5946,7 @@ dependencies = [
 [[package]]
 name = "swiftide-macros"
 version = "0.14.3"
+source = "git+https://github.com/bosun-ai/swiftide?branch=feat%2Fswiftide-agents#fd763fa4f6ac8fbe01d8061f3d92469dc9c91d03"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5956,6 +5962,7 @@ dependencies = [
 [[package]]
 name = "swiftide-query"
 version = "0.14.3"
+source = "git+https://github.com/bosun-ai/swiftide?branch=feat%2Fswiftide-agents#fd763fa4f6ac8fbe01d8061f3d92469dc9c91d03"
 dependencies = [
  "anyhow",
  "async-trait",

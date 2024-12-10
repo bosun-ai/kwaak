@@ -106,7 +106,7 @@ default = ["otel"]
 ]
 
 [patch.crates-io]
-# swiftide = { git = "https://github.com/bosun-ai/swiftide", branch = "feat/swiftide-agents" }
-# swiftide-macros = { git = "https://github.com/bosun-ai/swiftide", branch = "feat/swiftide-agents" }
-swiftide = { path = "../swiftide/swiftide" }
-swiftide-macros = { path = "../swiftide/swiftide-macros" }
+swiftide = { git = "https://github.com/bosun-ai/swiftide", branch = "feat/swiftide-agents" }
+swiftide-macros = { git = "https://github.com/bosun-ai/swiftide", branch = "feat/swiftide-agents" }
+# swiftide = { path = "../swiftide/swiftide" }
+# swiftide-macros = { path = "../swiftide/swiftide-macros" }

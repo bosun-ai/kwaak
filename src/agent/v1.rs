@@ -215,8 +215,8 @@ pub async fn build_agent(
                     .exec_cmd(&Command::shell(
                         "git diff --exit-code && git ls-files --others --exclude-standard",
                     ))
-                    .await?
-                    .is_empty()
+                    .await
+                    .is_ok()
                 {
                     tracing::info!("No changes to commit, skipping commit");
 

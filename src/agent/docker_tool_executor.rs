@@ -226,10 +226,17 @@ impl RunningDockerExecutor {
             todo!();
         }
 
+        let exec_inspect = self
+            .docker
+            .inspect_exec(&exec)
+            .await
+            .context("Failed to inspect docker exec")?;
+        let exit_code = exec_inspect.exit_code.unwrap_or(0);
+
         // Trim both stdout and stderr to remove surrounding whitespace and newlines
         let output = stdout.trim().to_string() + stderr.trim();
 
-        if stderr.is_empty() {
+        if exit_code == 0 {
             Ok(output.into())
         } else {
             Err(CommandError::FailedWithOutput(output.into()))
@@ -252,11 +259,14 @@ impl RunningDockerExecutor {
 
         };
 
-        let command_result = self.exec_shell(&cmd).await;
+        let write_file_result = self.exec_shell(&cmd).await;
 
         // If the directory or file does not exist, create it
-        if let Err(CommandError::FailedWithOutput(output)) = &command_result {
-            if output.output.contains("No such file or directory") {
+        if let Err(CommandError::FailedWithOutput(write_file)) = &write_file_result {
+            if ["No such file or directory", "Directory nonexistent"]
+                .iter()
+                .any(|&s| write_file.output.contains(s))
+            {
                 let path = path.parent().context("No parent directory")?;
                 let mkdircmd = format!("mkdir -p {}", path.display());
                 let _ = self.exec_shell(&mkdircmd).await?;
@@ -265,7 +275,7 @@ impl RunningDockerExecutor {
             }
         }
 
-        command_result
+        write_file_result
     }
 }
 
