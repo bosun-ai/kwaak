@@ -40,7 +40,9 @@ pub enum Command {
     IndexRepository {
         uuid: Uuid,
     },
-    /// Default when no command is provided
+    StopAgent {
+        uuid: Uuid,
+    },
     Chat {
         uuid: Uuid,
         message: String,
@@ -122,6 +124,7 @@ impl Command {
     pub fn uuid(&self) -> Uuid {
         match self {
             Command::Quit { uuid }
+            | Command::StopAgent { uuid }
             | Command::ShowConfig { uuid }
             | Command::IndexRepository { uuid }
             | Command::Chat { uuid, .. } => *uuid,
@@ -130,6 +133,7 @@ impl Command {
 
     pub fn with_uuid(self, uuid: Uuid) -> Self {
         match self {
+            Command::StopAgent { .. } => Command::StopAgent { uuid },
             Command::Quit { .. } => Command::Quit { uuid },
             Command::ShowConfig { .. } => Command::ShowConfig { uuid },
             Command::IndexRepository { .. } => Command::IndexRepository { uuid },
@@ -165,6 +169,10 @@ struct RunningAgent {
 impl RunningAgent {
     pub async fn query(&self, query: &str) -> Result<()> {
         self.agent.lock().await.query(query).await
+    }
+
+    pub async fn stop(&self) {
+        self.agent.lock().await.stop();
     }
 }
 
@@ -249,6 +257,18 @@ impl CommandHandler {
 
         #[allow(clippy::match_wildcard_for_single_variants)]
         match cmd {
+            Command::StopAgent { uuid  } => {
+                let mut locked_agents = self.agents.write().await;
+                let Some(agent) = locked_agents.get_mut(uuid) else {
+                    let _ = ui_tx.send(ChatMessage::new_system("No agent found").uuid(*uuid).into());
+                    return Ok(());
+                };
+
+                agent.stop();
+
+                let _ = ui_tx.send(ChatMessage::new_system("Agent stopped").uuid(*uuid).into());
+                           
+            }
             Command::IndexRepository { .. } => indexing::index_repository(repository).await?,
             Command::ShowConfig { uuid } => {
                 ui_tx

@@ -1,3 +1,5 @@
+// TODO: Rename to slash commands for clarity?
+//
 use uuid::Uuid;
 
 use crate::commands::Command;
