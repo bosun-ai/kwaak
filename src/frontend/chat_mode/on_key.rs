@@ -10,6 +10,7 @@ use crate::{
 pub fn on_key(app: &mut App, key: KeyEvent) {
     let current_input = app.text_input.lines().join("\n");
 
+    // `Ctrl-s` to send the message in the text input
     if key.code == KeyCode::Char('s')
         && key
             .modifiers
@@ -36,6 +37,28 @@ pub fn on_key(app: &mut App, key: KeyEvent) {
 
         app.text_input = TextArea::default();
 
+        return;
+    }
+
+
+    // `Ctrl-x` to stop a running agent
+    if key.code == KeyCode::Char('x')
+        && key
+            .modifiers
+            .contains(crossterm::event::KeyModifiers::CONTROL)
+    {
+        app.dispatch_command(&Command::StopAgent { uuid: app.current_chat });
+        return;
+    }
+
+
+    // `Ctrl-n` to start a new chat
+    if key.code == KeyCode::Char('n')
+        && key
+            .modifiers
+            .contains(crossterm::event::KeyModifiers::CONTROL)
+    {
+        app.send_ui_event(UIEvent::NewChat);
         return;
     }
 
