@@ -260,7 +260,7 @@ impl CommandHandler {
             Command::StopAgent { uuid  } => {
                 let mut locked_agents = self.agents.write().await;
                 let Some(agent) = locked_agents.get_mut(uuid) else {
-                    let _ = ui_tx.send(ChatMessage::new_system("No agent found").uuid(*uuid).into());
+                    let _ = ui_tx.send(ChatMessage::new_system("No agent found (yet), is it starting up?").uuid(*uuid).into());
                     return Ok(());
                 };
 
