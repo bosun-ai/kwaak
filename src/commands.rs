@@ -266,7 +266,7 @@ impl CommandHandler {
 
                 agent.stop();
 
-                let _ = ui_tx.send(ChatMessage::new_system("Agent stopped").uuid(*uuid).into());
+                let _ = ui_tx.send(ChatMessage::new_system("Agent will finish its current completions and stop").uuid(*uuid).into());
                            
             }
             Command::IndexRepository { .. } => indexing::index_repository(repository).await?,

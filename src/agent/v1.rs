@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use swiftide::{
     agents::{
         system_prompt::SystemPrompt, tools::local_executor::LocalExecutor, Agent, DefaultContext,
@@ -210,13 +210,14 @@ pub async fn build_agent(
             let maybe_lint_fix_command = maybe_lint_fix_command.clone();
             let command_responder = command_responder.clone();
             Box::pin(async move {
-                // If no changed files, we can do an early return
+                // TODO: Refactor to a separate tool so it can be tested in isolation and is less
+                // messy
                 if context
                     .exec_cmd(&Command::shell(
-                        "git diff --exit-code && git ls-files --others --exclude-standard",
+                        "git status --porcelain",
                     ))
-                    .await
-                    .is_ok()
+                    .await.context("Could not determine git status")?
+                    .is_empty()
                 {
                     tracing::info!("No changes to commit, skipping commit");
 
@@ -225,37 +226,25 @@ pub async fn build_agent(
 
                 if let Some(lint_fix_command) = &maybe_lint_fix_command {
                     command_responder.send_update("running lint and fix");
-                    let _ = context
+                    context
                         .exec_cmd(&Command::shell(lint_fix_command))
-                        .await
-                        .map_err(|e| {
-                            tracing::error!("Error running lint and fix: {:#}", e);
-                        });
+                        .await.context("Could not run lint and fix")?;
                 };
 
                 // Then commit the changes
-                let _ = context
+                context
                     .exec_cmd(&Command::shell("git add ."))
-                    .await
-                    .map_err(|e| {
-                        tracing::error!("Error adding files to git: {:?}", e);
-                    });
+                    .await.context("Could not add files to git")?;
 
-                let _ = context
+                context
                     .exec_cmd(&Command::shell(
-                        "git commit -m \"Committed changes after completion\"",
+                        "git commit -m \"[kwaak]: Committed changes after completion\"",
                     ))
-                    .await
-                    .map_err(|e| {
-                        tracing::error!("Error committing files to git: {:?}", e);
-                    });
+                    .await.context("Could not commit files to git")?;
 
-                let _ = context
+                context
                     .exec_cmd(&Command::shell("git push"))
-                    .await
-                    .map_err(|e| {
-                        tracing::error!("Error pushing changes to git: {:?}", e);
-                    });
+                    .await.context("Could not push changes to git")?;
 
                 Ok(())
             })
