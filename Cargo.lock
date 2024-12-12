@@ -4902,9 +4902,9 @@ dependencies = [
 
 [[package]]
 name = "redb"
-version = "2.2.0"
+version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84b1de48a7cf7ba193e81e078d17ee2b786236eed1d3f7c60f8a09545efc4925"
+checksum = "a7c2a94325f9c5826b17c42af11067230f503747f870117a28180e85696e21ba"
 dependencies = [
  "libc",
 ]
@@ -5822,8 +5822,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "swiftide"
-version = "0.14.3"
-source = "git+https://github.com/bosun-ai/swiftide?branch=feat%2Fswiftide-agents#d12e44b50ec59e7f85dc233e9cf86aa25d27cae0"
+version = "0.14.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8a9ab7beb6dd46d2a778b235000f997f4627ea51934f7e42577352e8be6bc6c"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5839,8 +5840,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-agents"
-version = "0.14.3"
-source = "git+https://github.com/bosun-ai/swiftide?branch=feat%2Fswiftide-agents#d12e44b50ec59e7f85dc233e9cf86aa25d27cae0"
+version = "0.14.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b761dfb4dfd1e69aa7e1b3633d6aa40b84f416099ca92412c1a28b138f78a326"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5860,8 +5862,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-core"
-version = "0.14.3"
-source = "git+https://github.com/bosun-ai/swiftide?branch=feat%2Fswiftide-agents#d12e44b50ec59e7f85dc233e9cf86aa25d27cae0"
+version = "0.14.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e399610dc2d6cb59e3ef68e86aadaa740dc552c47183f3559676252591ba3a7d"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5885,8 +5888,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-indexing"
-version = "0.14.3"
-source = "git+https://github.com/bosun-ai/swiftide?branch=feat%2Fswiftide-agents#d12e44b50ec59e7f85dc233e9cf86aa25d27cae0"
+version = "0.14.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bcc9a51da8aa498ea28526f6187ceb8ef136eea1bba597c541bf93805e410806"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5910,8 +5914,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-integrations"
-version = "0.14.3"
-source = "git+https://github.com/bosun-ai/swiftide?branch=feat%2Fswiftide-agents#d12e44b50ec59e7f85dc233e9cf86aa25d27cae0"
+version = "0.14.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d98a417d44e9a2075a27560cee695c8a832500cf0489fdf306a85ba8a240846"
 dependencies = [
  "anyhow",
  "arrow-array",
@@ -5945,8 +5950,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-macros"
-version = "0.14.3"
-source = "git+https://github.com/bosun-ai/swiftide?branch=feat%2Fswiftide-agents#d12e44b50ec59e7f85dc233e9cf86aa25d27cae0"
+version = "0.14.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8361119abc5fa053cf3fbbd6d086f0e2ae733fe3337a2b6ebafd63d48467449a"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5961,8 +5967,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-query"
-version = "0.14.3"
-source = "git+https://github.com/bosun-ai/swiftide?branch=feat%2Fswiftide-agents#d12e44b50ec59e7f85dc233e9cf86aa25d27cae0"
+version = "0.14.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c90e46117e2c54e4f087b2967bacde3078d220217c1f77f0317e2c8288346fb8"
 dependencies = [
  "anyhow",
  "async-trait",

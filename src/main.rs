@@ -31,6 +31,7 @@ mod frontend;
 mod git;
 mod indexing;
 mod kwaak_tracing;
+mod onboarding;
 mod repository;
 mod storage;
 mod templates;
