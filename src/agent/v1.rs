@@ -13,7 +13,7 @@ use tavily::Tavily;
 
 use crate::{
     commands::CommandResponder, config::SupportedToolExecutors, git::github::GithubSession,
-    indexing, repository::Repository, templates::Templates,
+    indexing, repository::Repository, templates::Templates, util::accept_non_zero_exit,
 };
 
 use super::{
@@ -212,12 +212,13 @@ pub async fn build_agent(
             Box::pin(async move {
                 // TODO: Refactor to a separate tool so it can be tested in isolation and is less
                 // messy
-                if context
-                    .exec_cmd(&Command::shell(
-                        "git status --porcelain",
-                    ))
-                    .await.context("Could not determine git status")?
-                    .is_empty()
+                if accept_non_zero_exit(
+                    context
+                        .exec_cmd(&Command::shell("git status --porcelain"))
+                        .await,
+                )
+                .context("Could not determine git status")?
+                .is_empty()
                 {
                     tracing::info!("No changes to commit, skipping commit");
 
@@ -226,25 +227,25 @@ pub async fn build_agent(
 
                 if let Some(lint_fix_command) = &maybe_lint_fix_command {
                     command_responder.send_update("running lint and fix");
-                    context
-                        .exec_cmd(&Command::shell(lint_fix_command))
-                        .await.context("Could not run lint and fix")?;
+                    accept_non_zero_exit(context.exec_cmd(&Command::shell(lint_fix_command)).await)
+                        .context("Could not run lint and fix")?;
                 };
 
                 // Then commit the changes
-                context
-                    .exec_cmd(&Command::shell("git add ."))
-                    .await.context("Could not add files to git")?;
+                accept_non_zero_exit(context.exec_cmd(&Command::shell("git add .")).await)
+                    .context("Could not add files to git")?;
 
-                context
-                    .exec_cmd(&Command::shell(
-                        "git commit -m \"[kwaak]: Committed changes after completion\"",
-                    ))
-                    .await.context("Could not commit files to git")?;
+                accept_non_zero_exit(
+                    context
+                        .exec_cmd(&Command::shell(
+                            "git commit -m \"[kwaak]: Committed changes after completion\"",
+                        ))
+                        .await,
+                )
+                .context("Could not commit files to git")?;
 
-                context
-                    .exec_cmd(&Command::shell("git push"))
-                    .await.context("Could not push changes to git")?;
+                accept_non_zero_exit(context.exec_cmd(&Command::shell("git push")).await)
+                    .context("Could not push changes to git")?;
 
                 Ok(())
             })

@@ -11,7 +11,7 @@ use swiftide_macros::{tool, Tool};
 use tavily::Tavily;
 use tokio::sync::Mutex;
 
-use crate::{config::ApiKey, git::github::GithubSession};
+use crate::{config::ApiKey, git::github::GithubSession, util::accept_non_zero_exit};
 
 static MAIN_BRANCH_CMD: &str = "git remote show origin | sed -n '/HEAD branch/s/.*: //p'";
 
@@ -24,7 +24,7 @@ static MAIN_BRANCH_CMD: &str = "git remote show origin | sed -n '/HEAD branch/s/
     )
 )]
 pub async fn shell_command(context: &dyn AgentContext, cmd: &str) -> Result<ToolOutput, ToolError> {
-    let output = context.exec_cmd(&Command::Shell(cmd.into())).await?;
+    let output = accept_non_zero_exit(context.exec_cmd(&Command::Shell(cmd.into())).await)?;
     Ok(output.into())
 }
 
@@ -71,7 +71,7 @@ pub async fn search_file(
     file_name: &str,
 ) -> Result<ToolOutput, ToolError> {
     let cmd = Command::Shell(format!("fd '{file_name}'"));
-    let output = context.exec_cmd(&cmd).await?;
+    let output = accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
 
     Ok(output.into())
 }
@@ -82,7 +82,7 @@ pub async fn search_file(
 )]
 pub async fn git(context: &dyn AgentContext, command: &str) -> Result<ToolOutput, ToolError> {
     let cmd = Command::Shell(format!("git {command}"));
-    let output = context.exec_cmd(&cmd).await?;
+    let output = accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
 
     Ok(output.into())
 }
@@ -96,7 +96,7 @@ pub async fn git(context: &dyn AgentContext, command: &str) -> Result<ToolOutput
 )]
 pub async fn search_code(context: &dyn AgentContext, query: &str) -> Result<ToolOutput, ToolError> {
     let cmd = Command::Shell(format!("rg '{query}'"));
-    let output = context.exec_cmd(&cmd).await?;
+    let output = accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
     Ok(output.into())
 }
 
@@ -174,15 +174,18 @@ impl CreateOrUpdatePullRequest {
     ) -> Result<ToolOutput, ToolError> {
         // Create a new branch
         let cmd = Command::Shell("git rev-parse --abbrev-ref HEAD".to_string());
-        let branch_name = context.exec_cmd(&cmd).await?.to_string().trim().to_string();
+        let branch_name = accept_non_zero_exit(context.exec_cmd(&cmd).await)?
+            .to_string()
+            .trim()
+            .to_string();
 
         let cmd = Command::Shell(format!("git add . && git commit -m '{title}'"));
-        context.exec_cmd(&cmd).await?;
+        accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
 
         // Commit changes
         // Push the current branch first
         let cmd = Command::Shell("git push origin HEAD".to_string());
-        context.exec_cmd(&cmd).await?;
+        accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
 
         // Any errors we just forward to the llm at this point
         let response = self
@@ -226,12 +229,9 @@ impl RunTests {
 
     async fn run_tests(&self, context: &dyn AgentContext) -> Result<ToolOutput, ToolError> {
         let cmd = Command::Shell(self.test_command.clone());
-        match context.exec_cmd(&cmd).await {
-            Ok(test_result) => Ok(test_result.into()),
-            // Generally failed tests have a non-zero exit code
-            Err(CommandError::FailedWithOutput(test_result)) => Ok(test_result.into()),
-            Err(err) => Err(err.into()),
-        }
+        let output = accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
+
+        Ok(output.into())
     }
 }
 
@@ -250,12 +250,9 @@ impl RunCoverage {
 
     async fn run_coverage(&self, context: &dyn AgentContext) -> Result<ToolOutput, ToolError> {
         let cmd = Command::Shell(self.coverage_command.clone());
-        match context.exec_cmd(&cmd).await {
-            Ok(test_result) => Ok(test_result.into()),
-            // Generally failed tests have a non-zero exit code
-            Err(CommandError::FailedWithOutput(test_result)) => Ok(test_result.into()),
-            Err(err) => Err(err.into()),
-        }
+        let output = accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
+
+        Ok(output.into())
     }
 }
 

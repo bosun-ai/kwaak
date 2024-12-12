@@ -1,8 +1,20 @@
+use swiftide::traits::{CommandError, CommandOutput};
+
 pub fn strip_markdown_tags(text: &str) -> String {
     if text.starts_with("```markdown") && text.ends_with("```") {
         text[12..text.len() - 3].trim().to_string()
     } else {
         text.to_string()
+    }
+}
+
+// TODO: Would be nice if this was a method on a custom result in swiftide
+pub fn accept_non_zero_exit(
+    result: Result<CommandOutput, CommandError>,
+) -> Result<CommandOutput, CommandError> {
+    match result {
+        Ok(output) | Err(CommandError::FailedWithOutput(output)) => Ok(output),
+        Err(err) => Err(err),
     }
 }
 
