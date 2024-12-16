@@ -40,17 +40,17 @@ pub fn on_key(app: &mut App, key: KeyEvent) {
         return;
     }
 
-
     // `Ctrl-x` to stop a running agent
     if key.code == KeyCode::Char('x')
         && key
             .modifiers
             .contains(crossterm::event::KeyModifiers::CONTROL)
     {
-        app.dispatch_command(&Command::StopAgent { uuid: app.current_chat });
+        app.dispatch_command(&Command::StopAgent {
+            uuid: app.current_chat,
+        });
         return;
     }
-
 
     // `Ctrl-n` to start a new chat
     if key.code == KeyCode::Char('n')
@@ -65,16 +65,18 @@ pub fn on_key(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Tab => app.send_ui_event(UIEvent::NextChat),
         KeyCode::PageDown => {
-            app.vertical_scroll = app.vertical_scroll.saturating_add(1);
-            app.vertical_scroll_state = app
+            let current_chat = app.current_chat_mut();
+            current_chat.vertical_scroll = current_chat.vertical_scroll.saturating_add(1);
+            current_chat.vertical_scroll_state = current_chat
                 .vertical_scroll_state
-                .position(app.vertical_scroll);
+                .position(current_chat.vertical_scroll);
         }
         KeyCode::PageUp => {
-            app.vertical_scroll = app.vertical_scroll.saturating_sub(1);
-            app.vertical_scroll_state = app
+            let current_chat = app.current_chat_mut();
+            current_chat.vertical_scroll = current_chat.vertical_scroll.saturating_sub(1);
+            current_chat.vertical_scroll_state = current_chat
                 .vertical_scroll_state
-                .position(app.vertical_scroll);
+                .position(current_chat.vertical_scroll);
         }
         _ => {
             app.text_input.input(key);
