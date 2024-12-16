@@ -76,6 +76,7 @@ rust-embed = { version = "8.5.0", features = ["debug-embed"] }
 [dev-dependencies]
 test-log = { version = "0.2.16", features = ["trace"] }
 insta = "1.41.1"
+tempfile = "3.14.0"
 
 [lints.rust]
 unsafe_code = "forbid"

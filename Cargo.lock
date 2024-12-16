@@ -3167,6 +3167,7 @@ dependencies = [
  "swiftide",
  "swiftide-macros",
  "tavily",
+ "tempfile",
  "tera",
  "test-log",
  "throbber-widgets-tui",

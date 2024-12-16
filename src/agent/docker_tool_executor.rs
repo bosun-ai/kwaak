@@ -41,6 +41,7 @@ pub struct DockerExecutor {
     image_name: String,
     #[allow(dead_code)]
     working_dir: PathBuf,
+    dockerfile: PathBuf,
 }
 
 impl Default for DockerExecutor {
@@ -49,6 +50,7 @@ impl Default for DockerExecutor {
             context_path: ".".into(),
             image_name: "docker-executor".into(),
             working_dir: ".".into(),
+            dockerfile: "Dockerfile".into(),
         }
     }
 }
@@ -63,8 +65,10 @@ impl DockerExecutor {
             // TODO: Clean me up
             panic!("Running in docker requires a Dockerfile");
         }
-        executor.with_context_path(&repository.config().docker.context);
-        executor.with_image_name(&repository.config().project_name);
+        executor
+            .with_context_path(&repository.config().docker.context)
+            .with_image_name(&repository.config().project_name)
+            .with_dockerfile(dockerfile);
 
         executor
     }
@@ -81,6 +85,11 @@ impl DockerExecutor {
         self
     }
 
+    pub fn with_dockerfile(&mut self, path: impl Into<PathBuf>) -> &mut Self {
+        self.dockerfile = path.into();
+        self
+    }
+
     #[allow(dead_code)]
     pub fn with_working_dir(&mut self, path: impl Into<PathBuf>) -> &mut Self {
         self.working_dir = path.into();
@@ -89,7 +98,7 @@ impl DockerExecutor {
     }
 
     pub async fn start(self) -> Result<RunningDockerExecutor> {
-        RunningDockerExecutor::start(&self.context_path, &self.image_name).await
+        RunningDockerExecutor::start(&self.context_path, &self.dockerfile, &self.image_name).await
     }
 }
 
@@ -108,7 +117,11 @@ impl ToolExecutor for RunningDockerExecutor {
 
 impl RunningDockerExecutor {
     /// Starts a docker container with a given context and image name
-    pub async fn start(context_path: &Path, image_name: &str) -> Result<RunningDockerExecutor> {
+    pub async fn start(
+        context_path: &Path,
+        dockerfile: &Path,
+        image_name: &str,
+    ) -> Result<RunningDockerExecutor> {
         let docker = Docker::connect_with_socket_defaults().unwrap();
 
         // TODO: Handle dockerfile not being named `Dockerfile` or missing
@@ -124,6 +137,8 @@ impl RunningDockerExecutor {
         let build_options = BuildImageOptions {
             t: image_name.as_str(),
             rm: true,
+            #[allow(clippy::unnecessary_to_owned)]
+            dockerfile: &dockerfile.to_string_lossy().into_owned(),
             ..Default::default()
         };
 
@@ -312,6 +327,7 @@ async fn build_context_as_tar(context_path: &Path) -> Result<Vec<u8>> {
     // Ensure we *do* include the .git directory
     // let overrides = OverrideBuilder::new(context_path).add(".git")?.build()?;
 
+    dbg!(&context_path);
     for entry in WalkBuilder::new(context_path)
         // .overrides(overrides)
         .hidden(false)
@@ -322,7 +338,7 @@ async fn build_context_as_tar(context_path: &Path) -> Result<Vec<u8>> {
         let path = entry.path();
 
         if path.is_file() {
-            let relative_path = path.strip_prefix(context_path)?;
+            dbg!(path);
             let mut file = tokio::fs::File::open(path).await?;
             let mut buffer_content = Vec::new();
             file.read_to_end(&mut buffer_content).await?;
@@ -331,6 +347,8 @@ async fn build_context_as_tar(context_path: &Path) -> Result<Vec<u8>> {
             header.set_size(buffer_content.len() as u64);
             header.set_mode(0o644);
             header.set_cksum();
+
+            let relative_path = path.strip_prefix(context_path)?;
             tar.append_data(&mut header, relative_path, &*buffer_content)
                 .await?;
         }
@@ -343,6 +361,7 @@ async fn build_context_as_tar(context_path: &Path) -> Result<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
+
     use bollard::secret::ContainerStateStatusEnum;
 
     use super::*;
@@ -539,5 +558,32 @@ mod tests {
 
         // Assert that the written content matches the read content
         assert_eq!(content, read_file.output);
+    }
+
+    #[test_log::test(tokio::test(flavor = "multi_thread"))]
+    async fn test_custom_dockerfile() {
+        let context_path = tempfile::tempdir().unwrap();
+
+        dbg!("Copying context to {}", context_path.path().display());
+        std::process::Command::new("cp")
+            .arg("Dockerfile")
+            .arg(context_path.path().join("Dockerfile.custom"))
+            .output()
+            .unwrap();
+
+        let executor = DockerExecutor::default()
+            .with_context_path(context_path.path())
+            .with_image_name("test-custom")
+            .with_dockerfile("Dockerfile.custom")
+            .to_owned()
+            .start()
+            .await
+            .unwrap();
+
+        let output = executor
+            .exec_cmd(&Command::shell("echo hello"))
+            .await
+            .unwrap();
+        assert_eq!(output.to_string(), "hello");
     }
 }
