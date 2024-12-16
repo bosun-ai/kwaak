@@ -41,6 +41,18 @@ mod util;
 async fn main() -> Result<()> {
     let args = cli::Args::parse();
 
+    if args.init {
+        if std::fs::metadata("kwaak.toml").is_ok() {
+            println!("kwaak.toml already exists in current directory, skipping initialization");
+            return Ok(());
+        }
+        let config = onboarding::create_template_config()?;
+        std::fs::write("kwaak.toml", config)?;
+
+        println!("Initialized kwaak project in current directory, please review and customize the created `kwaak.toml` file");
+        return Ok(());
+    }
+
     init_panic_hook();
     // Load configuration
     let config = Config::load(&args.config_path).await?;

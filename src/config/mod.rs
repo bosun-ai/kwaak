@@ -2,7 +2,7 @@ mod api_key;
 mod command_configuration;
 #[allow(clippy::module_inception)]
 mod config;
-mod defaults;
+pub mod defaults;
 mod llm_configuration;
 
 pub use api_key::ApiKey;

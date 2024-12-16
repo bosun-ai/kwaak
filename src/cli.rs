@@ -23,6 +23,10 @@ pub struct Args {
     /// Clear the the index and cache for this project and exit
     #[arg(long, name = "clear-cache", default_value_t = false)]
     pub clear_cache: bool,
+
+    /// Initializes a new kwaak project in the current directory
+    #[arg(long, default_value_t = false)]
+    pub init: bool,
 }
 
 #[derive(clap::ValueEnum, Clone, Debug, Default)]
