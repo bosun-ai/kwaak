@@ -13,7 +13,6 @@ use std::sync::{atomic::AtomicUsize, Arc};
 use swiftide::{
     agents::hooks::AfterEachFn,
     chat_completion::{ChatCompletion, ChatMessage, Tool},
-    traits::SimplePrompt,
 };
 use tracing::Instrument as _;
 

@@ -145,9 +145,9 @@ fn format_message(message: &ChatMessage) -> serde_json::Value {
         ChatMessage::ToolOutput(..) => "⚙ Tool Output",
     };
     let content = match message {
-        ChatMessage::User(msg) => msg.to_string(),
-        ChatMessage::System(msg) => msg.to_string(),
-        ChatMessage::Summary(msg) => msg.to_string(),
+        ChatMessage::User(msg) | ChatMessage::System(msg) | ChatMessage::Summary(msg) => {
+            msg.to_string()
+        }
         ChatMessage::Assistant(msg, tool_calls) => {
             let mut msg = msg.as_deref().unwrap_or_default().to_string();
 
