@@ -3,22 +3,20 @@
 
 <!--toc:start-->
 
-- [About The Project](#about-the-project)
-- [Latest updates on our blog :fire:](#latest-updates-on-our-blog-fire)
-- [Example](#example)
-- [Vision](#vision)
+- [What is Kwaak?](#what-is-kwaak)
 - [Features](#features)
-  - [In detail](#in-detail)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-- [Usage and concepts](#usage-and-concepts)
+- [Getting started](#getting-started)
+  - [Requirements](#requirements)
+  - [Installation and setup](#installation-and-setup)
+  - [Running Kwaak](#running-kwaak)
+- [Example prompts](#example-prompts)
 - [Roadmap](#roadmap)
+- [Community](#community)
 - [Contributing](#contributing)
 - [License](#license)
   <!--toc:end-->
 
-    </details>
+      </details>
 
 <a name="readme-top"></a>
 
