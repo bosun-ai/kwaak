@@ -53,9 +53,7 @@ derive_more = { version = "1.0.0", features = ["full"] }
 tui-markdown = "0.3.0"
 uuid = { version = "1.10.0", features = ["v4"] }
 derive_builder = "0.20.2"
-tui-logger = { features = [
-  "tracing-support",
-], git = "https://github.com/gin66/tui-logger" }
+tui-logger = { features = ["tracing-support"], version = "0.14" }
 # Only needed for tui-logger filtering
 log = "0.4"
 throbber-widgets-tui = "0.8.0"
