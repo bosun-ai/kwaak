@@ -6,15 +6,9 @@ use tui_logger::TuiWidgetState;
 use tui_textarea::TextArea;
 use uuid::Uuid;
 
-// use ratatui::{
-//     layout::Rect,
-//     style::{Modifier, Style},
-//     widgets::{ListState, ScrollbarState, Tabs},
-//     Terminal,
-// };
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, ListState, Padding, ScrollbarState, Tabs},
+    widgets::{Block, Borders, ListState, Padding, Tabs},
 };
 
 use crossterm::event::{self, KeyCode, KeyEvent};
@@ -55,10 +49,6 @@ pub struct App<'a> {
 
     /// Mode the app is in, manages the which layout is rendered and if it should quit
     pub mode: AppMode,
-
-    // Scroll chat
-    pub vertical_scroll_state: ScrollbarState,
-    pub vertical_scroll: usize,
 
     /// Tracks the current selected state in the UI
     pub chats_state: ListState,
@@ -132,8 +122,6 @@ impl Default for App<'_> {
             ui_rx,
             command_tx: None,
             mode: AppMode::default(),
-            vertical_scroll_state: ScrollbarState::default(),
-            vertical_scroll: 0,
             chats_state: ListState::default().with_selected(Some(0)),
             tab_names: vec!["[F1] Chats", "[F2] Logs"],
             log_state: TuiWidgetState::new()
@@ -308,8 +296,6 @@ impl App<'_> {
 
             return;
         };
-
-        // TODO: Just use math, current + 1 % len
 
         if let Some(chat) = self.chats.get(next_idx) {
             self.chats_state.select(Some(next_idx));

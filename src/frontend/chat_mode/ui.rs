@@ -52,7 +52,7 @@ pub fn ui(f: &mut ratatui::Frame, area: Rect, app: &mut App) {
 }
 
 fn render_chat_messages(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
-    let current_chat = app.current_chat();
+    let current_chat = app.current_chat_mut();
     let messages = current_chat.messages.clone();
     let chat_content: Text = messages
         .iter()
@@ -61,13 +61,14 @@ fn render_chat_messages(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
 
     let num_lines = chat_content.lines.len();
 
-    app.vertical_scroll_state = app.vertical_scroll_state.content_length(num_lines);
+    current_chat.vertical_scroll_state =
+        current_chat.vertical_scroll_state.content_length(num_lines);
 
     // If we're rendering the current chat and it has new messages
     // set the counter back to 0 and scroll to bottom
     // TODO: Fix this, this solution is annoying as it overwrites scrolling by the user
-    if app.current_chat().new_message_count > 0 {
-        app.current_chat_mut().new_message_count = 0;
+    if current_chat.new_message_count > 0 {
+        current_chat.new_message_count = 0;
     }
     //
     //     let max_height = area.height as usize;
@@ -98,7 +99,7 @@ fn render_chat_messages(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
     let chat_messages = Paragraph::new(chat_content)
         .block(message_block)
         .wrap(Wrap { trim: false })
-        .scroll((app.vertical_scroll as u16, 0));
+        .scroll((current_chat.vertical_scroll as u16, 0));
 
     f.render_widget(chat_messages, area);
 
@@ -108,7 +109,7 @@ fn render_chat_messages(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
             .begin_symbol(Some("↑"))
             .end_symbol(Some("↓")),
         area,
-        &mut app.vertical_scroll_state,
+        &mut current_chat.vertical_scroll_state,
     );
 }
 fn render_chat_list(f: &mut ratatui::Frame, app: &mut App, area: Rect) {

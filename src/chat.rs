@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use ratatui::widgets::ScrollbarState;
+
 use crate::chat_message::ChatMessage;
 
 #[derive(Debug, Clone)]
@@ -12,6 +14,11 @@ pub struct Chat {
     pub state: ChatState,
     pub new_message_count: usize,
     pub completed_tool_call_ids: HashSet<String>,
+
+    // Scrolling is per chat
+    // but handled in the ui
+    pub vertical_scroll_state: ScrollbarState,
+    pub vertical_scroll: usize,
 }
 
 impl Chat {
@@ -68,6 +75,8 @@ impl Default for Chat {
             state: ChatState::default(),
             new_message_count: 0,
             completed_tool_call_ids: HashSet::new(),
+            vertical_scroll_state: ScrollbarState::default(),
+            vertical_scroll: 0,
         }
     }
 }

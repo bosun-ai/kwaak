@@ -65,12 +65,18 @@ pub fn on_key(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Tab => app.send_ui_event(UIEvent::NextChat),
         KeyCode::PageDown => {
-            app.vertical_scroll = app.vertical_scroll.saturating_add(1);
-            app.vertical_scroll_state = app.vertical_scroll_state.position(app.vertical_scroll);
+            let current_chat = app.current_chat_mut();
+            current_chat.vertical_scroll = current_chat.vertical_scroll.saturating_add(1);
+            current_chat.vertical_scroll_state = current_chat
+                .vertical_scroll_state
+                .position(current_chat.vertical_scroll);
         }
         KeyCode::PageUp => {
-            app.vertical_scroll = app.vertical_scroll.saturating_sub(1);
-            app.vertical_scroll_state = app.vertical_scroll_state.position(app.vertical_scroll);
+            let current_chat = app.current_chat_mut();
+            current_chat.vertical_scroll = current_chat.vertical_scroll.saturating_sub(1);
+            current_chat.vertical_scroll_state = current_chat
+                .vertical_scroll_state
+                .position(current_chat.vertical_scroll);
         }
         _ => {
             app.text_input.input(key);
