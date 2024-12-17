@@ -20,7 +20,7 @@ test = "REQUIRED"
 # Example: coverage = "cargo tarpaulin --skip-clean --target-dir target/debug --engine llvm"
 coverage = "REQUIRED"
 ## Optional: Lint and fix command. This command is run after each completion cycle, before committing the code.
-## Recommened to use, as it avoids the LLM getting distracted by linting issues
+## Recommended to use, as it avoids the LLM getting distracted by linting issues
 # Example: lint_and_fix = "cargo clippy --fix --allow-dirty --allow-staged && cargo fmt"
 
 ## Git and GitHub configuration
@@ -58,6 +58,6 @@ embedding_model = "text-embedding-3-large"
 ##
 ## In the future, an executor is planned that does not have these dependencies, but for now, they are required.
 ##
-## If your project already has a Dockerfile and you want to keep it clean, you can specificy a different file to use.
+## If your project already has a Dockerfile and you want to keep it clean, you can specify a different file to use.
 [docker]
 dockerfile = "Dockerfile"
