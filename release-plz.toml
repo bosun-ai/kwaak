@@ -1,0 +1,7 @@
+[workspace]
+# `cargo-dist` creates the github release with the binaries
+git_release_enable = false
+# And create the tag such that dist is triggered
+git_tag_enable = true
+
+changelog_config = "cliff.toml"
