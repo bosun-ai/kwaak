@@ -85,6 +85,7 @@ fn otel_provider() -> TracerProvider {
         .build()
         .expect("failed to create otlp exporter");
 
+    #[allow(deprecated, reason = "fix it when it breaks")]
     TracerProvider::builder()
         .with_batch_exporter(exporter, runtime::Tokio)
         .with_config(opentelemetry_sdk::trace::Config::default().with_resource(
