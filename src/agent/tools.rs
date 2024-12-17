@@ -57,7 +57,7 @@ pub async fn write_file(
 
     context.exec_cmd(&cmd).await?;
 
-    let success_message = format!("File written succesfully to {file_name}");
+    let success_message = format!("File written successfully to {file_name}");
 
     Ok(success_message.into())
 }
@@ -202,7 +202,7 @@ impl CreateOrUpdatePullRequest {
                 |pr| {
                     pr.html_url.map_or_else(
                         || {
-                            "No pull request url found, are you sure you commited and pushed your changes?"
+                            "No pull request url found, are you sure you committed and pushed your changes?"
                                 .to_string()
                         },
                         |url| url.to_string(),

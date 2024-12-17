@@ -4,7 +4,7 @@
 project_name = "{{ project_name }}"
 language = "{{ language }}"
 
-## Optional: Connect kwaak to tavily to enabe it to search the web
+## Optional: Connect kwaak to tavily to enable it to search the web
 #tavily_api_key = "env:TAVILY_API_KEY"
 
 ## Optional: Override the tool executor. Valid options are `local` and `docker`
