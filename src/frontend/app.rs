@@ -363,8 +363,6 @@ mod tests {
         assert_eq!(app.current_chat, second_uuid);
 
         app.next_chat();
-        dbg!(app.current_chat);
-        dbg!(app.chats.iter().map(|chat| chat.uuid).collect::<Vec<_>>());
 
         assert_eq!(app.current_chat, first_uuid);
 

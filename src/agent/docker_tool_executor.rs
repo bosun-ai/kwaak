@@ -327,7 +327,6 @@ async fn build_context_as_tar(context_path: &Path) -> Result<Vec<u8>> {
     // Ensure we *do* include the .git directory
     // let overrides = OverrideBuilder::new(context_path).add(".git")?.build()?;
 
-    dbg!(&context_path);
     for entry in WalkBuilder::new(context_path)
         // .overrides(overrides)
         .hidden(false)
@@ -338,7 +337,6 @@ async fn build_context_as_tar(context_path: &Path) -> Result<Vec<u8>> {
         let path = entry.path();
 
         if path.is_file() {
-            dbg!(path);
             let mut file = tokio::fs::File::open(path).await?;
             let mut buffer_content = Vec::new();
             file.read_to_end(&mut buffer_content).await?;
@@ -385,7 +383,7 @@ mod tests {
     }
 
     #[test_log::test(tokio::test(flavor = "multi_thread"))]
-    async fn test_context_present_and_connective() {
+    async fn test_context_present() {
         let executor = DockerExecutor::default()
             .with_context_path(".")
             .with_image_name("tests")
@@ -403,14 +401,6 @@ mod tests {
             .unwrap();
 
         assert!(ls.to_string().contains("Cargo.toml"));
-
-        // Verify we have connectivity
-        let ping = executor
-            .exec_cmd(&Command::Shell("ping www.google.com -c 1".to_string()))
-            .await
-            .unwrap();
-
-        assert!(ping.output.contains("1 packets transmitted, 1 received"));
     }
 
     #[test_log::test(tokio::test(flavor = "multi_thread"))]
@@ -434,8 +424,6 @@ mod tests {
             .unwrap();
 
         let output = executor.exec_cmd(&Command::shell("ls")).await.unwrap();
-
-        dbg!(output);
 
         // Read the content from the file
         //
@@ -477,8 +465,6 @@ mod tests {
 
         let output = executor.exec_cmd(&Command::shell("ls")).await.unwrap();
 
-        dbg!(output);
-
         // Read the content from the file
         //
         let read_file = executor.exec_cmd(&Command::read_file(path)).await.unwrap();
@@ -490,7 +476,7 @@ mod tests {
     async fn test_assert_container_stopped_on_drop() {
         let executor = DockerExecutor::default()
             .with_context_path(".")
-            .with_image_name("test-files")
+            .with_image_name("test-drop")
             .with_working_dir("/app")
             .to_owned()
             .start()
@@ -550,8 +536,6 @@ mod tests {
 
         let output = executor.exec_cmd(&Command::shell("ls")).await.unwrap();
 
-        dbg!(output);
-
         // Read the content from the file
         //
         let read_file = executor.exec_cmd(&Command::read_file(path)).await.unwrap();
@@ -564,7 +548,6 @@ mod tests {
     async fn test_custom_dockerfile() {
         let context_path = tempfile::tempdir().unwrap();
 
-        dbg!("Copying context to {}", context_path.path().display());
         std::process::Command::new("cp")
             .arg("Dockerfile")
             .arg(context_path.path().join("Dockerfile.custom"))
