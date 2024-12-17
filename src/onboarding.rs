@@ -64,8 +64,15 @@ mod test {
 
     #[test]
     fn test_valid_template() {
+        // Clean up env variables for a pure test
+        std::env::vars().for_each(|(key, _)| {
+            if key.starts_with("KWAAK") {
+                std::env::remove_var(key);
+            }
+        });
+        std::env::set_var("KWAAK_OPENAI_API_KEY", "test");
+        std::env::set_var("KWAAK_GITHUB_TOKEN", "test");
         let config = create_template_config().unwrap();
-        dbg!(&config);
 
         toml::from_str::<crate::config::Config>(&config).unwrap();
     }
