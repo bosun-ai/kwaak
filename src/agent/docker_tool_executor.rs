@@ -423,8 +423,6 @@ mod tests {
             .await
             .unwrap();
 
-        let output = executor.exec_cmd(&Command::shell("ls")).await.unwrap();
-
         // Read the content from the file
         //
         let read_file = executor.exec_cmd(&Command::read_file(path)).await.unwrap();
@@ -462,8 +460,6 @@ mod tests {
             .exec_cmd(&Command::write_file(path, content))
             .await
             .unwrap();
-
-        let output = executor.exec_cmd(&Command::shell("ls")).await.unwrap();
 
         // Read the content from the file
         //
@@ -533,8 +529,6 @@ mod tests {
             .exec_cmd(&Command::write_file(path, content))
             .await
             .unwrap();
-
-        let output = executor.exec_cmd(&Command::shell("ls")).await.unwrap();
 
         // Read the content from the file
         //
