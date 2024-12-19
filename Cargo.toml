@@ -50,7 +50,7 @@ derive_more = { version = "1.0.0", features = ["full"] }
 # tui-markdown = { git = "https://github.com/timonv/tui-markdown.git", branch = "code-highlighting", features = [
 #   "highlight-code",
 # ] }
-tui-markdown = "0.3.0"
+tui-markdown = "0.3.1"
 uuid = { version = "1.10.0", features = ["v4"] }
 derive_builder = "0.20.2"
 tui-logger = { features = ["tracing-support"], version = "0.14" }
