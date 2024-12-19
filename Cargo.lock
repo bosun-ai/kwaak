@@ -6273,9 +6273,9 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "tavily"
-version = "1.0.1"
+version = "2.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6bf480643338c47dd8b9adca26108b7ae72012214f471f79dd6638a5bf1f38f"
+checksum = "33995d4fe0034d69e1b45c24268f504fcbf015b5d86e678a9f053172a6343978"
 dependencies = [
  "reqwest",
  "serde",
