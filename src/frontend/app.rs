@@ -1,9 +1,6 @@
 use anyhow::Result;
-use indoc::indoc;
-use std::io;
 use std::time::Duration;
 use strum::IntoEnumIterator as _;
-use text::{ToLine as _, ToSpan};
 use tui_logger::TuiWidgetState;
 use tui_textarea::TextArea;
 use uuid::Uuid;

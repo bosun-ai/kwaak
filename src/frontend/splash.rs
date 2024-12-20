@@ -1,7 +1,6 @@
-use anyhow::Result;
 use layout::Flex;
 use ratatui::{
-    widgets::{Block, Borders, Clear, Padding, Paragraph},
+    widgets::{Block, Padding},
     Frame,
 };
 use ratatui_splash_screen::{SplashConfig, SplashScreen};
