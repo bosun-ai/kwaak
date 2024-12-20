@@ -217,6 +217,8 @@ fn render_help(f: &mut ratatui::Frame, app: &App, area: Rect) {
     };
     Paragraph::new(
         [
+            "Page Up/Down - Scroll",
+            "^s - Send message",
             "^s - Send message",
             "^x - Stop agent",
             "^n - New chat",

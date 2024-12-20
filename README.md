@@ -131,6 +131,8 @@ Keybindings:
 - **_ctrl-x_**: Exit the agent
 - **_ctrl-c_**: Exit kwaak
 - **_ctrl-n_**: Create a new agent
+- **_Page Up_**: Scroll chat up
+- **_Page Down_**: Scroll chat down
 - **_tab_**: Switch between agents
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
