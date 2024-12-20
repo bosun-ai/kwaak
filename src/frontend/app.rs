@@ -22,6 +22,7 @@ use crate::{
     chat::{Chat, ChatState},
     chat_message::ChatMessage,
     commands::Command,
+    frontend,
 };
 
 use super::{chat_mode, logs_mode, UIEvent, UserInputCommand};
@@ -64,6 +65,9 @@ pub struct App<'a> {
 
     /// States when viewing logs
     pub log_state: TuiWidgetState,
+
+    /// Commands that relate to boot, and not a chat
+    pub boot_uuid: Uuid,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -132,6 +136,7 @@ impl Default for App<'_> {
                 .set_level_for_target("kwaak", log::LevelFilter::Info)
                 .set_level_for_target("swiftide", log::LevelFilter::Info),
             selected_tab: 0,
+            boot_uuid: Uuid::new_v4(),
         }
     }
 }
@@ -199,6 +204,9 @@ impl App<'_> {
     }
 
     fn add_chat_message(&mut self, message: ChatMessage) {
+        if message.uuid() == Some(self.boot_uuid) {
+            return;
+        }
         let chat = self.find_chat_mut(message.uuid().unwrap_or(self.current_chat));
         chat.add_message(message);
     }
@@ -207,15 +215,27 @@ impl App<'_> {
     pub async fn run<B: ratatui::backend::Backend>(
         &mut self,
         terminal: &mut Terminal<B>,
-    ) -> io::Result<()> {
+    ) -> Result<()> {
         let handle = task::spawn(poll_ui_events(self.ui_tx.clone()));
+
+        let mut has_indexed_on_boot = false;
+        let mut splash = frontend::splash::Splash::default();
+
+        self.dispatch_command(&Command::IndexRepository {
+            uuid: self.boot_uuid,
+        });
 
         loop {
             // Draw the UI
             terminal.draw(|f| {
-                let base_area = self.draw_base_ui(f);
+                if has_indexed_on_boot && splash.is_rendered() {
+                    let base_area = self.draw_base_ui(f);
 
-                self.mode.ui(f, base_area, self);
+                    self.mode.ui(f, base_area, self);
+                } else {
+                    splash.render(f, "Indexing your code ...");
+                    std::thread::sleep(Duration::from_millis(100));
+                }
             })?;
 
             if self.mode == AppMode::Quit {
@@ -235,7 +255,12 @@ impl App<'_> {
                         // Handle periodic tasks if necessary
                     }
                     UIEvent::CommandDone(uuid) => {
-                        self.find_chat_mut(uuid).transition(ChatState::Ready);
+                        if uuid == self.boot_uuid {
+                            has_indexed_on_boot = true;
+                            self.current_chat_mut().transition(ChatState::Ready);
+                        } else {
+                            self.find_chat_mut(uuid).transition(ChatState::Ready);
+                        }
                     }
                     UIEvent::AgentActivity(uuid, activity) => {
                         self.find_chat_mut(uuid)

@@ -1,4 +1,5 @@
 mod app;
+mod splash;
 mod ui_command;
 mod ui_event;
 
