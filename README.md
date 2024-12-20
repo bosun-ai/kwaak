@@ -45,7 +45,7 @@
     <img src="https://github.com/bosun-ai/kwaak/blob/master/images/logo.webp" alt="Logo" width="250" height="250">
   </a>
 
-  <h3 align="center">Swiftide</h3>
+  <h3 align="center">Kwaak</h3>
 
   <p align="center">
     Run a team of autonomous AI agents on your code, right from your terminal!
@@ -70,7 +70,7 @@
 
 Always wanted to run a team of AI agents locally from your own machine? Kwaak provides a terminal interface to operate autonomous AI agents on your codebase.
 
-<<DEMO HERE>>
+<!-- demo here -->
 
 Powered by [Swiftide](https://github.com/bosun-ai/swiftide), Kwaak is aware of your codebase and can answer questions about your code, find examples, write and execute code, create pull requests, and more. Unlike other tools, Kwaak is focussed on autonomous agents, and can run multiple agents at the same time.
 
