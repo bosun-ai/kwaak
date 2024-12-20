@@ -41,10 +41,6 @@ pub fn ui(f: &mut ratatui::Frame, area: Rect, app: &mut App) {
     // Render chat messages
     render_chat_messages(f, app, chat_messages);
 
-    Block::default()
-        .borders(Borders::RIGHT | Borders::BOTTOM | Borders::TOP)
-        .render(right_area, f.buffer_mut());
-
     let [chat_list, help_area] =
         Layout::vertical([Constraint::Min(10), Constraint::Length(20)]).areas(right_area);
     // Render other information
@@ -129,6 +125,7 @@ fn render_chat_list(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
             Block::default()
                 .title("Chats".bold())
                 .title_alignment(Alignment::Center)
+                .borders(Borders::TOP | Borders::RIGHT)
                 .padding(Padding::right(1)),
         );
 
@@ -189,7 +186,6 @@ fn render_input_bar(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
 fn render_help(f: &mut ratatui::Frame, app: &App, area: Rect) {
     let border_set = symbols::border::Set {
         top_right: symbols::line::NORMAL.vertical_left,
-        bottom_right: symbols::line::NORMAL.horizontal_up,
         ..symbols::border::PLAIN
     };
     let [top, bottom] = Layout::vertical([
@@ -215,6 +211,10 @@ fn render_help(f: &mut ratatui::Frame, app: &App, area: Rect) {
     )
     .render(top, f.buffer_mut());
 
+    let border_set = symbols::border::Set {
+        top_right: symbols::line::NORMAL.vertical_left,
+        ..symbols::border::PLAIN
+    };
     Paragraph::new(
         [
             "^s - Send message",
@@ -231,7 +231,7 @@ fn render_help(f: &mut ratatui::Frame, app: &App, area: Rect) {
             .title("Keybindings".bold())
             .title_alignment(Alignment::Center)
             .border_set(border_set)
-            .borders(Borders::TOP | Borders::RIGHT)
+            .borders(Borders::TOP | Borders::RIGHT | Borders::BOTTOM)
             .padding(Padding::uniform(1)),
     )
     .render(bottom, f.buffer_mut());
