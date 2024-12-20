@@ -18,7 +18,7 @@ publish-jobs = ["homebrew"]
 # Whether to install an updater program
 install-updater = true
 # Which actions to run on pull requests
-# pr-run-mode = "upload"
+pr-run-mode = "upload"
 # Skip checking whether the specified configuration files are up to date
 # allow-dirty = ["ci"]
 
