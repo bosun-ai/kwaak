@@ -2755,6 +2755,7 @@ dependencies = [
  "tokio",
  "tokio-rustls 0.26.1",
  "tower-service",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -3210,6 +3211,7 @@ dependencies = [
  "ratatui",
  "ratatui-splash-screen",
  "regex",
+ "reqwest",
  "rust-embed",
  "secrecy 0.10.3",
  "serde",
@@ -5132,6 +5134,7 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasm-streams",
  "web-sys",
+ "webpki-roots",
  "windows-registry",
 ]
 
@@ -7343,6 +7346,15 @@ dependencies = [
  "js-sys",
  "serde",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "webpki-roots"
+version = "0.26.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d642ff16b7e79272ae451b7322067cdc17cadf68c23264be9d94a32319efe7e"
+dependencies = [
+ "rustls-pki-types",
 ]
 
 [[package]]
