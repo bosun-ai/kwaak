@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   protobuf-compiler \
   libprotobuf-dev \
   pkg-config libssl-dev iputils-ping \
+  make \
   && rm -rf /var/lib/apt/lists/* \
   && cp /usr/bin/fdfind /usr/bin/fd
 
