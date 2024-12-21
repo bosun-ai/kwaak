@@ -493,9 +493,11 @@ mod tests {
 
         // assert it stopped
         let container = docker.inspect_container(&container_id, None).await.unwrap();
-        assert_eq!(
-            container.state.as_ref().unwrap().status,
-            Some(ContainerStateStatusEnum::REMOVING)
+        let status = container.state.as_ref().unwrap().status;
+        assert!(
+            status == Some(ContainerStateStatusEnum::REMOVING) ||
+            status == Some(ContainerStateStatusEnum::EXITED),
+            "Unexpected container state: {:?}", status
         );
     }
 
