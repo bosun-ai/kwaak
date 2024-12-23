@@ -497,8 +497,7 @@ mod tests {
         assert!(
             status == Some(ContainerStateStatusEnum::REMOVING)
                 || status == Some(ContainerStateStatusEnum::EXITED),
-            "Unexpected container state: {:?}",
-            status
+            "Unexpected container state: {status:?}"
         );
     }
 
