@@ -135,6 +135,9 @@ impl GithubSession {
     }
 }
 
+const MAX_TOOL_CALL_LENGTH: usize = 250;
+const MAX_TOOL_RESPONSE_LENGTH: usize = 2048;
+
 fn format_message(message: &ChatMessage) -> serde_json::Value {
     let role = match message {
         ChatMessage::User(_) => "▶ User",
@@ -154,14 +157,18 @@ fn format_message(message: &ChatMessage) -> serde_json::Value {
             if let Some(tool_calls) = tool_calls {
                 msg.push_str("\nTool calls: \n");
                 for tool_call in tool_calls {
-                    msg.push_str(&format!("{tool_call}\n"));
+                    let mut tool_call = format!("{tool_call}\n");
+                    tool_call.truncate(MAX_TOOL_CALL_LENGTH);
+                    msg.push_str(&tool_call);
                 }
             }
 
             msg
         }
         ChatMessage::ToolOutput(tool_call, tool_output) => {
-            format!("{tool_call} => {tool_output}")
+            let mut msg = format!("{tool_call} => {tool_output}");
+            msg.truncate(MAX_TOOL_RESPONSE_LENGTH);
+            msg
         }
     };
 
