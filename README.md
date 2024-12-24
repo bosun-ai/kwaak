@@ -115,10 +115,16 @@ Additionally, you will need an OpenAI API key and a [github token](https://docs.
 
 Pre-built binaries are available from the [releases page](https://github.com/bosun-ai/kwaak/releases).
 
+#### Homebrew
+
+```shell
+brew install bosun-ai/tap/kwaak
+```
+
 #### Linux and MacOS (using curl)
 
 ```shell
- curl --proto '=https' --tlsv1.2 -LsSf https://github.com/bosun-ai/kwaak/releases/latest/kwaak-installer.sh | sh
+ curl --proto '=https' --tlsv1.2 -LsSf https://github.com/bosun-ai/kwaak/releases/latest/download/kwaak-installer.sh | sh
 ```
 
 #### Cargo
@@ -187,7 +193,7 @@ If you have a great idea, please fork the repo and create a pull request.
 
 Don't forget to give the project a star! Thanks again!
 
-Testing agents is not a trivial matter. We have internal benchmarks to verify agent behaviour across larger datasets.
+Testing agents is not a trivial matter. We have (for now) internal benchmarks to verify agent behaviour across larger datasets.
 
 If you just want to contribute (bless you!), see [our issues](https://github.com/bosun-ai/kwaak/issues) or join us on Discord.
 
