@@ -69,7 +69,7 @@
 
 Always wanted to run a team of AI agents locally from your own machine? Improve test coverage, write documentation, or improve code quality, while you focus on building the cool stuff? Kwaak enables you to run a team of autonomous AI agents right from your terminal.
 
-<!-- demo here -->
+![demo](./images/demo.gif)
 
 Powered by [Swiftide](https://github.com/bosun-ai/swiftide), Kwaak is aware of your codebase and can answer questions about your code, find examples, write and execute code, create pull requests, and more. Unlike other tools, Kwaak is focussed on autonomous agents, and can run multiple agents at the same time.
 
