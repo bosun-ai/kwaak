@@ -38,7 +38,8 @@ pub async fn read_file(
 ) -> Result<ToolOutput, ToolError> {
     let cmd = Command::ReadFile(file_name.into());
 
-    let output = context.exec_cmd(&cmd).await?;
+    // i.e. if the file doesn't exist, just forward that message
+    let output = accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
 
     Ok(output.into())
 }
