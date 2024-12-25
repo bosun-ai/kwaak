@@ -13,7 +13,7 @@ pub fn accept_non_zero_exit(
     result: Result<CommandOutput, CommandError>,
 ) -> Result<CommandOutput, CommandError> {
     match result {
-        Ok(output) | Err(CommandError::FailedWithOutput(output)) => Ok(output),
+        Ok(output) | Err(CommandError::NonZeroExit(output)) => Ok(output),
         Err(err) => Err(err),
     }
 }

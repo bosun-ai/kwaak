@@ -260,7 +260,7 @@ impl RunningDockerExecutor {
         if exit_code == 0 {
             Ok(output.into())
         } else {
-            Err(CommandError::FailedWithOutput(output.into()))
+            Err(CommandError::NonZeroExit(output.into()))
         }
     }
 
@@ -283,7 +283,7 @@ impl RunningDockerExecutor {
         let write_file_result = self.exec_shell(&cmd).await;
 
         // If the directory or file does not exist, create it
-        if let Err(CommandError::FailedWithOutput(write_file)) = &write_file_result {
+        if let Err(CommandError::NonZeroExit(write_file)) = &write_file_result {
             if ["No such file or directory", "Directory nonexistent"]
                 .iter()
                 .any(|&s| write_file.output.contains(s))
