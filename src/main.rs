@@ -37,6 +37,9 @@ mod storage;
 mod templates;
 mod util;
 
+#[cfg(test)]
+mod test_utils;
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = cli::Args::parse();

@@ -43,8 +43,12 @@ impl GithubSession {
     /// Used to overwrite the origin remote so that the agent can interact with git
     #[tracing::instrument(skip_all)]
     pub fn add_token_to_url(&self, repo_url: impl AsRef<str>) -> Result<SecretString> {
-        if !repo_url.as_ref().starts_with("https://") {
-            anyhow::bail!("Only https urls are supported")
+        let mut repo_url = repo_url.as_ref().to_string();
+
+        if repo_url.starts_with("git@") {
+            let converted = repo_url.replace(':', "/").replace("git@", "https://");
+            dbg!(&converted);
+            let _ = std::mem::replace(&mut repo_url, converted);
         }
 
         let mut parsed = url::Url::parse(repo_url.as_ref()).context("Failed to parse url")?;
@@ -180,6 +184,10 @@ fn format_message(message: &ChatMessage) -> serde_json::Value {
 
 #[cfg(test)]
 mod tests {
+    use secrecy::ExposeSecret as _;
+
+    use crate::test_utils;
+
     use super::*;
 
     #[test]
@@ -206,5 +214,51 @@ mod tests {
         let rendered = Templates::render("pull_request.md", &context).unwrap();
 
         insta::assert_snapshot!(rendered);
+    }
+
+    #[tokio::test]
+    async fn test_add_token_to_url() {
+        let repository = test_utils::test_repository(); // Assuming you have a default implementation for Repository
+        let github_session = GithubSession::from_repository(&repository).unwrap();
+
+        let repo_url = "https://github.com/owner/repo";
+        let tokenized_url = github_session.add_token_to_url(repo_url).unwrap();
+
+        assert_eq!(
+            tokenized_url.expose_secret(),
+            format!(
+                "https://x-access-token:{}@github.com/owner/repo",
+                repository
+                    .config()
+                    .github
+                    .token
+                    .as_ref()
+                    .unwrap()
+                    .expose_secret()
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn test_add_token_to_git_url() {
+        let repository = test_utils::test_repository(); // Assuming you have a default implementation for Repository
+        let github_session = GithubSession::from_repository(&repository).unwrap();
+
+        let repo_url = "git@github.com:user/repo.git";
+        let tokenized_url = github_session.add_token_to_url(repo_url).unwrap();
+
+        assert_eq!(
+            tokenized_url.expose_secret(),
+            format!(
+                "https://x-access-token:{}@github.com/user/repo.git",
+                repository
+                    .config()
+                    .github
+                    .token
+                    .as_ref()
+                    .unwrap()
+                    .expose_secret()
+            )
+        );
     }
 }

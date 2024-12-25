@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
@@ -74,9 +75,17 @@ pub struct GithubConfiguration {
     pub token: Option<ApiKey>,
 }
 
+impl FromStr for Config {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        toml::from_str(s).context("Failed to parse configuration")
+    }
+}
+
 impl Config {
     /// Loads the configuration file from the current path
-    pub(crate) async fn load(path: &Path) -> Result<Config> {
+    pub(crate) async fn load(path: impl AsRef<Path>) -> Result<Config> {
         let file = tokio::fs::read(path)
             .await
             .context("Could not find `kwaak.toml` in current directory")?;
