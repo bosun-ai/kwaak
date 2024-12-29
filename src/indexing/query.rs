@@ -8,9 +8,10 @@ use swiftide::{
 
 use crate::{repository::Repository, storage, util::strip_markdown_tags};
 
-pub async fn query(repository: &Repository, query: &str) -> Result<String> {
+#[tracing::instrument(skip_all, err)]
+pub async fn query(repository: &Repository, query: impl AsRef<str>) -> Result<String> {
     let answer = build_query_pipeline(repository)?
-        .query(query)
+        .query(query.as_ref())
         .await?
         .answer()
         .to_string();

@@ -5,8 +5,21 @@ use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 
+pub struct Guard {
+    otel: Option<TracerProvider>,
+}
+
+impl Drop for Guard {
+    fn drop(&mut self) {
+        if let Some(provider) = self.otel.take() {
+            if let Err(e) = provider.shutdown() {
+                eprintln!("Failed to shutdown OpenTelemetry: {e:?}");
+            }
+        }
+    }
+}
 // For now just log to stdout and file
-pub fn init(repository: &Repository) -> Result<()> {
+pub fn init(repository: &Repository) -> Result<Guard> {
     let log_dir = repository.config().log_dir();
 
     let file_appender = tracing_appender::rolling::daily(
@@ -18,21 +31,18 @@ pub fn init(repository: &Repository) -> Result<()> {
 
     // Logs the file layer will capture
     let mut env_filter_layer = EnvFilter::builder()
-        .with_default_directive(LevelFilter::INFO.into())
-        .from_env_lossy()
-        .add_directive("h2=error".parse().unwrap())
-        .add_directive("tower=error".parse().unwrap())
-        .add_directive("tui_markdown=error".parse().unwrap());
+        .with_default_directive(LevelFilter::ERROR.into())
+        .from_env_lossy();
 
     if cfg!(feature = "otel") {
         env_filter_layer = env_filter_layer
-            .add_directive("swiftide=trace".parse().unwrap())
-            .add_directive("swiftide_indexing=trace".parse().unwrap())
-            .add_directive("swiftide_integrations=trace".parse().unwrap())
-            .add_directive("swiftide_query=trace".parse().unwrap())
-            .add_directive("swiftide_agents=trace".parse().unwrap())
-            .add_directive("swiftide_core=trace".parse().unwrap())
-            .add_directive("kwaak=trace".parse().unwrap());
+            .add_directive("swiftide=debug".parse().unwrap())
+            .add_directive("swiftide_indexing=debug".parse().unwrap())
+            .add_directive("swiftide_integrations=debug".parse().unwrap())
+            .add_directive("swiftide_query=debug".parse().unwrap())
+            .add_directive("swiftide_agents=debug".parse().unwrap())
+            .add_directive("swiftide_core=debug".parse().unwrap())
+            .add_directive("kwaak=debug".parse().unwrap());
     }
 
     // The log level tui logger will capture
@@ -50,11 +60,13 @@ pub fn init(repository: &Repository) -> Result<()> {
         fmt_layer.boxed(),
     ];
 
+    let mut provider_for_guard = None;
     if cfg!(feature = "otel") {
         dbg!("OpenTelemetry tracing enabled");
-        let provider = otel_provider();
+        let provider = init_otel();
         let tracer = provider.tracer("kwaak");
-        opentelemetry::global::set_tracer_provider(provider);
+        opentelemetry::global::set_tracer_provider(provider.clone());
+        provider_for_guard = Some(provider);
 
         // Create a tracing layer with the configured tracer
         let layer = OpenTelemetryLayer::new(tracer);
@@ -67,7 +79,9 @@ pub fn init(repository: &Repository) -> Result<()> {
         .with(layers);
     registry.try_init()?;
 
-    Ok(())
+    Ok(Guard {
+        otel: provider_for_guard,
+    })
 }
 
 #[cfg(feature = "otel")]
@@ -76,7 +90,7 @@ use opentelemetry::trace::TracerProvider as _;
 use opentelemetry_sdk::trace::TracerProvider;
 
 #[cfg(feature = "otel")]
-fn otel_provider() -> TracerProvider {
+fn init_otel() -> TracerProvider {
     use opentelemetry_sdk::runtime;
     use opentelemetry_sdk::trace::TracerProvider;
 
@@ -85,14 +99,10 @@ fn otel_provider() -> TracerProvider {
         .build()
         .expect("failed to create otlp exporter");
 
-    #[allow(deprecated, reason = "fix it when it breaks")]
     TracerProvider::builder()
         .with_batch_exporter(exporter, runtime::Tokio)
-        .with_config(opentelemetry_sdk::trace::Config::default().with_resource(
-            opentelemetry_sdk::Resource::new(vec![opentelemetry::KeyValue::new(
-                "service.name",
-                "kwaak",
-            )]),
-        ))
+        .with_resource(opentelemetry_sdk::Resource::new(vec![
+            opentelemetry::KeyValue::new("service.name", "kwaak"),
+        ]))
         .build()
 }

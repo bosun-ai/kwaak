@@ -16,6 +16,10 @@ pub struct Args {
     #[arg(short, long, required_if_eq("mode", "run-agent"))]
     pub initial_message: Option<String>,
 
+    /// When querying the indexed project, the query to run
+    #[arg(short, long, required_if_eq("mode", "query"))]
+    pub query: Option<String>,
+
     /// Print the configuration and exit
     #[arg(long)]
     pub print_config: bool,
@@ -29,9 +33,15 @@ pub struct Args {
     pub init: bool,
 }
 
-#[derive(clap::ValueEnum, Clone, Debug, Default)]
+#[derive(clap::ValueEnum, Clone, Debug, Default, strum_macros::AsRefStr)]
 pub enum ModeArgs {
+    /// Index the current project
+    Index,
+    /// Query the indexed project
+    Query,
+    /// Run an agent directly
     RunAgent,
+    /// Start the TUI
     #[default]
     Tui,
 }
