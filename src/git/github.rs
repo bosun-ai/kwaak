@@ -140,9 +140,15 @@ impl GithubSession {
     }
 }
 
+// Temporarily disabled, if messages get too large the PR can't be created.
+//
+// Need a better solution, i.e. github content api
+#[allow(dead_code)]
 const MAX_TOOL_CALL_LENGTH: usize = 250;
+#[allow(dead_code)]
 const MAX_TOOL_RESPONSE_LENGTH: usize = 2048;
 
+#[allow(dead_code)]
 fn format_message(message: &ChatMessage) -> serde_json::Value {
     let role = match message {
         ChatMessage::User(_) => "▶ User",

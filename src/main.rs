@@ -15,7 +15,6 @@ use ratatui::{
 };
 
 use ::tracing::instrument;
-use ::tracing::Instrument as _;
 use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -80,7 +79,7 @@ async fn main() -> Result<()> {
     {
         let _guard = crate::kwaak_tracing::init(&repository)?;
 
-        let span = tracing::info_span!(
+        let _root_span = tracing::info_span!(
             "main",
             "otel.name" = format!("main.{}", args.mode.as_ref().to_lowercase())
         )
