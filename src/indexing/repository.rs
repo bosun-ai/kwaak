@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::repository::Repository;
 use crate::storage;
 use anyhow::Result;
@@ -5,7 +7,11 @@ use swiftide::indexing::loaders;
 use swiftide::indexing::transformers;
 use swiftide::indexing::Node;
 use swiftide::traits::EmbeddingModel;
+use swiftide::traits::NodeCache;
+use swiftide::traits::Persist;
 use swiftide::traits::SimplePrompt;
+
+// NOTE: Indexing in parallel guarantees a bad time
 
 #[tracing::instrument(skip_all)]
 pub async fn index_repository(repository: &Repository) -> Result<()> {
@@ -14,19 +20,17 @@ pub async fn index_repository(repository: &Repository) -> Result<()> {
     // NOTE: Parameter to optimize on
     let chunk_size = 100..2048;
 
-    // TODO: If we get the concrete types instead, possible easier in the future.
     let indexing_provider: Box<dyn SimplePrompt> =
         repository.config().indexing_provider().try_into()?;
     let embedding_provider: Box<dyn EmbeddingModel> =
         repository.config().embedding_provider().try_into()?;
-    let lancedb = storage::build_lancedb(repository)?
-        .with_metadata("path")
-        .with_metadata(transformers::metadata_qa_code::NAME)
-        .to_owned();
-    let redb = storage::build_redb(repository)?;
+
+    // TODO: These should be static
+    let lancedb = storage::get_lancedb(repository) as Arc<dyn Persist>;
+    let redb = storage::get_redb(repository) as Arc<dyn NodeCache>;
 
     swiftide::indexing::Pipeline::from_loader(loader)
-        .filter_cached(redb.build()?)
+        .filter_cached(redb)
         .then_chunk(transformers::ChunkCode::try_for_language_and_chunk_size(
             repository.config().language,
             chunk_size,
@@ -40,7 +44,7 @@ pub async fn index_repository(repository: &Repository) -> Result<()> {
 
             Ok(chunk)
         })
-        .then_store_with(lancedb.build()?)
+        .then_store_with(lancedb)
         .run()
         .await
 }

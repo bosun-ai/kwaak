@@ -71,6 +71,9 @@ lazy_static = "1.5.0"
 rust-embed = { version = "8.5.0", features = ["debug-embed"] }
 ratatui-splash-screen = "0.1.4"
 reqwest = { version = "0.12", features = ["rustls-tls"] }
+chrono = "0.4.39"
+redb = { version = "2.3.0" }
+
 #fml
 openssl-sys = { version = "0.9.104", features = ["vendored"] }
 
@@ -108,8 +111,8 @@ default = ["otel"]
 ]
 
 [patch.crates-io]
-# swiftide = { path = "../swiftide/swiftide" }
-# swiftide-macros = { path = "../swiftide/swiftide-macros" }
+swiftide = { path = "../swiftide/swiftide" }
+swiftide-macros = { path = "../swiftide/swiftide-macros" }
 
 # The profile that 'dist' will build with
 [profile.dist]

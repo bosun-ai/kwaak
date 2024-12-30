@@ -3300,6 +3300,7 @@ dependencies = [
  "async-openai",
  "async-trait",
  "bollard",
+ "chrono",
  "clap",
  "crossterm",
  "derive_builder",
@@ -3317,6 +3318,7 @@ dependencies = [
  "opentelemetry_sdk",
  "ratatui",
  "ratatui-splash-screen",
+ "redb",
  "regex",
  "reqwest",
  "rust-embed",
@@ -6105,8 +6107,6 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "swiftide"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06d7df8f4aa8d3adcd1a292a9b27606c18b3f8019a81f3990c13f35e59798df4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6123,8 +6123,6 @@ dependencies = [
 [[package]]
 name = "swiftide-agents"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e4ebd59e90d943a334089103c51fec7ae3294466facacc605375b37ceb9f9ab"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6145,8 +6143,6 @@ dependencies = [
 [[package]]
 name = "swiftide-core"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "717c8ebf379af0e5bfd717f26341814e4c49e1d4d7544e0595b0455c8b7b3b5c"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6171,8 +6167,6 @@ dependencies = [
 [[package]]
 name = "swiftide-indexing"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f33d4adb7048c616099aac9891ea6caddaed9c30e450b90489977b2f463e0f0d"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6197,8 +6191,6 @@ dependencies = [
 [[package]]
 name = "swiftide-integrations"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8b6b8f20947a88568c8ca6a9dd71722fa267e8a45d18baffe91d22733bdbda1"
 dependencies = [
  "anyhow",
  "arrow-array",
@@ -6233,8 +6225,6 @@ dependencies = [
 [[package]]
 name = "swiftide-macros"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1eae5d1fd1877c99639152d671ddb9250234ee3ee0fd460bab3346eecef00c14"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6250,8 +6240,6 @@ dependencies = [
 [[package]]
 name = "swiftide-query"
 version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10a6390e629c5b5355f5dd9a8bf122fd5a78079eb45761b51906933ddc2aad98"
 dependencies = [
  "anyhow",
  "async-trait",

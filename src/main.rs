@@ -33,6 +33,7 @@ mod indexing;
 mod kwaak_tracing;
 mod onboarding;
 mod repository;
+mod runtime_settings;
 mod storage;
 mod templates;
 mod util;

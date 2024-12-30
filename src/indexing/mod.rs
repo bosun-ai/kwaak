@@ -1,3 +1,4 @@
+mod garbage_collection;
 mod query;
 mod repository;
 

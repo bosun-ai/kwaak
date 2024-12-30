@@ -1,7 +1,10 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 use swiftide::{
     query::{
         self, answers, query_transformers, search_strategies::SimilaritySingleEmbedding, states,
+        Retrieve,
     },
     traits::{EmbeddingModel, SimplePrompt},
 };
@@ -25,7 +28,8 @@ pub fn build_query_pipeline<'b>(
     let embedding_provider: Box<dyn EmbeddingModel> =
         repository.config().embedding_provider().try_into()?;
 
-    let lancedb = storage::build_lancedb(repository)?;
+    let lancedb =
+        storage::get_lancedb(repository) as Arc<dyn Retrieve<SimilaritySingleEmbedding<()>>>;
     let search_strategy: SimilaritySingleEmbedding<()> = SimilaritySingleEmbedding::default()
         .with_top_k(20)
         .to_owned();
@@ -37,7 +41,7 @@ pub fn build_query_pipeline<'b>(
         .then_transform_query(query_transformers::Embed::from_client(
             embedding_provider.clone(),
         ))
-        .then_retrieve(lancedb.build()?)
+        .then_retrieve(lancedb)
         // .then_transform_response(response_transformers::Summary::from_client(
         //     query_provider.clone(),
         // ))
