@@ -24,7 +24,7 @@ pub enum UIEvent {
     /// Command finished
     CommandDone(Uuid),
     /// Agent has an update (for showing intermediate progress)
-    AgentActivity(Uuid, String),
+    ActivityUpdate(Uuid, String),
     /// Quit from the frontend
     Quit,
 }

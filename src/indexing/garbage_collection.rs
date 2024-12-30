@@ -4,17 +4,23 @@
 //! NOTE: If more general settings are added to Redb, better extract this to a more general place.
 
 use anyhow::Result;
-use std::{collections::HashSet, path::PathBuf, time::SystemTime};
-use swiftide::traits::Persist;
+use std::{collections::HashSet, path::PathBuf, sync::Arc, time::SystemTime};
+use swiftide::{
+    integrations::{lancedb::LanceDB, redb::Redb},
+    traits::Persist,
+};
 
 use crate::{repository::Repository, storage};
 
 const LAST_INDEX_DATE: &str = "last_index_date";
 
+#[derive(Debug)]
 pub struct GarbageCollector<'repository> {
     /// The last index date
     last_cleaned_up_at: Option<SystemTime>,
     repository: &'repository Repository,
+    lancedb: Arc<LanceDB>,
+    redb: Arc<Redb>,
 }
 
 impl<'repository> GarbageCollector<'repository> {
@@ -25,10 +31,13 @@ impl<'repository> GarbageCollector<'repository> {
         Self {
             last_cleaned_up_at,
             repository,
+            lancedb: storage::get_lancedb(repository),
+            redb: storage::get_redb(repository),
         }
     }
 
     fn files_changed_since_last_index(&self) -> Vec<PathBuf> {
+        // Currently walks all files not in ignore, which might be more than necessary
         ignore::Walk::new(self.repository.path())
             .filter_map(Result::ok)
             .filter(|entry| entry.file_type().is_some_and(|ft| ft.is_file()))
@@ -51,12 +60,10 @@ impl<'repository> GarbageCollector<'repository> {
     }
 
     async fn delete_files_from_index(&self, files: Vec<PathBuf>) -> Result<()> {
-        let lancedb = storage::get_lancedb(self.repository);
-
         // Ensure the table is set up
-        // lancedb.setup().await?;
+        self.lancedb.setup().await?;
 
-        let table = lancedb.open_table().await?;
+        let table = self.lancedb.open_table().await?;
 
         for file in files {
             let predicate = format!("path = \"{}\"", file.display());
@@ -69,8 +76,6 @@ impl<'repository> GarbageCollector<'repository> {
     //
     // There are much better ways to do this, but for now this is the simplest
     fn delete_files_from_cache(&self, files: &[PathBuf]) -> Result<()> {
-        let redb = storage::get_redb(self.repository);
-
         // Read all files and build a fake node
         let node_ids = files
             .iter()
@@ -85,16 +90,15 @@ impl<'repository> GarbageCollector<'repository> {
                     .build()
                     .expect("infallible");
 
-                Some(redb.node_key(&node))
+                Some(self.redb.node_key(&node))
             })
             .collect::<Vec<_>>();
 
-        let write_tx = redb.database().begin_write()?;
+        let write_tx = self.redb.database().begin_write()?;
         {
-            let mut table = write_tx.open_table(redb.table_definition())?;
+            let mut table = write_tx.open_table(self.redb.table_definition())?;
             for id in &node_ids {
-                let debug = table.remove(id).ok();
-                dbg!(&debug.flatten().map(|r| r.value()));
+                table.remove(id).ok();
             }
         }
 
@@ -104,16 +108,16 @@ impl<'repository> GarbageCollector<'repository> {
     }
 
     // Returns true if no rows were indexed, or otherwise errors were encountered
-    async fn never_indexed(&self) -> bool {
-        let lance_db = storage::get_lancedb(self.repository);
-
-        if let Ok(table) = lance_db.open_table().await {
+    #[tracing::instrument(skip(self))]
+    async fn never_been_indexed(&self) -> bool {
+        if let Ok(table) = self.lancedb.open_table().await {
             table.count_rows(None).await.map(|n| n == 0).unwrap_or(true)
         } else {
             true
         }
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn clean_up(&self) -> Result<()> {
         let files = self.files_changed_since_last_index();
 
@@ -122,7 +126,7 @@ impl<'repository> GarbageCollector<'repository> {
             return Ok(());
         }
 
-        if self.never_indexed().await {
+        if self.never_been_indexed().await {
             tracing::warn!("No index date found; skipping garbage collection");
             return Ok(());
         }
@@ -155,7 +159,6 @@ mod tests {
 
     use swiftide::{
         indexing::{transformers::metadata_qa_code, Node},
-        query::{Retrieve, TryStreamExt as _},
         traits::{NodeCache, Persist},
     };
     use tempfile;

@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use layout::Flex;
 use ratatui::{
     widgets::{Block, Padding},
@@ -10,6 +12,7 @@ use ratatui_splash_screen::{SplashConfig, SplashScreen};
 // use std::time::Duration;
 //
 use ratatui::prelude::*;
+use text::ToSpan as _;
 // use ratatui_splash_screen::{SplashConfig, SplashScreen, SplashError};
 //
 static SPLASH_CONFIG: SplashConfig = SplashConfig {
@@ -19,21 +22,25 @@ static SPLASH_CONFIG: SplashConfig = SplashConfig {
     use_colors: true,
 };
 
-pub struct Splash {
+pub struct Splash<'m> {
     splash_screen: SplashScreen,
+    message: Cow<'m, str>, // Might get tens of thousands of updates (or more), so let's avoid unnecessary allocations
 }
 
-impl Default for Splash {
+impl Default for Splash<'_> {
     fn default() -> Self {
         let splash_screen = SplashScreen::new(SPLASH_CONFIG).unwrap();
-        Splash { splash_screen }
+        Splash {
+            splash_screen,
+            message: "".into(),
+        }
     }
 }
 
 // Splash renders in the center of the screen an image with a loading bar
 // Image is 50x50 characters, below a line with the text "Indexing your code ..."
-impl Splash {
-    pub fn render(&mut self, f: &mut Frame, status_text: &str) {
+impl<'m> Splash<'m> {
+    pub fn render(&mut self, f: &mut Frame) {
         let splash_area = center(
             f.area(),
             Constraint::Percentage(48),
@@ -45,9 +52,9 @@ impl Splash {
         f.render_widget(&mut self.splash_screen, image_area);
 
         #[allow(clippy::cast_possible_truncation)]
-        let left_padding = (text_area.width - status_text.len() as u16) / 2;
+        let left_padding = (text_area.width - self.message.len() as u16) / 2;
         let block = Block::default().padding(Padding::new(left_padding, 0, 1, 0));
-        let throbber = throbber_widgets_tui::Throbber::default().label(status_text);
+        let throbber = throbber_widgets_tui::Throbber::default().label(self.message.to_span());
 
         f.render_widget(throbber, block.inner(text_area));
         f.render_widget(block, text_area);
@@ -55,6 +62,13 @@ impl Splash {
 
     pub fn is_rendered(&self) -> bool {
         self.splash_screen.is_rendered()
+    }
+
+    pub fn set_message<T>(&mut self, message: T)
+    where
+        T: Into<Cow<'m, str>>,
+    {
+        self.message = message.into();
     }
 }
 

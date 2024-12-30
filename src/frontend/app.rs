@@ -230,10 +230,12 @@ impl App<'_> {
 
                     self.mode.ui(f, base_area, self);
                 } else {
-                    splash.render(f, "Indexing your code ...");
-                    std::thread::sleep(Duration::from_millis(100));
+                    splash.render(f);
                 }
             })?;
+            if !splash.is_rendered() {
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
 
             if self.mode == AppMode::Quit {
                 break;
@@ -259,9 +261,13 @@ impl App<'_> {
                             self.find_chat_mut(uuid).transition(ChatState::Ready);
                         }
                     }
-                    UIEvent::AgentActivity(uuid, activity) => {
-                        self.find_chat_mut(uuid)
-                            .transition(ChatState::LoadingWithMessage(activity));
+                    UIEvent::ActivityUpdate(uuid, activity) => {
+                        if uuid == self.boot_uuid {
+                            splash.set_message(activity);
+                        } else {
+                            self.find_chat_mut(uuid)
+                                .transition(ChatState::LoadingWithMessage(activity));
+                        }
                     }
                     UIEvent::ChatMessage(message) => {
                         self.add_chat_message(message);

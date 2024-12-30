@@ -7,8 +7,8 @@ use swiftide::integrations::treesitter::SupportedLanguages;
 
 use super::api_key::ApiKey;
 use super::defaults::{
-    default_cache_dir, default_docker_context, default_dockerfile, default_log_dir,
-    default_main_branch, default_project_name,
+    default_cache_dir, default_docker_context, default_dockerfile, default_indexing_concurrency,
+    default_log_dir, default_main_branch, default_project_name,
 };
 use super::{CommandConfiguration, LLMConfiguration, LLMConfigurations};
 
@@ -24,6 +24,9 @@ pub struct Config {
     pub cache_dir: PathBuf,
     #[serde(default = "default_log_dir")]
     pub log_dir: PathBuf,
+
+    #[serde(default = "default_indexing_concurrency")]
+    pub indexing_concurrency: usize,
 
     #[serde(default)]
     pub docker: DockerConfiguration,

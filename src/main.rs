@@ -1,3 +1,4 @@
+#![recursion_limit = "256"] // Temporary fix so tracing plays nice with lancedb
 use std::{
     io::{self, stdout},
     panic::{set_hook, take_hook},
@@ -88,7 +89,7 @@ async fn main() -> Result<()> {
         match args.mode {
             cli::ModeArgs::RunAgent => start_agent(&repository, &args).await,
             cli::ModeArgs::Tui => start_tui(&repository).await,
-            cli::ModeArgs::Index => index_repository(&repository).await,
+            cli::ModeArgs::Index => index_repository(&repository, None).await,
             cli::ModeArgs::Query => {
                 let result = query(&repository, args.query.expect("Expected a query")).await?;
 
@@ -108,7 +109,7 @@ async fn main() -> Result<()> {
 
 #[instrument]
 async fn start_agent(repository: &repository::Repository, args: &cli::Args) -> Result<()> {
-    indexing::index_repository(repository).await?;
+    indexing::index_repository(repository, None).await?;
 
     let mut command_responder = CommandResponder::default();
     let responder_for_agent = command_responder.clone();

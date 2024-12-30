@@ -4,7 +4,7 @@ use anyhow::Result;
 use swiftide::agents::Agent;
 use tokio::{
     sync::{mpsc, Mutex, RwLock},
-    task,
+    task::{self, JoinHandle},
 };
 use uuid::Uuid;
 
@@ -43,6 +43,7 @@ pub enum CommandResponse {
     ActivityUpdate(Uuid, String),
 }
 
+#[derive(Debug)]
 pub struct CommandResponder {
     tx: mpsc::UnboundedSender<CommandResponse>,
     rx: Option<mpsc::UnboundedReceiver<CommandResponse>>,
@@ -234,7 +235,7 @@ impl CommandHandler {
 
     /// TODO: Most commands should probably be handled in a tokio task
     /// Maybe generalize tasks to make ui updates easier?
-    #[tracing::instrument(skip_all, fields(cmd = %cmd.to_string(), otel.name = %cmd.to_string(), uuid = cmd.uuid().to_string()), err)]
+    #[tracing::instrument(skip_all, fields(otel.name = %cmd.to_string(), uuid = %cmd.uuid()), err)]
     async fn handle_command(
         &self,
         repository: &Repository,
@@ -267,7 +268,10 @@ impl CommandHandler {
                 // &mut. It 'seems' to work, but I'm not sure if it's correct.
                 agent.stop().await;
             }
-            Command::IndexRepository { .. } => indexing::index_repository(repository).await?,
+            Command::IndexRepository { .. } => {
+                let (command_responder, _guard) = self.spawn_command_responder(&cmd.uuid());
+                indexing::index_repository(repository, Some(command_responder)).await?;
+            }
             Command::ShowConfig { uuid } => {
                 ui_tx
                     .send(
@@ -307,28 +311,9 @@ impl CommandHandler {
             return Ok(agent.clone());
         }
 
-        let mut command_responder = CommandResponder::default().with_uuid(uuid);
+        let (responder, handle) = self.spawn_command_responder(&uuid);
 
-        let ui_tx_clone = self.ui_tx.clone().expect("expected ui tx");
-
-        // TODO: Perhaps nicer to have a single loop for all agents
-        // Then the majority of this can be moved to i.e. agents/running_agent
-        // Design wise: Agents should not know about UI, command handler and UI should not know
-        // about agent internals
-        let responder_for_agent = command_responder.clone();
-        let handle = task::spawn(async move {
-            while let Some(response) = command_responder.recv().await {
-                match response {
-                    CommandResponse::Chat(msg) => {
-                        let _ = ui_tx_clone.send(msg.into());
-                    }
-                    CommandResponse::ActivityUpdate(uuid, state) => {
-                        let _ = ui_tx_clone.send(UIEvent::AgentActivity(uuid, state));
-                    }
-                }
-            }
-        });
-        let agent = agent::build_agent(&self.repository, query, responder_for_agent).await?;
+        let agent = agent::build_agent(&self.repository, query, responder).await?;
 
         let running_agent = RunningAgent {
             agent: Arc::new(Mutex::new(agent)),
@@ -339,5 +324,33 @@ impl CommandHandler {
         self.agents.write().await.insert(uuid, running_agent);
 
         Ok(cloned)
+    }
+
+    /// Forwards updates from the backend (i.e. agents) to the UI
+    fn spawn_command_responder(&self, uuid: &Uuid) -> (CommandResponder, JoinHandle<()>) {
+        let mut command_responder = CommandResponder::default().with_uuid(*uuid);
+
+        let ui_tx_clone = self.ui_tx.clone().expect("expected ui tx");
+
+        // TODO: Perhaps nicer to have a single loop for all agents
+        // Then the majority of this can be moved to i.e. agents/running_agent
+        // Design wise: Agents should not know about UI, command handler and UI should not know
+        // about agent internals
+        // As long as nobody is running thousands of agents, this is fine
+        let cloned_responder = command_responder.clone();
+        let handle = task::spawn(async move {
+            while let Some(response) = command_responder.recv().await {
+                match response {
+                    CommandResponse::Chat(msg) => {
+                        let _ = ui_tx_clone.send(msg.into());
+                    }
+                    CommandResponse::ActivityUpdate(uuid, state) => {
+                        let _ = ui_tx_clone.send(UIEvent::ActivityUpdate(uuid, state));
+                    }
+                }
+            }
+        });
+
+        (cloned_responder, handle)
     }
 }
