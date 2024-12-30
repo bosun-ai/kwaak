@@ -5168,9 +5168,9 @@ dependencies = [
 
 [[package]]
 name = "redb"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7c2a94325f9c5826b17c42af11067230f503747f870117a28180e85696e21ba"
+checksum = "ea0a72cd7140de9fc3e318823b883abf819c20d478ec89ce880466dc2ef263c6"
 dependencies = [
  "libc",
 ]
@@ -6125,6 +6125,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "swiftide"
 version = "0.15.0"
+source = "git+https://github.com/bosun-ai/swiftide#2831101daa2928b5507116d9eb907d98fb77bf50"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6141,6 +6142,7 @@ dependencies = [
 [[package]]
 name = "swiftide-agents"
 version = "0.15.0"
+source = "git+https://github.com/bosun-ai/swiftide#2831101daa2928b5507116d9eb907d98fb77bf50"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6161,6 +6163,7 @@ dependencies = [
 [[package]]
 name = "swiftide-core"
 version = "0.15.0"
+source = "git+https://github.com/bosun-ai/swiftide#2831101daa2928b5507116d9eb907d98fb77bf50"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6185,6 +6188,7 @@ dependencies = [
 [[package]]
 name = "swiftide-indexing"
 version = "0.15.0"
+source = "git+https://github.com/bosun-ai/swiftide#2831101daa2928b5507116d9eb907d98fb77bf50"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6209,6 +6213,7 @@ dependencies = [
 [[package]]
 name = "swiftide-integrations"
 version = "0.15.0"
+source = "git+https://github.com/bosun-ai/swiftide#2831101daa2928b5507116d9eb907d98fb77bf50"
 dependencies = [
  "anyhow",
  "arrow-array",
@@ -6243,6 +6248,7 @@ dependencies = [
 [[package]]
 name = "swiftide-macros"
 version = "0.15.0"
+source = "git+https://github.com/bosun-ai/swiftide#2831101daa2928b5507116d9eb907d98fb77bf50"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6258,6 +6264,7 @@ dependencies = [
 [[package]]
 name = "swiftide-query"
 version = "0.15.0"
+source = "git+https://github.com/bosun-ai/swiftide#2831101daa2928b5507116d9eb907d98fb77bf50"
 dependencies = [
  "anyhow",
  "async-trait",
