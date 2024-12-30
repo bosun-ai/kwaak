@@ -21,9 +21,9 @@ pub struct Config {
     pub llm: Box<LLMConfigurations>,
     pub commands: CommandConfiguration,
     #[serde(default = "default_cache_dir")]
-    cache_dir: PathBuf,
+    pub cache_dir: PathBuf,
     #[serde(default = "default_log_dir")]
-    log_dir: PathBuf,
+    pub log_dir: PathBuf,
 
     #[serde(default)]
     pub docker: DockerConfiguration,

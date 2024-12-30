@@ -73,6 +73,7 @@ ratatui-splash-screen = "0.1.4"
 reqwest = { version = "0.12", features = ["rustls-tls"] }
 chrono = "0.4.39"
 redb = { version = "2.3.0" }
+lancedb = "0.14.1"
 
 #fml
 openssl-sys = { version = "0.9.104", features = ["vendored"] }

@@ -7,8 +7,8 @@ use crate::{config::Config, runtime_settings::RuntimeSettings};
 
 #[derive(Debug, Clone)]
 pub struct Repository {
-    config: Config,
-    path: PathBuf,
+    pub(crate) config: Config,
+    pub(crate) path: PathBuf,
 }
 
 impl Repository {

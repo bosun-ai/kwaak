@@ -1,5 +1,8 @@
+use tempfile::tempdir;
+
 use crate::{config::Config, repository::Repository};
 
+/// Creates a repository for testing purposes with a temporary directory
 pub fn test_repository() -> Repository {
     let toml = r#"
             language = "rust"

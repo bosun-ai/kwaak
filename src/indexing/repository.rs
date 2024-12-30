@@ -11,10 +11,15 @@ use swiftide::traits::NodeCache;
 use swiftide::traits::Persist;
 use swiftide::traits::SimplePrompt;
 
+use super::garbage_collection::GarbageCollector;
+
 // NOTE: Indexing in parallel guarantees a bad time
 
 #[tracing::instrument(skip_all)]
 pub async fn index_repository(repository: &Repository) -> Result<()> {
+    let garbage_collector = GarbageCollector::from_repository(repository);
+    garbage_collector.clean_up().await;
+
     let extensions = repository.config().language.file_extensions();
     let loader = loaders::FileLoader::new(repository.path()).with_extensions(extensions);
     // NOTE: Parameter to optimize on
@@ -25,7 +30,6 @@ pub async fn index_repository(repository: &Repository) -> Result<()> {
     let embedding_provider: Box<dyn EmbeddingModel> =
         repository.config().embedding_provider().try_into()?;
 
-    // TODO: These should be static
     let lancedb = storage::get_lancedb(repository) as Arc<dyn Persist>;
     let redb = storage::get_redb(repository) as Arc<dyn NodeCache>;
 
