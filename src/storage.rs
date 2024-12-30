@@ -1,6 +1,7 @@
 //! Builds various storage providers for kwaak
+//!
+//! Handled as statics to avoid multiple instances of the same storage provider
 
-use std::cell::OnceCell;
 use std::sync::{Arc, OnceLock};
 
 use anyhow::Result;

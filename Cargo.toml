@@ -15,7 +15,7 @@ anyhow = "1.0.88"
 crossterm = "0.28.1"
 ratatui = "0.29.0"
 tui-textarea = "0.7.0"
-tokio = { version = "1.40.0", features = ["full"] }
+tokio = { version = "1.42.0", features = ["full"] }
 strum = "0.26.3"
 strum_macros = "0.26.4"
 swiftide = { version = "0.15.0", features = [
@@ -70,12 +70,20 @@ tera = "1.20.0"
 lazy_static = "1.5.0"
 rust-embed = { version = "8.5.0", features = ["debug-embed"] }
 ratatui-splash-screen = "0.1.4"
-reqwest = { version = "0.12", features = ["rustls-tls"] }
+reqwest = { version = "0.12", features = [
+  "rustls-tls",
+  "charset",
+  "http2",
+  "macos-system-configuration",
+], default-features = false }
 chrono = "0.4.39"
 redb = { version = "2.3.0" }
-lancedb = "0.14.1"
+lancedb = { version = "0.14.1", default-features = false, features = [
+  "rustls-tls",
+] }
 
 #fml
+# TODO: Suspect it's lancedb
 openssl-sys = { version = "0.9.104", features = ["vendored"] }
 
 [dev-dependencies]

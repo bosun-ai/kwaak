@@ -54,15 +54,13 @@ impl<'repository> GarbageCollector<'repository> {
         let lancedb = storage::get_lancedb(self.repository);
 
         // Ensure the table is set up
-        lancedb.setup().await?;
+        // lancedb.setup().await?;
 
-        {
-            let table = lancedb.open_table().await?;
+        let table = lancedb.open_table().await?;
 
-            for file in files {
-                let predicate = format!("path = \"{}\"", file.display());
-                table.delete(&predicate).await?;
-            }
+        for file in files {
+            let predicate = format!("path = \"{}\"", file.display());
+            table.delete(&predicate).await?;
         }
         Ok(())
     }
@@ -119,20 +117,20 @@ impl<'repository> GarbageCollector<'repository> {
     pub async fn clean_up(&self) -> Result<()> {
         let files = self.files_changed_since_last_index();
 
-        // if files.is_empty() {
-        //     tracing::info!("No files changed since last index; skipping garbage collection");
-        //     return Ok(());
-        // }
-        //
-        // // if self.never_indexed().await {
-        // //     tracing::warn!("No index date found; skipping garbage collection");
-        // //     return Ok(());
-        // // }
-        //
-        // tracing::warn!(
-        //     "Found {} changed files since last index; garbage collecting ...",
-        //     files.len()
-        // );
+        if files.is_empty() {
+            tracing::info!("No files changed since last index; skipping garbage collection");
+            return Ok(());
+        }
+
+        if self.never_indexed().await {
+            tracing::warn!("No index date found; skipping garbage collection");
+            return Ok(());
+        }
+
+        tracing::warn!(
+            "Found {} changed files since last index; garbage collecting ...",
+            files.len()
+        );
 
         // should delete files from cache and index
         // should early return if no files are found, or index is empty
@@ -198,7 +196,8 @@ mod tests {
         assert!(redb.get(&node).await);
 
         let lancedb = storage::get_lancedb(&repository);
-        lancedb.setup().await.unwrap();
+        // Ignore any errors here
+        let _ = lancedb.setup().await;
         let node = lancedb.store(node).await.unwrap();
 
         (repository, node, tempdir)

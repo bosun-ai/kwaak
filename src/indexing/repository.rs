@@ -18,7 +18,7 @@ use super::garbage_collection::GarbageCollector;
 #[tracing::instrument(skip_all)]
 pub async fn index_repository(repository: &Repository) -> Result<()> {
     let garbage_collector = GarbageCollector::from_repository(repository);
-    garbage_collector.clean_up().await;
+    garbage_collector.clean_up().await?;
 
     let extensions = repository.config().language.file_extensions();
     let loader = loaders::FileLoader::new(repository.path()).with_extensions(extensions);
