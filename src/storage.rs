@@ -56,6 +56,7 @@ pub(crate) fn build_lancedb(repository: &Repository) -> Result<LanceDBBuilder> {
         .table_name(&config.project_name)
         .with_metadata("path")
         .with_metadata(transformers::metadata_qa_code::NAME)
+        .with_metadata(transformers::metadata_qa_text::NAME)
         .to_owned())
 }
 

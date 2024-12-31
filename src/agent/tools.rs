@@ -89,10 +89,10 @@ pub async fn git(context: &dyn AgentContext, command: &str) -> Result<ToolOutput
 }
 
 #[tool(
-    description = "Search code in the repository",
+    description = "Search code in the project",
     param(
         name = "query",
-        description = "Code you would like to find in the repository"
+        description = "Code you would like to find in the repository. Best used for exact search in the code. Uses `ripgrep`."
     )
 )]
 pub async fn search_code(context: &dyn AgentContext, query: &str) -> Result<ToolOutput, ToolError> {
@@ -103,10 +103,10 @@ pub async fn search_code(context: &dyn AgentContext, query: &str) -> Result<Tool
 
 #[derive(Tool, Clone)]
 #[tool(
-    description = "Explain code in human language",
+    description = "Search code and documentation in human language in the project",
     param(
         name = "query",
-        description = "A description, question, or literal code you want to know more about"
+        description = "A description, question, or literal code you want to know more about. Uses a semantic similary search."
     )
 )]
 pub struct ExplainCode<'a> {

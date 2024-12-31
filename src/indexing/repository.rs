@@ -30,8 +30,10 @@ pub async fn index_repository(
     garbage_collector.clean_up().await?;
 
     updater.send_update("Starting to index your code ...");
-    let extensions = repository.config().language.file_extensions();
-    let loader = loaders::FileLoader::new(repository.path()).with_extensions(extensions);
+    let mut extensions = repository.config().language.file_extensions().to_vec();
+    extensions.push("md");
+
+    let loader = loaders::FileLoader::new(repository.path()).with_extensions(&extensions);
     // NOTE: Parameter to optimize on
     let chunk_size = 100..2048;
 
@@ -46,9 +48,17 @@ pub async fn index_repository(
     let total_chunks = Arc::new(AtomicU64::new(0));
     let processed_chunks = Arc::new(AtomicU64::new(0));
 
-    swiftide::indexing::Pipeline::from_loader(loader)
+    let (mut markdown, mut code) = swiftide::indexing::Pipeline::from_loader(loader)
         .with_concurrency(repository.config().indexing_concurrency)
+        .with_default_llm_client(indexing_provider)
         .filter_cached(redb)
+        .split_by(|node| {
+            let Ok(node) = node else { return true };
+
+            node.path.extension().map_or(true, |ext| ext == "md")
+        });
+
+    code = code
         .then_chunk(transformers::ChunkCode::try_for_language_and_chunk_size(
             repository.config().language,
             chunk_size,
@@ -72,8 +82,33 @@ pub async fn index_repository(
                 Ok(node)
             }
         })
-        .then(transformers::MetadataQACode::new(indexing_provider))
-        // Since OpenAI is IO bound, making many small embedding requests in parallel is faster
+        .then(transformers::MetadataQACode::default());
+
+    markdown = markdown
+        .then_chunk(transformers::ChunkMarkdown::default())
+        .then({
+            let total_chunks = Arc::clone(&total_chunks);
+            let processed_chunks = Arc::clone(&processed_chunks);
+            let updater = updater.clone();
+
+            move |node| {
+                let total_chunks = total_chunks.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+
+                updater.send_update(format!(
+                    "Indexing a bit of code {}/{}",
+                    processed_chunks
+                        .clone()
+                        .load(std::sync::atomic::Ordering::Relaxed),
+                    total_chunks
+                ));
+
+                Ok(node)
+            }
+        })
+        .then(transformers::MetadataQAText::default());
+
+    // Since OpenAI is IO bound, making many small embedding requests in parallel is faster
+    code.merge(markdown)
         .then_in_batch(transformers::Embed::new(embedding_provider).with_batch_size(12))
         .then(|mut chunk: Node| {
             chunk
