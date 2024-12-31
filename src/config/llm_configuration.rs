@@ -8,7 +8,7 @@ use swiftide::{
 };
 use url::Url;
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(untagged)]
 #[allow(clippy::large_enum_variant)] // Parent is always on the heap in config
 pub enum LLMConfigurations {
@@ -21,7 +21,7 @@ pub enum LLMConfigurations {
     },
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(tag = "provider")]
 pub enum LLMConfiguration {
     OpenAI {

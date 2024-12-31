@@ -1,7 +1,7 @@
 //! Configuration for commands that tools can use to operate on the project.
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct CommandConfiguration {
     pub test: String,
     pub coverage: String,

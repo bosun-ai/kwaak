@@ -44,6 +44,12 @@ impl std::fmt::Debug for ApiKey {
     }
 }
 
+impl PartialEq for ApiKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.expose_secret() == other.expose_secret()
+    }
+}
+
 impl ApiKey {
     pub fn new(secret: SecretString) -> Self {
         ApiKey(secret)

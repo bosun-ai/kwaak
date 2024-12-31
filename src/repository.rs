@@ -43,3 +43,53 @@ impl Into<Repository> for &Repository {
         self.clone()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::test_repository;
+    use std::fs as sync_fs;
+    use tokio::runtime::Runtime; // Synchronous filesystem operations for test setup
+
+    #[test]
+    fn test_from_config() {
+        let repo = test_repository();
+        assert_eq!(repo.path(), &PathBuf::from("."));
+    }
+
+    #[test]
+    fn test_path() {
+        let repo = test_repository();
+        assert_eq!(repo.path(), &PathBuf::from("."));
+    }
+
+    #[test]
+    fn test_config() {
+        let repo = test_repository();
+        // Assuming Config implements PartialEq;
+        assert_eq!(repo.config(), &repo.config);
+    }
+
+    #[test]
+    fn test_into_repository() {
+        let repo = test_repository();
+        let _: Repository = (&repo).into(); // Check trait implementation
+    }
+
+    #[test]
+    fn test_clear_cache() {
+        let repo = test_repository();
+        let rt = Runtime::new().unwrap();
+
+        // Ensure the cache directory exists before attempting to clear it
+        let cache_dir = repo.config.cache_dir();
+        if !cache_dir.exists() {
+            sync_fs::create_dir_all(cache_dir).expect("Failed to create cache directory for test");
+        }
+
+        // Run `clear_cache` asynchronously within the test runtime
+        rt.block_on(async {
+            assert!(repo.clear_cache().await.is_ok());
+        });
+    }
+}

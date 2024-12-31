@@ -13,7 +13,7 @@ use super::defaults::{
 use super::{CommandConfiguration, LLMConfiguration, LLMConfigurations};
 
 // TODO: Improving parsing by enforcing invariants
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct Config {
     #[serde(default = "default_project_name")]
     pub project_name: String,
@@ -49,7 +49,7 @@ pub enum SupportedToolExecutors {
     Local,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DockerConfiguration {
     #[serde(default = "default_dockerfile")]
     pub dockerfile: PathBuf,
@@ -66,7 +66,7 @@ impl Default for DockerConfiguration {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GithubConfiguration {
     // TODO: Repo and owner can probably be derived from the origin url
     // Personally would prefer an onboarding that prefils instead of inferring at runtime
