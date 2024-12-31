@@ -4,7 +4,7 @@
 //! NOTE: If more general settings are added to Redb, better extract this to a more general place.
 
 use anyhow::Result;
-use std::{collections::HashSet, path::PathBuf, sync::Arc, time::SystemTime};
+use std::{path::PathBuf, sync::Arc, time::SystemTime};
 use swiftide::{
     integrations::{lancedb::LanceDB, redb::Redb},
     traits::Persist,
@@ -155,18 +155,16 @@ impl<'repository> GarbageCollector<'repository> {
 
 #[cfg(test)]
 mod tests {
-    use std::{sync::Arc, time::Duration};
+    use std::time::Duration;
 
     use swiftide::{
         indexing::{transformers::metadata_qa_code, Node},
         traits::{NodeCache, Persist},
     };
-    use tempfile;
 
     use crate::test_utils;
 
     use super::*;
-    use lancedb::query::{ExecutableQuery, QueryBase};
 
     // Would be nice if this (part of) was part of the test repository helper
     //
