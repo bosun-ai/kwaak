@@ -36,10 +36,12 @@ pub fn get_redb(repository: &Repository) -> Arc<Redb> {
     }))
 }
 
-fn build_lancedb(repository: &Repository) -> Result<LanceDBBuilder> {
+pub(crate) fn build_lancedb(repository: &Repository) -> Result<LanceDBBuilder> {
     let config = repository.config();
     let mut cache_dir = config.cache_dir().to_owned();
     cache_dir.push("lancedb");
+
+    tracing::debug!("Building LanceDB with cache dir: {:?}", cache_dir);
 
     let embedding_provider = config.embedding_provider();
 
@@ -58,10 +60,12 @@ fn build_lancedb(repository: &Repository) -> Result<LanceDBBuilder> {
 }
 
 #[allow(clippy::unnecessary_wraps)]
-fn build_redb(repository: &Repository) -> Result<RedbBuilder> {
+pub(crate) fn build_redb(repository: &Repository) -> Result<RedbBuilder> {
     let config = repository.config();
     let mut cache_dir = config.cache_dir().to_owned();
     cache_dir.push("redb");
+
+    tracing::debug!("Building Redb with cache dir: {:?}", cache_dir);
 
     let redb_builder = Redb::builder()
         .database_path(cache_dir)

@@ -4,46 +4,57 @@
 //! NOTE: If more general settings are added to Redb, better extract this to a more general place.
 
 use anyhow::Result;
-use std::{path::PathBuf, sync::Arc, time::SystemTime};
+use std::{borrow::Cow, path::PathBuf, sync::Arc, time::SystemTime};
 use swiftide::{
     integrations::{lancedb::LanceDB, redb::Redb},
     traits::Persist,
 };
 
-use crate::{repository::Repository, storage};
+use crate::{repository::Repository, runtime_settings::RuntimeSettings, storage};
 
-const LAST_INDEX_DATE: &str = "last_index_date";
+const LAST_CLEANED_UP_AT: &str = "last_cleaned_up_at";
 
 #[derive(Debug)]
 pub struct GarbageCollector<'repository> {
     /// The last index date
-    last_cleaned_up_at: Option<SystemTime>,
-    repository: &'repository Repository,
+    repository: Cow<'repository, Repository>,
     lancedb: Arc<LanceDB>,
     redb: Arc<Redb>,
 }
 
 impl<'repository> GarbageCollector<'repository> {
     pub fn from_repository(repository: &'repository Repository) -> Self {
-        let last_cleaned_up_at: Option<SystemTime> =
-            repository.runtime_settings().get(LAST_INDEX_DATE);
-
         Self {
-            last_cleaned_up_at,
-            repository,
+            repository: Cow::Borrowed(repository),
             lancedb: storage::get_lancedb(repository),
             redb: storage::get_redb(repository),
         }
     }
 
+    fn runtime_settings(&self) -> RuntimeSettings {
+        if cfg!(test) {
+            RuntimeSettings::from_db(self.redb.clone())
+        } else {
+            self.repository.runtime_settings()
+        }
+    }
+    fn get_last_cleaned_up_at(&self) -> Option<SystemTime> {
+        self.runtime_settings().get(LAST_CLEANED_UP_AT)
+    }
+
+    fn update_last_cleaned_up_at(&self, date: SystemTime) -> Result<()> {
+        self.runtime_settings().set(LAST_CLEANED_UP_AT, date)
+    }
+
     fn files_changed_since_last_index(&self) -> Vec<PathBuf> {
         // Currently walks all files not in ignore, which might be more than necessary
+        let last_cleaned_up_at = self.get_last_cleaned_up_at();
         ignore::Walk::new(self.repository.path())
             .filter_map(Result::ok)
             .filter(|entry| entry.file_type().is_some_and(|ft| ft.is_file()))
             .filter(|entry| {
                 // If no clean up is known, all files are considered changed
-                let Some(last_cleaned_up_at) = self.last_cleaned_up_at else {
+                let Some(last_cleaned_up_at) = last_cleaned_up_at else {
                     return true;
                 };
 
@@ -53,6 +64,12 @@ impl<'repository> GarbageCollector<'repository> {
                     return false;
                 };
 
+                tracing::debug!(
+                    ?modified_at,
+                    ?last_cleaned_up_at,
+                    "Comparing file modified times for {}",
+                    entry.path().display()
+                );
                 modified_at > last_cleaned_up_at
             })
             .map(ignore::DirEntry::into_path)
@@ -136,6 +153,8 @@ impl<'repository> GarbageCollector<'repository> {
             files.len()
         );
 
+        tracing::debug!(?files, "Files changed since last index");
+
         // should delete files from cache and index
         // should early return if no files are found, or index is empty
         // if index is empty and cache not => clear cache
@@ -145,9 +164,7 @@ impl<'repository> GarbageCollector<'repository> {
             self.delete_files_from_index(files).await?;
         }
 
-        self.repository
-            .runtime_settings()
-            .set(LAST_INDEX_DATE, SystemTime::now())?;
+        self.update_last_cleaned_up_at(SystemTime::now())?;
 
         Ok(())
     }
@@ -166,11 +183,21 @@ mod tests {
 
     use super::*;
 
+    // In kwaak the storage providers are statics. In these tests however, we need to recreate them
+    // for each in a unique test directory
+    struct TestContext {
+        redb: Arc<Redb>,
+        lancedb: Arc<LanceDB>,
+        node: Node,
+        subject: GarbageCollector<'static>,
+        _guard: tempfile::TempDir,
+    }
+
     // Would be nice if this (part of) was part of the test repository helper
     //
     // Creates a repository, temporary folders, adds a node to both the cache and the index as if
     // it was indexed
-    async fn setup() -> (Repository, Node, tempfile::TempDir) {
+    async fn setup() -> TestContext {
         let mut repository = test_utils::test_repository();
         let tempdir = tempfile::tempdir().unwrap();
         repository.path = tempdir.path().to_path_buf();
@@ -192,25 +219,45 @@ mod tests {
         node.metadata
             .insert(metadata_qa_code::NAME, "test".to_string());
 
-        let redb = storage::get_redb(&repository);
-        redb.set(&node).await;
+        let redb = Arc::new(storage::build_redb(&repository).unwrap().build().unwrap());
+
+        {
+            redb.set(&node).await;
+        }
         assert!(redb.get(&node).await);
 
-        let lancedb = storage::get_lancedb(&repository);
+        let lancedb = Arc::new(
+            storage::build_lancedb(&repository)
+                .unwrap()
+                .build()
+                .unwrap(),
+        );
         // Ignore any errors here
-        let _ = lancedb.setup().await;
+        if let Err(error) = lancedb.setup().await {
+            tracing::warn!(%error, "Error setting up LanceDB");
+        }
         let node = lancedb.store(node).await.unwrap();
 
-        (repository, node, tempdir)
+        let subject = GarbageCollector {
+            repository: Cow::Owned(repository.clone()),
+            lancedb: lancedb.clone(),
+            redb: redb.clone(),
+        };
+        TestContext {
+            redb,
+            lancedb,
+            node,
+            subject,
+            _guard: tempdir,
+        }
     }
 
     macro_rules! assert_rows_with_path_in_lancedb {
-        ($repository:expr, $path:expr, $count:expr) => {
-            let lancedb = storage::get_lancedb($repository);
+        ($context:expr, $path:expr, $count:expr) => {
             let predicate = format!("path = \"{}\"", $path.display());
 
             let count = {
-                let table = lancedb.open_table().await.unwrap();
+                let table = $context.lancedb.open_table().await.unwrap();
                 table.count_rows(Some(predicate)).await.unwrap()
             };
 
@@ -220,62 +267,50 @@ mod tests {
 
     #[test_log::test(tokio::test)]
     async fn test_clean_up_never_done_before() {
-        let (repository, node, _guard) = setup().await;
+        let context = setup().await;
 
-        // Store nodes in cache and lancedb
-        let redb = storage::get_redb(&repository);
-
-        assert_rows_with_path_in_lancedb!(&repository, node.path, 1);
+        assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
         // Now run the garbage collector
-        let garbage_collector = GarbageCollector::from_repository(&repository);
-        garbage_collector.clean_up().await.unwrap();
+        context.subject.clean_up().await.unwrap();
 
-        assert_rows_with_path_in_lancedb!(&repository, node.path, 0);
-        assert!(!redb.get(&node).await);
+        assert_rows_with_path_in_lancedb!(&context, context.node.path, 0);
+        assert!(!context.redb.get(&context.node).await);
     }
 
     #[test_log::test(tokio::test)]
     async fn test_clean_up_changed_file() {
-        let (repository, node, _guard) = setup().await;
+        let context = setup().await;
 
-        // Store nodes in cache and lancedb
-        let redb = storage::get_redb(&repository);
-
-        repository
-            .runtime_settings()
-            .set(LAST_INDEX_DATE, SystemTime::now() - Duration::from_secs(60))
+        context
+            .subject
+            .update_last_cleaned_up_at(SystemTime::now() - Duration::from_secs(60))
             .unwrap();
 
-        assert_rows_with_path_in_lancedb!(&repository, node.path, 1);
+        assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
         // Now run the garbage collector
-        let garbage_collector = GarbageCollector::from_repository(&repository);
-        garbage_collector.clean_up().await.unwrap();
+        context.subject.clean_up().await.unwrap();
 
-        assert_rows_with_path_in_lancedb!(&repository, node.path, 0);
-        assert!(!redb.get(&node).await);
+        assert_rows_with_path_in_lancedb!(&context, context.node.path, 0);
+        assert!(!context.redb.get(&context.node).await);
     }
 
     #[test_log::test(tokio::test)]
     async fn test_nothing_changed() {
-        let (repository, node, _guard) = setup().await;
+        let context = setup().await;
 
-        // Store nodes in cache and lancedb
-        let redb = storage::get_redb(&repository);
-
-        repository
-            .runtime_settings()
-            .set(LAST_INDEX_DATE, SystemTime::now() + Duration::from_secs(60))
+        context
+            .subject
+            .update_last_cleaned_up_at(SystemTime::now() + Duration::from_secs(600))
             .unwrap();
 
-        assert_rows_with_path_in_lancedb!(&repository, node.path, 1);
+        assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
         // Now run the garbage collector
-        let garbage_collector = GarbageCollector::from_repository(&repository);
-        garbage_collector.clean_up().await.unwrap();
+        context.subject.clean_up().await.unwrap();
 
-        assert_rows_with_path_in_lancedb!(&repository, node.path, 1);
-        assert!(redb.get(&node).await);
+        assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
+        assert!(context.redb.get(&context.node).await);
     }
 }
