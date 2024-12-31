@@ -61,7 +61,6 @@ impl RuntimeSettings {
 }
 #[cfg(test)]
 mod tests {
-    use storage::build_redb;
 
     use super::*;
     use crate::test_utils;
