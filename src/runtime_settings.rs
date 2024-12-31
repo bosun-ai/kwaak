@@ -61,12 +61,14 @@ impl RuntimeSettings {
 }
 #[cfg(test)]
 mod tests {
+    use storage::build_redb;
+
     use super::*;
     use crate::test_utils;
 
-    #[test]
+    #[test_log::test]
     fn test_set_and_get() {
-        let repository = test_utils::test_repository();
+        let (repository, _guard) = test_utils::test_repository();
         let runtime_settings = RuntimeSettings::from_repository(&repository);
 
         let key = "test_key";
@@ -81,9 +83,9 @@ mod tests {
         assert_eq!(retrieved_value, value);
     }
 
-    #[test]
+    #[test_log::test]
     fn test_with_non_string() {
-        let repository = test_utils::test_repository();
+        let (repository, _guard) = test_utils::test_repository();
         let runtime_settings = RuntimeSettings::from_repository(&repository);
 
         let key = "test_key";

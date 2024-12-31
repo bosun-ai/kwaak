@@ -1,7 +1,9 @@
 use crate::{config::Config, repository::Repository};
 
-/// Creates a repository for testing purposes with a temporary directory
-pub fn test_repository() -> Repository {
+pub struct TestGuard {
+    pub tempdir: tempfile::TempDir,
+}
+pub fn test_repository() -> (Repository, TestGuard) {
     let toml = r#"
             language = "rust"
 
@@ -31,5 +33,14 @@ pub fn test_repository() -> Repository {
             "#;
     let config: Config = toml.parse().unwrap();
 
-    Repository::from_config(config)
+    let mut repository = Repository::from_config(config);
+
+    let tempdir = tempfile::tempdir().unwrap();
+    repository.path = tempdir.path().to_path_buf();
+    repository.config.cache_dir = tempdir.path().to_path_buf();
+    repository.config.log_dir = tempdir.path().join("logs");
+    std::fs::create_dir_all(&repository.config.cache_dir).unwrap();
+    std::fs::create_dir_all(&repository.config.log_dir).unwrap();
+
+    (repository, TestGuard { tempdir })
 }

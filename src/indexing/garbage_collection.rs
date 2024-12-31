@@ -179,7 +179,7 @@ mod tests {
         traits::{NodeCache, Persist},
     };
 
-    use crate::test_utils;
+    use crate::test_utils::{self, TestGuard};
 
     use super::*;
 
@@ -190,7 +190,7 @@ mod tests {
         lancedb: Arc<LanceDB>,
         node: Node,
         subject: GarbageCollector<'static>,
-        _guard: tempfile::TempDir,
+        _guard: TestGuard,
     }
 
     // Would be nice if this (part of) was part of the test repository helper
@@ -198,15 +198,9 @@ mod tests {
     // Creates a repository, temporary folders, adds a node to both the cache and the index as if
     // it was indexed
     async fn setup() -> TestContext {
-        let mut repository = test_utils::test_repository();
-        let tempdir = tempfile::tempdir().unwrap();
-        repository.path = tempdir.path().to_path_buf();
-        repository.config.cache_dir = tempdir.path().join("cache");
-        repository.config.log_dir = tempdir.path().join("log");
-        std::fs::create_dir_all(&repository.config.cache_dir).unwrap();
-        std::fs::create_dir_all(&repository.config.log_dir).unwrap();
+        let (repository, guard) = test_utils::test_repository();
 
-        let tempfile = tempdir.path().join("test_file");
+        let tempfile = guard.tempdir.path().join("test_file");
         std::fs::write(&tempfile, "Test node").unwrap();
 
         let mut node = Node::builder()
@@ -248,7 +242,7 @@ mod tests {
             lancedb,
             node,
             subject,
-            _guard: tempdir,
+            _guard: guard,
         }
     }
 
