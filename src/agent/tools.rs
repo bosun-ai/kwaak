@@ -106,7 +106,7 @@ pub async fn search_code(context: &dyn AgentContext, query: &str) -> Result<Tool
     description = "Search code and documentation in human language in the project",
     param(
         name = "query",
-        description = "A description, question, or literal code you want to know more about. Uses a semantic similary search."
+        description = "A description, question, or literal code you want to know more about. Uses a semantic similarly search."
     )
 )]
 pub struct ExplainCode<'a> {
