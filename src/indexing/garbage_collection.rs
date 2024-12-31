@@ -72,7 +72,7 @@ impl<'repository> GarbageCollector<'repository> {
         Ok(())
     }
 
-    // This works under the assumption that relatively litle files change at a time
+    // This works under the assumption that relatively little files change at a time
     //
     // There are much better ways to do this, but for now this is the simplest
     fn delete_files_from_cache(&self, files: &[PathBuf]) -> Result<()> {
