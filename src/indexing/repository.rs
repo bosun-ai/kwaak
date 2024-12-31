@@ -7,6 +7,7 @@ use crate::storage;
 use anyhow::Result;
 use swiftide::indexing::loaders;
 use swiftide::indexing::transformers;
+use swiftide::indexing::EmbeddedField;
 use swiftide::indexing::Node;
 use swiftide::traits::EmbeddingModel;
 use swiftide::traits::NodeCache;
@@ -39,7 +40,7 @@ pub async fn index_repository(
     let embedding_provider: Box<dyn EmbeddingModel> =
         repository.config().embedding_provider().try_into()?;
 
-    let lancedb = storage::get_lancedb(repository) as Arc<dyn Persist>;
+    let lancedb = storage::get_lancedb(repository);
     let redb = storage::get_redb(repository) as Arc<dyn NodeCache>;
 
     let total_chunks = Arc::new(AtomicU64::new(0));
@@ -81,24 +82,38 @@ pub async fn index_repository(
 
             Ok(chunk)
         })
-        .then(move |node| {
-            let current = processed_chunks
-                .clone()
-                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        .then({
+            let updater = updater.clone();
 
-            updater.send_update(format!(
-                "Indexing a bit of code {}/{}",
-                current,
-                total_chunks
+            move |node| {
+                let current = processed_chunks
                     .clone()
-                    .load(std::sync::atomic::Ordering::Relaxed)
-            ));
+                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
-            Ok(node)
+                updater.send_update(format!(
+                    "Indexing a bit of code {}/{}",
+                    current,
+                    total_chunks
+                        .clone()
+                        .load(std::sync::atomic::Ordering::Relaxed)
+                ));
+
+                Ok(node)
+            }
         })
-        .then_store_with(lancedb)
+        .then_store_with(Arc::clone(&lancedb) as Arc<dyn Persist>)
         .run()
-        .await
+        .await?;
+
+    updater.send_update("Creating column indices ...");
+    let table = lancedb.open_table().await?;
+    let column_name = format!("vector_{}", EmbeddedField::Combined.field_name());
+    table
+        .create_index(&[&column_name], lancedb::index::Index::Auto)
+        .execute()
+        .await?;
+
+    Ok(())
 }
 
 // Just a simple wrapper so we can avoid having to Option check all the time
