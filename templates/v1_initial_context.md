@@ -1,21 +1,9 @@
-## Role
+{{ query }}
 
-You are helping an agent to get started on a task with an initial task and plan.
+Project the agent is working on: {{project_name}}
+The language the project is written in: {{lang}}
 
-## Task
-
-What is the purpose of the {{project_name}} that is written in {{lang}}? Provide a detailed answer to help me understand the context.
-
-The agent starts with the following prompt:
-
-```markdown
-{{original_system_prompt}}
-```
-
-And has to complete the following task:
-{{query}}
-
-For the agent to accomplish this task, provide the following context:
+For the agent to accomplish this task, example questions could be (not limited to!):
 
 - What files might be relevant to the agent?
 - Any directories the agent could explore?

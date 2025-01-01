@@ -33,8 +33,8 @@ async fn generate_initial_context(
         .collect::<Vec<String>>()
         .join("\n");
 
-    // TODO: This would be a nice answer transformer in the query pipeline
 
+    // TODO: Move this to the _answer_ transformer
     let mut template_context = tera::Context::new();
     template_context.insert("project_name", &repository.config().project_name);
     template_context.insert("lang", &repository.config().language);

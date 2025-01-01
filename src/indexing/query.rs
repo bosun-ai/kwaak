@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use indoc::formatdoc;
 use swiftide::{
     query::{
-        self, answers, query_transformers, search_strategies::SimilaritySingleEmbedding, states,
-        Retrieve,
+        self, answers, query_transformers, search_strategies::SimilaritySingleEmbedding, states, Query, Retrieve
     }, template::Template, traits::{EmbeddingModel, SimplePrompt}
 };
 
@@ -30,7 +30,7 @@ pub fn build_query_pipeline<'b>(
     let lancedb =
         storage::get_lancedb(repository) as Arc<dyn Retrieve<SimilaritySingleEmbedding<()>>>;
     let search_strategy: SimilaritySingleEmbedding<()> = SimilaritySingleEmbedding::default()
-        .with_top_k(20)
+        .with_top_k(40)
         .to_owned();
 
     let template = Templates::from_file("indexing_document.md")?;
@@ -40,7 +40,24 @@ pub fn build_query_pipeline<'b>(
         .build()
         .expect("infallible");
 
+    let language = repository.config().language.to_string();
+    let project = repository.config().project_name.clone();
+
     Ok(query::Pipeline::from_search_strategy(search_strategy)
+        .then_transform_query(move |mut query: Query<states::Pending>| {
+            let current = query.current();
+            query.transformed_query(formatdoc! {"
+                {current}
+
+                The project is written in: {language}
+                The project is called: {project}
+
+            "},
+
+            );
+
+            Ok(query)
+        })
         .then_transform_query(query_transformers::GenerateSubquestions::from_client(
             query_provider.clone(),
         ))

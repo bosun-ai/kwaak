@@ -16,6 +16,9 @@ use swiftide::traits::SimplePrompt;
 
 use super::garbage_collection::GarbageCollector;
 
+const CODE_CHUNK_RANGE: std::ops::Range<usize> = 100..1024;
+const MARKDOWN_CHUNK_RANGE: std::ops::Range<usize> = 100..512;
+
 // NOTE: Indexing in parallel guarantees a bad time
 
 #[tracing::instrument(skip_all)]
@@ -34,8 +37,6 @@ pub async fn index_repository(
     extensions.push("md");
 
     let loader = loaders::FileLoader::new(repository.path()).with_extensions(&extensions);
-    // NOTE: Parameter to optimize on
-    let chunk_size = 100..2048;
 
     let indexing_provider: Box<dyn SimplePrompt> =
         repository.config().indexing_provider().try_into()?;
@@ -61,7 +62,7 @@ pub async fn index_repository(
     code = code
         .then_chunk(transformers::ChunkCode::try_for_language_and_chunk_size(
             repository.config().language,
-            chunk_size,
+            CODE_CHUNK_RANGE,
         )?)
         .then({
             let total_chunks = Arc::clone(&total_chunks);
@@ -85,7 +86,7 @@ pub async fn index_repository(
         .then(transformers::MetadataQACode::default());
 
     markdown = markdown
-        .then_chunk(transformers::ChunkMarkdown::default())
+        .then_chunk(transformers::ChunkMarkdown::from_chunk_range(MARKDOWN_CHUNK_RANGE))
         .then({
             let total_chunks = Arc::clone(&total_chunks);
             let processed_chunks = Arc::clone(&processed_chunks);
