@@ -27,23 +27,23 @@ async fn generate_initial_context(
     original_system_prompt: &str,
     tools: &[Box<dyn Tool>],
 ) -> Result<String> {
-    let available_tools = tools
-        .iter()
-        .map(|tool| format!("- **{}**: {}", tool.name(), tool.tool_spec().description))
-        .collect::<Vec<String>>()
-        .join("\n");
-
-
-    // TODO: Move this to the _answer_ transformer
-    let mut template_context = tera::Context::new();
-    template_context.insert("project_name", &repository.config().project_name);
-    template_context.insert("lang", &repository.config().language);
-    template_context.insert("original_system_prompt", original_system_prompt);
-    template_context.insert("query", query);
-    template_context.insert("available_tools", &available_tools);
-
-    let initial_context_prompt = Templates::render("v1_initial_context.md", &template_context)?;
-    let retrieved_context = indexing::query(repository, &initial_context_prompt).await?;
+    // let available_tools = tools
+    //     .iter()
+    //     .map(|tool| format!("- **{}**: {}", tool.name(), tool.tool_spec().description))
+    //     .collect::<Vec<String>>()
+    //     .join("\n");
+    //
+    //
+    // // TODO: Move this to the _answer_ transformer
+    // let mut template_context = tera::Context::new();
+    // template_context.insert("project_name", &repository.config().project_name);
+    // template_context.insert("lang", &repository.config().language);
+    // template_context.insert("original_system_prompt", original_system_prompt);
+    // template_context.insert("query", query);
+    // template_context.insert("available_tools", &available_tools);
+    //
+    // let initial_context_prompt = Templates::render("v1_initial_context.md", &template_context)?;
+    let retrieved_context = indexing::query(repository, &query).await?;
     let formatted_context = format!("Additional information:\n\n{retrieved_context}");
     Ok(formatted_context)
 }
