@@ -7,7 +7,6 @@ use crate::storage;
 use anyhow::Result;
 use swiftide::indexing::loaders;
 use swiftide::indexing::transformers;
-use swiftide::indexing::EmbeddedField;
 use swiftide::indexing::Node;
 use swiftide::traits::EmbeddingModel;
 use swiftide::traits::NodeCache;

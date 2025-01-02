@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use anyhow::Context as _;
 use anyhow::Result;
 use rust_embed::Embed;
@@ -24,6 +22,6 @@ impl Templates {
         let byte_file =
             Templates::get(name).with_context(|| format!("Expected template {name}"))?;
 
-         String::from_utf8(byte_file.data.into_owned()).context("Failed to read template")
+        String::from_utf8(byte_file.data.into_owned()).context("Failed to read template")
     }
 }

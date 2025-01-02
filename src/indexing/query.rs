@@ -3,12 +3,10 @@ use std::sync::Arc;
 use anyhow::Result;
 use indoc::formatdoc;
 use swiftide::{
-    chat_completion::Tool,
     query::{
         self, answers, query_transformers, search_strategies::SimilaritySingleEmbedding, states,
         Query, Retrieve,
     },
-    template::Template,
     traits::{EmbeddingModel, SimplePrompt},
 };
 

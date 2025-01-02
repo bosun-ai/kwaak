@@ -5,15 +5,6 @@ expression: "Templates::render(\"indexing_document.md\",\n&Context::from_seriali
 The following snippet is part of the file `my file`
 
 
-## Metadata associated with this snippet
-
-**soups**:
-
-```
-[tomato, snert]
-```
-## Content
-
 ````
 This is a test document
 ````
