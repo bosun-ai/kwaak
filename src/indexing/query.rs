@@ -3,9 +3,13 @@ use std::sync::Arc;
 use anyhow::Result;
 use indoc::formatdoc;
 use swiftide::{
+    chat_completion::Tool,
     query::{
-        self, answers, query_transformers, search_strategies::SimilaritySingleEmbedding, states, Query, Retrieve
-    }, template::Template, traits::{EmbeddingModel, SimplePrompt}
+        self, answers, query_transformers, search_strategies::SimilaritySingleEmbedding, states,
+        Query, Retrieve,
+    },
+    template::Template,
+    traits::{EmbeddingModel, SimplePrompt},
 };
 
 use crate::{repository::Repository, storage, templates::Templates, util::strip_markdown_tags};
@@ -33,10 +37,14 @@ pub fn build_query_pipeline<'b>(
         .with_top_k(40)
         .to_owned();
 
-    let template = Templates::from_file("indexing_document.md")?;
+    let prompt_template = Templates::from_file("agentic_answer_prompt.md")?;
+    let document_template = Templates::from_file("indexing_document.md")?;
+
+    // NOTE: Changed a lot to tailor it for agentic flows, might be worth upstreaming
     let simple = answers::Simple::builder()
         .client(query_provider.clone())
-        .document_template(template)
+        .prompt_template(prompt_template.into())
+        .document_template(document_template)
         .build()
         .expect("infallible");
 
@@ -52,9 +60,7 @@ pub fn build_query_pipeline<'b>(
                 The project is written in: {language}
                 The project is called: {project}
 
-            "},
-
-            );
+            "});
 
             Ok(query)
         })
