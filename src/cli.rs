@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Parser, Debug, Clone)]
 #[clap(author, about, version)]
 pub struct Args {
