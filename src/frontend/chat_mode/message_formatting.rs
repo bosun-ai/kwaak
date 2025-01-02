@@ -100,6 +100,10 @@ pub fn format_chat_message<'a>(current_chat: &Chat, message: &'a ChatMessage) ->
 }
 
 fn format_tool_call(tool_call: &swiftide::chat_completion::ToolCall) -> String {
+    if let Some(formatted) = pretty_format_tool(tool_call) {
+        return formatted;
+    }
+
     // If args, parse them as a json value, then if its just one, render only the value, otherwise
     // limit the output to 20 characters
     let formatted_args = tool_call.args().and_then(|args| {
@@ -135,4 +139,50 @@ fn format_tool_call(tool_call: &swiftide::chat_completion::ToolCall) -> String {
     } else {
         format!("calling tool `{}`", tool_call.name())
     }
+}
+
+fn pretty_format_tool(tool_call: &swiftide::chat_completion::ToolCall) -> Option<String> {
+    let parsed_lt = tool_call
+        .args()
+        .and_then(|args| serde_json::from_str::<serde_json::Value>(args).ok());
+
+    let parsed_args = parsed_lt.as_ref().and_then(serde_json::Value::as_object);
+
+    // TODO: Would be nice to have user friendly result stats here
+    Some(match tool_call.name() {
+        "shell_command" => format!("running shell command `{}`", get_value(parsed_args, "cmd")?),
+        "read_file" => format!("reading file `{}`", get_value(parsed_args, "file_name")?),
+        "write_file" => format!("writing file `{}`", get_value(parsed_args, "file_name")?),
+        "search_file" => format!(
+            "searching for files matching `{}`",
+            get_value(parsed_args, "file_name")?
+        ),
+        "search_code" => format!(
+            "searching for code matching `{}`",
+            get_value(parsed_args, "query")?
+        ),
+        "git" => format!(
+            "running git command `{}`",
+            get_value(parsed_args, "command")?
+        ),
+        "explain_code" => format!(
+            "querying for code explaining `{}`",
+            get_value(parsed_args, "query")?
+        ),
+        "create_or_update_pull_request" => "creating a pull request".to_string(),
+        "run_tests" => "running tests".to_string(),
+        "run_coverage" => "running tests and gathering coverage".to_string(),
+        "search_web" => format!(
+            "searching the web for `{}`",
+            get_value(parsed_args, "query")?
+        ),
+        _ => return None,
+    })
+}
+
+fn get_value<'a>(
+    args: Option<&'a serde_json::Map<String, serde_json::Value>>,
+    key: &str,
+) -> Option<&'a str> {
+    args?.get(key).and_then(serde_json::Value::as_str)
 }
