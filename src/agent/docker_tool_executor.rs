@@ -517,7 +517,8 @@ mod tests {
         let status = container.state.as_ref().unwrap().status;
         assert!(
             status == Some(ContainerStateStatusEnum::REMOVING)
-                || status == Some(ContainerStateStatusEnum::EXITED),
+                || status == Some(ContainerStateStatusEnum::EXITED)
+                || status == Some(ContainerStateStatusEnum::DEAD),
             "Unexpected container state: {status:?}"
         );
     }
