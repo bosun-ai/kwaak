@@ -66,24 +66,13 @@ fn render_chat_messages(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
     current_chat.vertical_scroll_state =
         current_chat.vertical_scroll_state.content_length(num_lines);
 
-    // If we're rendering the current chat and it has new messages
-    // set the counter back to 0 and scroll to bottom
-    // TODO: Fix this, this solution is annoying as it overwrites scrolling by the user
-    if current_chat.new_message_count > 0 {
-        current_chat.new_message_count = 0;
+    // We need to consider the available area height to calculate how much can be shown
+    let view_height = area.height as usize;
+
+    // Ensure the last message is half-visible
+    if current_chat.vertical_scroll + (view_height / 2) >= num_lines {
+        current_chat.vertical_scroll = num_lines.saturating_sub(view_height / 2);
     }
-    //
-    //     let max_height = area.height as usize;
-    //
-    //     // If the number of lines is greater than what fits in the chat list area and the vertical
-    //     // there are more lines than where we are scrolled to, scroll down the remaining lines
-    //     if num_lines > max_height && num_lines > app.vertical_scroll {
-    //         app.vertical_scroll = num_lines - max_height;
-    //         app.vertical_scroll_state = app.vertical_scroll_state.position(app.vertical_scroll);
-    //     } else {
-    //         app.vertical_scroll = 0;
-    //     }
-    // }
 
     // Unify borders
     let border_set = symbols::border::Set {
@@ -107,12 +96,13 @@ fn render_chat_messages(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
     // Render scrollbar
     f.render_stateful_widget(
         Scrollbar::new(ScrollbarOrientation::VerticalRight)
-            .begin_symbol(Some("↑"))
-            .end_symbol(Some("↓")),
+            .begin_symbol(Some(""))
+            .end_symbol(Some("")),
         area,
         &mut current_chat.vertical_scroll_state,
     );
 }
+
 fn render_chat_list(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
     let list: List = app
         .chats
