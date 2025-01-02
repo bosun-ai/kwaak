@@ -7,6 +7,7 @@ use swiftide::{
 };
 use tokio::io::AsyncReadExt as _;
 use tracing::{error, info};
+use uuid::Uuid;
 
 use bollard::{
     container::{
@@ -42,11 +43,13 @@ pub struct DockerExecutor {
     #[allow(dead_code)]
     working_dir: PathBuf,
     dockerfile: PathBuf,
+    container_uuid: Uuid,
 }
 
 impl Default for DockerExecutor {
     fn default() -> Self {
         Self {
+            container_uuid: Uuid::new_v4(),
             context_path: ".".into(),
             image_name: "docker-executor".into(),
             working_dir: ".".into(),
@@ -84,9 +87,16 @@ impl DockerExecutor {
 
         if cfg!(debug_assertions) {
             // Parallel tests can cause conflicts with the same image name
+            // So we add an extra uuid to the image name as well
             let random_suffix = uuid::Uuid::new_v4().to_string();
             self.image_name = format!("{}-{}", self.image_name, random_suffix);
         }
+
+        self
+    }
+
+    pub fn with_container_uuid(&mut self, uuid: impl Into<Uuid>) -> &mut Self {
+        self.container_uuid = uuid.into();
 
         self
     }
@@ -104,7 +114,13 @@ impl DockerExecutor {
     }
 
     pub async fn start(self) -> Result<RunningDockerExecutor> {
-        RunningDockerExecutor::start(&self.context_path, &self.dockerfile, &self.image_name).await
+        RunningDockerExecutor::start(
+            self.container_uuid,
+            &self.context_path,
+            &self.dockerfile,
+            &self.image_name,
+        )
+        .await
     }
 }
 
@@ -124,6 +140,7 @@ impl ToolExecutor for RunningDockerExecutor {
 impl RunningDockerExecutor {
     /// Starts a docker container with a given context and image name
     pub async fn start(
+        container_uuid: Uuid,
         context_path: &Path,
         dockerfile: &Path,
         image_name: &str,
@@ -179,9 +196,7 @@ impl RunningDockerExecutor {
             ..Default::default()
         };
 
-        // Add a random suffix so multiple containers do not conflict
-        let random_suffix = uuid::Uuid::new_v4().to_string();
-        let container_name = format!("kwaak-{image_name}-{random_suffix}");
+        let container_name = format!("kwaak-{image_name}-{container_uuid}");
         let create_options = CreateContainerOptions {
             name: container_name.as_str(),
             ..Default::default()
