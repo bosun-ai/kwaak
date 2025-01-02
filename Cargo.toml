@@ -83,9 +83,6 @@ lancedb = { version = "0.14.1", default-features = false, features = [
 ] }
 num_cpus = "1.16.0"
 
-#fml
-# TODO: Suspect it's lancedb
-openssl-sys = { version = "0.9.104", features = ["vendored"] }
 
 [dev-dependencies]
 test-log = { version = "0.2.16", features = ["trace"] }
