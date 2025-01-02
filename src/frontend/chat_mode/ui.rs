@@ -14,7 +14,7 @@ use super::message_formatting::format_chat_message;
 
 pub fn ui(f: &mut ratatui::Frame, area: Rect, app: &mut App) {
     // Create the main layout (vertical)
-    let [main_area, _bottom_area] = Layout::default()
+    let [main_area, bottom_area] = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Min(0), // Main area
@@ -51,6 +51,17 @@ pub fn ui(f: &mut ratatui::Frame, area: Rect, app: &mut App) {
 
     // Render commands display area
     render_help(f, app, help_area);
+
+    // Bottom paragraph with the git branch, right aligned italic
+
+    Paragraph::new(Line::from(vec![Span::raw(format!(
+        "kwaak/{}",
+        app.current_chat
+    ))]))
+    .style(Style::default().fg(Color::DarkGray).italic())
+    .block(Block::default().padding(Padding::right(1)))
+    .alignment(Alignment::Right)
+    .render(bottom_area, f.buffer_mut());
 }
 
 fn render_chat_messages(f: &mut ratatui::Frame, app: &mut App, area: Rect) {

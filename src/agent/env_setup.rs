@@ -6,13 +6,14 @@ use anyhow::Result;
 use secrecy::ExposeSecret;
 use swiftide::traits::Command;
 use swiftide::traits::ToolExecutor;
+use uuid::Uuid;
 
 use crate::config::SupportedToolExecutors;
 use crate::git::github::GithubSession;
 use crate::repository::Repository;
 
 pub struct EnvSetup<'a> {
-    #[allow(dead_code)]
+    uuid: Uuid,
     repository: &'a Repository,
     github_session: Option<&'a GithubSession>,
     executor: &'a dyn ToolExecutor,
@@ -20,11 +21,13 @@ pub struct EnvSetup<'a> {
 
 impl EnvSetup<'_> {
     pub fn new<'a>(
+        uuid: Uuid,
         repository: &'a Repository,
         github_session: Option<&'a GithubSession>,
         executor: &'a dyn ToolExecutor,
     ) -> EnvSetup<'a> {
         EnvSetup {
+            uuid,
             repository,
             github_session,
             executor,
@@ -80,8 +83,10 @@ impl EnvSetup<'_> {
         Ok(())
     }
 
+    // NOTE: Git branch is currently hardcoded to `kwaak/{uuid}` in the frontend, using the same
+    // uuid as the chat
     async fn switch_to_work_branch(&self) -> Result<()> {
-        let branch_name = format!("kwaak-{}", uuid::Uuid::new_v4());
+        let branch_name = format!("kwaak/{}", self.uuid);
         let cmd = Command::Shell(format!("git checkout -b {branch_name}"));
         self.executor.exec_cmd(&cmd).await?;
 

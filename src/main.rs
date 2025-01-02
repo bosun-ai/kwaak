@@ -21,6 +21,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use tokio::fs;
+use uuid::Uuid;
 
 mod agent;
 mod chat;
@@ -134,7 +135,8 @@ async fn start_agent(repository: &repository::Repository, args: &cli::Args) -> R
         .as_deref()
         .expect("Expected initial query for the agent")
         .to_string();
-    let mut agent = agent::build_agent(repository, &query, responder_for_agent).await?;
+    let mut agent =
+        agent::build_agent(Uuid::new_v4(), repository, &query, responder_for_agent).await?;
 
     agent.query(&query).await?;
     handle.abort();

@@ -313,7 +313,7 @@ impl CommandHandler {
 
         let (responder, handle) = self.spawn_command_responder(&uuid);
 
-        let agent = agent::build_agent(&self.repository, query, responder).await?;
+        let agent = agent::build_agent(uuid, &self.repository, query, responder).await?;
 
         let running_agent = RunningAgent {
             agent: Arc::new(Mutex::new(agent)),
