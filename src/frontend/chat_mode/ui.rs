@@ -61,17 +61,25 @@ fn render_chat_messages(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
         .flat_map(|m| format_chat_message(current_chat, m))
         .collect();
 
-    let num_lines = chat_content.lines.len();
-
-    current_chat.vertical_scroll_state =
-        current_chat.vertical_scroll_state.content_length(num_lines);
+    // Since we are rendering the chat, we can reset the new message count
+    current_chat.new_message_count = 0;
 
     // We need to consider the available area height to calculate how much can be shown
     let view_height = area.height as usize;
 
-    // Ensure the last message is half-visible
-    if current_chat.vertical_scroll + (view_height / 2) >= num_lines {
-        current_chat.vertical_scroll = num_lines.saturating_sub(view_height / 2);
+    current_chat.num_lines = chat_content.lines.len();
+    if current_chat.num_lines >= current_chat.num_lines.saturating_sub(view_height / 2) {
+        current_chat.num_lines = current_chat.num_lines.saturating_sub(view_height / 2);
+    }
+
+    // Record the number of lines in the chat for multi line scrolling
+    current_chat.vertical_scroll_state = current_chat
+        .vertical_scroll_state
+        .content_length(current_chat.num_lines);
+
+    // Max scroll to halfway view-height of last content
+    if current_chat.vertical_scroll >= current_chat.num_lines {
+        current_chat.vertical_scroll = current_chat.num_lines;
     }
 
     // Unify borders
@@ -96,8 +104,8 @@ fn render_chat_messages(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
     // Render scrollbar
     f.render_stateful_widget(
         Scrollbar::new(ScrollbarOrientation::VerticalRight)
-            .begin_symbol(Some(""))
-            .end_symbol(Some("")),
+            .begin_symbol(Some("↑"))
+            .end_symbol(Some("↓")),
         area,
         &mut current_chat.vertical_scroll_state,
     );
@@ -208,6 +216,7 @@ fn render_help(f: &mut ratatui::Frame, app: &App, area: Rect) {
     Paragraph::new(
         [
             "Page Up/Down - Scroll",
+            "End - Scroll to end",
             "^s - Send message",
             "^s - Send message",
             "^x - Stop agent",

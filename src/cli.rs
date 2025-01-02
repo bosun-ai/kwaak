@@ -31,6 +31,10 @@ pub struct Args {
     /// Initializes a new kwaak project in the current directory
     #[arg(long, default_value_t = false)]
     pub init: bool,
+
+    /// Skip initial indexing and splash screen
+    #[arg(short, long, default_value_t = false)]
+    pub skip_indexing: bool,
 }
 
 #[derive(clap::ValueEnum, Clone, Debug, Default, strum_macros::AsRefStr)]

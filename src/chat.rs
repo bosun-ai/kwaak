@@ -19,6 +19,7 @@ pub struct Chat {
     // but handled in the ui
     pub vertical_scroll_state: ScrollbarState,
     pub vertical_scroll: usize,
+    pub num_lines: usize,
 }
 
 impl Chat {
@@ -77,6 +78,7 @@ impl Default for Chat {
             completed_tool_call_ids: HashSet::new(),
             vertical_scroll_state: ScrollbarState::default(),
             vertical_scroll: 0,
+            num_lines: 0,
         }
     }
 }

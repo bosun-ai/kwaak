@@ -88,7 +88,7 @@ async fn main() -> Result<()> {
         .entered();
         match args.mode {
             cli::ModeArgs::RunAgent => start_agent(&repository, &args).await,
-            cli::ModeArgs::Tui => start_tui(&repository).await,
+            cli::ModeArgs::Tui => start_tui(&repository, &args).await,
             cli::ModeArgs::Index => index_repository(&repository, None).await,
             cli::ModeArgs::Query => {
                 let result = query(&repository, args.query.expect("Expected a query")).await?;
@@ -142,7 +142,7 @@ async fn start_agent(repository: &repository::Repository, args: &cli::Args) -> R
 }
 
 #[instrument]
-async fn start_tui(repository: &repository::Repository) -> Result<()> {
+async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Result<()> {
     ::tracing::info!("Loaded configuration: {:?}", repository.config());
 
     // Setup terminal
@@ -150,6 +150,10 @@ async fn start_tui(repository: &repository::Repository) -> Result<()> {
 
     // Start the application
     let mut app = App::default();
+
+    if args.skip_indexing {
+        app.skip_indexing = true;
+    }
 
     if cfg!(feature = "test-layout") {
         app.ui_tx

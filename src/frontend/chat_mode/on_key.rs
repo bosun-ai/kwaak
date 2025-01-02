@@ -58,29 +58,16 @@ pub fn on_key(app: &mut App, key: KeyEvent) {
         return;
     }
 
-    // `Ctrl-e` to scroll to the last message keeping it 50% in view
-    if key.code == KeyCode::Char('e')
-        && key
-            .modifiers
-            .contains(crossterm::event::KeyModifiers::CONTROL)
-    {
-        let current_chat = app.current_chat_mut();
-        let num_messages = current_chat.messages.len();
-        // Placeholder for the calculation of viewable lines based on layout
-        let view_height = 10; // This should match the UI layout constraints
-
-        if num_messages > view_height {
-            // Scroll to make the last message half-visible
-            current_chat.vertical_scroll = num_messages.saturating_sub(view_height / 2);
-            current_chat.vertical_scroll_state = current_chat
-                .vertical_scroll_state
-                .position(current_chat.vertical_scroll);
-        }
-        return;
-    }
-
     match key.code {
         KeyCode::Tab => app.send_ui_event(UIEvent::NextChat),
+        KeyCode::End => {
+            let current_chat = app.current_chat_mut();
+            let num_lines = current_chat.num_lines;
+
+            current_chat.vertical_scroll = num_lines;
+            current_chat.vertical_scroll_state =
+                current_chat.vertical_scroll_state.position(num_lines);
+        }
         KeyCode::PageDown => {
             let current_chat = app.current_chat_mut();
             current_chat.vertical_scroll = current_chat.vertical_scroll.saturating_add(1);

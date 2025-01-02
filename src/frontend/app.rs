@@ -65,6 +65,9 @@ pub struct App<'a> {
 
     /// Commands that relate to boot, and not a chat
     pub boot_uuid: Uuid,
+
+    /// Skip indexing on boot
+    pub skip_indexing: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -119,6 +122,7 @@ impl Default for App<'_> {
         };
 
         Self {
+            skip_indexing: false,
             text_input: new_text_area(),
             current_chat: chat.uuid,
             chats: vec![chat],
@@ -218,9 +222,13 @@ impl App<'_> {
         let mut has_indexed_on_boot = false;
         let mut splash = frontend::splash::Splash::default();
 
-        self.dispatch_command(&Command::IndexRepository {
-            uuid: self.boot_uuid,
-        });
+        if self.skip_indexing {
+            has_indexed_on_boot = true;
+        } else {
+            self.dispatch_command(&Command::IndexRepository {
+                uuid: self.boot_uuid,
+            });
+        }
 
         loop {
             // Draw the UI
