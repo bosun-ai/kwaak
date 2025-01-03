@@ -59,7 +59,7 @@ throbber-widgets-tui = "0.8.0"
 bollard = "0.18.1"
 tokio-tar = "0.3.1"
 ignore = "0.4.23"
-async-trait = "0.1.83"
+async-trait = "0.1.84"
 url = "2.5.3"
 octocrab = "0.42.0"
 indoc = "2.0.5"
@@ -90,7 +90,7 @@ openssl-sys = { version = "0.9.104", features = ["vendored"] }
 [dev-dependencies]
 test-log = { version = "0.2.16", features = ["trace"] }
 insta = "1.41.1"
-tempfile = "3.14.0"
+tempfile = "3.15.0"
 
 [lints.rust]
 unsafe_code = "forbid"

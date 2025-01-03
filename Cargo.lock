@@ -494,9 +494,9 @@ dependencies = [
 
 [[package]]
 name = "async-trait"
-version = "0.1.83"
+version = "0.1.84"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "721cae7de5c34fbb2acd27e21e6d2cf7b886dce0c27388d46c4e6c47ea4318dd"
+checksum = "1b1244b10dcd56c92219da4e14caa97e312079e185f04ba3eea25061561dc0a0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5262,9 +5262,9 @@ checksum = "ba39f3699c378cd8970968dcbff9c43159ea4cfbd88d43c00b22f2ef10a435d2"
 
 [[package]]
 name = "reqwest"
-version = "0.12.11"
+version = "0.12.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fe060fe50f524be480214aba758c71f99f90ee8c83c5a36b5e9e1d568eb4eb3"
+checksum = "43e734407157c3c2034e0258f5e4473ddb361b1e85f95a66690d67264d7cd1da"
 dependencies = [
  "async-compression",
  "base64 0.22.1",
@@ -6532,12 +6532,13 @@ dependencies = [
 
 [[package]]
 name = "tempfile"
-version = "3.14.0"
+version = "3.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28cce251fcbc87fac86a866eeb0d6c2d536fc16d06f184bb61aeae11aa4cee0c"
+checksum = "9a8a559c81686f576e8cd0290cd2a24a2a9ad80c98b3478856500fcbd7acd704"
 dependencies = [
  "cfg-if",
  "fastrand 2.3.0",
+ "getrandom",
  "once_cell",
  "rustix 0.38.42",
  "windows-sys 0.59.0",
