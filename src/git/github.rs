@@ -4,9 +4,16 @@
 use std::sync::Mutex;
 
 use anyhow::{Context, Result};
-use octocrab::{models::pulls::PullRequest, Octocrab};
+use octocrab::{
+    models::{pulls::PullRequest, Code},
+    Octocrab, Page,
+};
+use reqwest::header::{HeaderMap, ACCEPT};
 use secrecy::SecretString;
+use serde::{Deserialize, Serialize};
+use serde_json::json;
 use swiftide::chat_completion::ChatMessage;
+use url::Url;
 
 use crate::{config::ApiKey, repository::Repository, templates::Templates};
 
@@ -63,6 +70,23 @@ impl GithubSession {
 
     pub fn main_branch(&self) -> &str {
         &self.repository.config().github.main_branch
+    }
+
+    #[tracing::instrument(skip(self), err)]
+    pub async fn search_code(&self, query: &str) -> Result<Page<CodeWithMatches>> {
+        let mut headers = HeaderMap::new();
+        headers.insert(ACCEPT, "application/vnd.github.text-match+json".parse()?);
+
+        self.octocrab
+            .get_with_headers(
+                "/search/code",
+                Some(&json!({
+                "q": query,
+                })),
+                Some(headers),
+            )
+            .await
+            .context("Failed to search code")
     }
 
     #[tracing::instrument(skip_all)]
@@ -275,4 +299,25 @@ mod tests {
             )
         );
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct CodeWithMatches {
+    pub name: String,
+    pub path: String,
+    pub sha: String,
+    pub url: Url,
+    pub git_url: Url,
+    pub html_url: Url,
+    pub repository: octocrab::models::Repository,
+    pub text_matches: Vec<TextMatches>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct TextMatches {
+    object_url: Url,
+    object_type: String,
+    property: String,
+    fragment: String,
+    // matches: Vec<Match>,
 }

@@ -27,7 +27,7 @@ async fn generate_initial_context(repository: &Repository, query: &str) -> Resul
     Ok(formatted_context)
 }
 
-fn configure_tools(
+pub fn available_tools(
     repository: &Repository,
     github_session: Option<&Arc<GithubSession>>,
 ) -> Result<Vec<Box<dyn Tool>>> {
@@ -47,6 +47,7 @@ fn configure_tools(
 
     if let Some(github_session) = github_session {
         tools.push(tools::CreateOrUpdatePullRequest::new(github_session).boxed());
+        tools.push(tools::GithubSearchCode::new(github_session).boxed());
     }
 
     if let Some(tavily_api_key) = &repository.config().tavily_api_key {
@@ -89,7 +90,7 @@ pub async fn build_agent(
         None => None,
     };
 
-    let tools = configure_tools(&repository, github_session.as_ref())?;
+    let tools = available_tools(&repository, github_session.as_ref())?;
 
     let system_prompt: Prompt =
     SystemPrompt::builder()

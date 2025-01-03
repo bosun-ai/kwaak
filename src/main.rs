@@ -2,13 +2,16 @@
 use std::{
     io::{self, stdout},
     panic::{set_hook, take_hook},
+    sync::Arc,
 };
 
-use anyhow::Result;
+use agent::available_tools;
+use anyhow::{Context as _, Result};
 use clap::Parser;
 use commands::{CommandResponder, CommandResponse};
 use config::Config;
 use frontend::App;
+use git::github::GithubSession;
 use indexing::{index_repository, query};
 use ratatui::{
     backend::{Backend, CrosstermBackend},
@@ -20,6 +23,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use swiftide::{agents::DefaultContext, chat_completion::Tool, traits::AgentContext};
 use tokio::fs;
 
 mod agent;
@@ -90,6 +94,7 @@ async fn main() -> Result<()> {
             cli::ModeArgs::RunAgent => start_agent(&repository, &args).await,
             cli::ModeArgs::Tui => start_tui(&repository, &args).await,
             cli::ModeArgs::Index => index_repository(&repository, None).await,
+            cli::ModeArgs::TestTool => test_tool(&repository, &args).await,
             cli::ModeArgs::Query => {
                 let result = query(&repository, args.query.expect("Expected a query")).await?;
 
@@ -103,6 +108,25 @@ async fn main() -> Result<()> {
     if cfg!(feature = "otel") {
         opentelemetry::global::shutdown_tracer_provider();
     }
+
+    Ok(())
+}
+
+async fn test_tool(repository: &repository::Repository, args: &cli::Args) -> Result<()> {
+    let tool_name = args.tool_name.as_ref().expect("Expected a tool name");
+    let tool_args = args.tool_args.as_deref();
+    let github_session = Arc::new(GithubSession::from_repository(&repository)?);
+    let tool = available_tools(repository, Some(&github_session))?
+        .into_iter()
+        .find(|tool| tool.name() == tool_name)
+        .context("Tool not found")?;
+
+    let agent_context = DefaultContext::default();
+
+    let output = tool
+        .invoke(&agent_context as &dyn AgentContext, tool_args)
+        .await?;
+    println!("{output}");
 
     Ok(())
 }
