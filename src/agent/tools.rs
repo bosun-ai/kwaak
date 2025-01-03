@@ -11,6 +11,7 @@ use swiftide::{
 use swiftide_macros::{tool, Tool};
 use tavily::Tavily;
 use tokio::sync::Mutex;
+use url::Url;
 
 use crate::{
     config::ApiKey, git::github::GithubSession, templates::Templates, util::accept_non_zero_exit,
@@ -354,4 +355,28 @@ impl GithubSearchCode {
 
         Ok(rendered)
     }
+}
+
+#[tool(
+    description = "Fetch a url and present it as markdown",
+    param(name = "url", description = "The url to fetch")
+)]
+pub async fn fetch_url(_context: &dyn AgentContext, url: &str) -> Result<ToolOutput, ToolError> {
+    let url_content = match reqwest::get(url).await {
+        Ok(response) if response.status().is_success() => response.text().await.unwrap(),
+
+        // Assuming 9/10 parsing/network errors for now always return it to the llm
+        Err(e) => return Ok(format!("Failed to fetch url: {e:#}").into()),
+        Ok(response) => return Ok(format!("Failed to fetch url: {}", response.status()).into()),
+    };
+
+    htmd::HtmlToMarkdown::builder()
+        .skip_tags(vec!["script", "style", "img", "video", "audio", "embed"])
+        .build()
+        .convert(&url_content)
+        .or_else(|e| {
+            tracing::warn!("Error converting markdown {e:#}");
+            Ok(url_content)
+        })
+        .map(Into::into)
 }

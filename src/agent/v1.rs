@@ -40,6 +40,7 @@ pub fn available_tools(
         tools::git(),
         tools::shell_command(),
         tools::search_code(),
+        tools::fetch_url(),
         tools::ExplainCode::new(query_pipeline).boxed(),
         tools::RunTests::new(&repository.config().commands.test).boxed(),
         tools::RunCoverage::new(&repository.config().commands.coverage).boxed(),
