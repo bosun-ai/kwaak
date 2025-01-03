@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
+// TODO: Move to subcommands
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Parser, Debug, Clone)]
 #[clap(author, about, version)]
@@ -20,6 +21,13 @@ pub struct Args {
     /// When querying the indexed project, the query to run
     #[arg(short, long, required_if_eq("mode", "query"))]
     pub query: Option<String>,
+
+    #[arg(required_if_eq("mode", "test-tool"))]
+    /// The tool name when testing a tool
+    pub tool_name: Option<String>,
+    /// Optional argument for testing a tool, expects the raw json
+    #[allow(clippy::struct_field_names)]
+    pub tool_args: Option<String>,
 
     /// Print the configuration and exit
     #[arg(long)]
@@ -49,4 +57,6 @@ pub enum ModeArgs {
     /// Start the TUI
     #[default]
     Tui,
+    /// Runs a tool and check the output. Warning: Will not run in a sandbox
+    TestTool,
 }

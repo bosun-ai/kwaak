@@ -2,6 +2,7 @@
 use std::sync::Arc;
 
 use anyhow::{Context as _, Result};
+use indoc::formatdoc;
 use swiftide::{
     chat_completion::{errors::ToolError, ToolOutput},
     query::{search_strategies, states},
@@ -10,8 +11,11 @@ use swiftide::{
 use swiftide_macros::{tool, Tool};
 use tavily::Tavily;
 use tokio::sync::Mutex;
+use url::Url;
 
-use crate::{config::ApiKey, git::github::GithubSession, util::accept_non_zero_exit};
+use crate::{
+    config::ApiKey, git::github::GithubSession, templates::Templates, util::accept_non_zero_exit,
+};
 
 static MAIN_BRANCH_CMD: &str = "git remote show origin | sed -n '/HEAD branch/s/.*: //p'";
 
@@ -308,4 +312,71 @@ impl SearchWeb {
             })
             .into())
     }
+}
+
+#[derive(Tool, Clone)]
+#[tool(
+    description = "Search code in github with the github search api",
+    param(
+        name = "query",
+        description = "Github search query (comptabile with github search api"
+    )
+)]
+pub struct GithubSearchCode {
+    github_session: Arc<GithubSession>,
+}
+
+impl GithubSearchCode {
+    pub fn new(github_session: &Arc<GithubSession>) -> Self {
+        Self {
+            github_session: Arc::clone(github_session),
+        }
+    }
+
+    pub async fn github_search_code(
+        &self,
+        _context: &dyn AgentContext,
+        query: &str,
+    ) -> Result<ToolOutput, ToolError> {
+        let mut results = self
+            .github_session
+            .search_code(query)
+            .await
+            .map_err(anyhow::Error::from)?;
+
+        tracing::debug!(?results, "Github search results");
+
+        let mut context = tera::Context::new();
+        context.insert("items", &results.take_items());
+
+        let rendered = Templates::render("github_search_results.md", &context)
+            .map(Into::into)
+            .context("Failed to render github search results")?;
+
+        Ok(rendered)
+    }
+}
+
+#[tool(
+    description = "Fetch a url and present it as markdown",
+    param(name = "url", description = "The url to fetch")
+)]
+pub async fn fetch_url(_context: &dyn AgentContext, url: &str) -> Result<ToolOutput, ToolError> {
+    let url_content = match reqwest::get(url).await {
+        Ok(response) if response.status().is_success() => response.text().await.unwrap(),
+
+        // Assuming 9/10 parsing/network errors for now always return it to the llm
+        Err(e) => return Ok(format!("Failed to fetch url: {e:#}").into()),
+        Ok(response) => return Ok(format!("Failed to fetch url: {}", response.status()).into()),
+    };
+
+    htmd::HtmlToMarkdown::builder()
+        .skip_tags(vec!["script", "style", "img", "video", "audio", "embed"])
+        .build()
+        .convert(&url_content)
+        .or_else(|e| {
+            tracing::warn!("Error converting markdown {e:#}");
+            Ok(url_content)
+        })
+        .map(Into::into)
 }

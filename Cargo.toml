@@ -82,6 +82,7 @@ lancedb = { version = "0.14.1", default-features = false, features = [
   "rustls-tls",
 ] }
 num_cpus = "1.16.0"
+htmd = "0.1.6"
 
 #fml
 # TODO: Suspect it's lancedb
