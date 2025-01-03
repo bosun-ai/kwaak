@@ -39,6 +39,21 @@ pub struct Config {
 
     #[serde(default)]
     pub tool_executor: SupportedToolExecutors,
+
+    /// By default the agent stops if the last message was its own and there are no new
+    /// completions.
+    ///
+    /// When endless mode is enabled, the agent will keep running until it either cannot complete,
+    /// did complete or was manually stopped.
+    ///
+    /// In addition, the agent is instructed that it cannot ask for feedback, but should try to
+    /// complete its task instead.
+    ///
+    /// When running without a TUI, the agent will always run in endless mode.
+    ///
+    /// WARN: There currently is _no_ limit for endless mode
+    #[serde(default)]
+    pub endless_mode: bool,
 }
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize, Default)]
