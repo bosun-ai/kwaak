@@ -164,6 +164,8 @@ impl<'repository> GarbageCollector<'repository> {
     pub async fn clean_up(&self) -> Result<()> {
         let files = self.files_changed_since_last_index();
 
+        tracing::debug!("Files detected as changed: {:?}", files);
+
         if files.is_empty() {
             tracing::info!("No files changed since last index; skipping garbage collection");
             return Ok(());
@@ -312,6 +314,11 @@ mod tests {
         // Simulate a file being deleted by removing it
         std::fs::remove_file(&context.node.path).unwrap();
 
+        tracing::debug!(
+            "Test setup: file {} is removed",
+            context.node.path.display()
+        );
+
         // Now run the garbage collector
         context.subject.clean_up().await.unwrap();
 
@@ -345,6 +352,11 @@ mod tests {
 
         // Simulate file deletion
         std::fs::remove_file(&context.node.path).unwrap();
+
+        tracing::debug!(
+            "Test setup: file {} is removed",
+            context.node.path.display()
+        );
 
         // Now run the garbage collector
         context.subject.clean_up().await.unwrap();
