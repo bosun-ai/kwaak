@@ -10,6 +10,7 @@ use swiftide::{
     traits::{Command, SimplePrompt, ToolExecutor},
 };
 use tavily::Tavily;
+use uuid::Uuid;
 
 use crate::{
     commands::CommandResponder, config::SupportedToolExecutors, git::github::GithubSession,
@@ -59,12 +60,15 @@ fn configure_tools(
     Ok(tools)
 }
 
-async fn start_tool_executor(repository: &Repository) -> Result<Box<dyn ToolExecutor>> {
+async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Box<dyn ToolExecutor>> {
     let boxed = match repository.config().tool_executor {
-        SupportedToolExecutors::Docker => {
-            Box::new(DockerExecutor::from_repository(repository).start().await?)
-                as Box<dyn ToolExecutor>
-        }
+        SupportedToolExecutors::Docker => Box::new(
+            DockerExecutor::from_repository(repository)
+                .with_container_uuid(uuid)
+                .to_owned()
+                .start()
+                .await?,
+        ) as Box<dyn ToolExecutor>,
         SupportedToolExecutors::Local => Box::new(LocalExecutor::new(".")) as Box<dyn ToolExecutor>,
     };
 
@@ -73,6 +77,9 @@ async fn start_tool_executor(repository: &Repository) -> Result<Box<dyn ToolExec
 
 #[tracing::instrument(skip(repository, command_responder))]
 pub async fn build_agent(
+    // Reference to where the agent is running
+    // Enforces the chat, git branch, and docker image have the same name
+    uuid: Uuid,
     repository: &Repository,
     query: &str,
     command_responder: CommandResponder,
@@ -119,12 +126,12 @@ pub async fn build_agent(
 
     // Run executor and initial context in parallel
     let (executor, initial_context) = tokio::try_join!(
-        start_tool_executor(&repository),
+        start_tool_executor(uuid, &repository),
         generate_initial_context(&repository, query)
     )?;
 
     // Run a series of commands inside the executor so that everything is available
-    let env_setup = EnvSetup::new(&repository, github_session.as_deref(), &*executor);
+    let env_setup = EnvSetup::new(uuid, &repository, github_session.as_deref(), &*executor);
     env_setup.exec_setup_commands().await?;
 
     let context = DefaultContext::from_executor(executor);
