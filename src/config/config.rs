@@ -61,7 +61,7 @@ pub struct Config {
 }
 
 fn default_otel_enabled() -> bool {
-    true
+    false
 }
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize, Default)]
@@ -193,7 +193,7 @@ mod tests {
         }
 
         // Verify default otel_enabled
-        assert!(config.otel_enabled);
+        assert!(!config.otel_enabled);
     }
 
     #[test]
@@ -273,6 +273,6 @@ mod tests {
         }
 
         // Verify default otel_enabled
-        assert!(config.otel_enabled);
+        assert!(!config.otel_enabled);
     }
 }
