@@ -105,7 +105,7 @@ pub async fn search_code(context: &dyn AgentContext, query: &str) -> Result<Tool
 
 #[derive(Tool, Clone)]
 #[tool(
-    description = "Search code and documentation in human language in the project. Only searches within the current project. If you need help on code outside the current project, use other tools.",
+    description = "Search code and documentation in human language in the project. Only searches within the current project. If you need help on code outside the project, use other tools.",
     param(
         name = "query",
         description = "A description, question, or literal code you want to know more about. Uses a semantic similarly search."
@@ -285,7 +285,7 @@ impl SearchWeb {
         _context: &dyn AgentContext,
         query: &str,
     ) -> Result<ToolOutput, ToolError> {
-        let request = tavily::SearchRequest::new(self.api_key.expose_secret(), query)
+        let _request = tavily::SearchRequest::new(self.api_key.expose_secret(), query)
             .search_depth("advanced")
             .include_answer(true)
             .include_images(false)
@@ -340,7 +340,7 @@ impl GithubSearchCode {
         _context: &dyn AgentContext,
         query: &str,
     ) -> Result<ToolOutput, ToolError> {
-        let results = self
+        let mut results = self
             .github_session
             .search_code(query)
             .await
@@ -348,7 +348,7 @@ impl GithubSearchCode {
 
         tracing::debug!(?results, "Github search results");
 
-        let context = tera::Context::new();
+        let mut context = tera::Context::new();
         context.insert("items", &results.take_items());
 
         let rendered = Templates::render("github_search_results.md", &context)
