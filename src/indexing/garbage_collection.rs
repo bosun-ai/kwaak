@@ -103,21 +103,31 @@ impl<'repository> GarbageCollector<'repository> {
             .map(ignore::DirEntry::into_path)
             .collect::<Vec<_>>();
 
-        tracing::info!("Found {} modified and {} deleted paths.", modified_files.len(), deleted_paths.len());
+        tracing::info!(
+            "Found {} modified and {} deleted paths.",
+            modified_files.len(),
+            deleted_paths.len()
+        );
 
         [modified_files, deleted_paths].concat()
     }
 
     async fn delete_files_from_index(&self, files: Vec<PathBuf>) -> Result<()> {
         // Ensure the table is set up
-        tracing::info!("Setting up LanceDB table for deletion of files: {:?}", files);
+        tracing::info!(
+            "Setting up LanceDB table for deletion of files: {:?}",
+            files
+        );
         self.lancedb.setup().await?;
 
         let table = self.lancedb.open_table().await?;
 
         for file in files {
             let predicate = format!("path = \"{}\"", file.display());
-            tracing::debug!("Deleting file from LanceDB index with predicate: {}", predicate);
+            tracing::debug!(
+                "Deleting file from LanceDB index with predicate: {}",
+                predicate
+            );
             table.delete(&predicate).await?;
         }
         Ok(())
@@ -130,7 +140,10 @@ impl<'repository> GarbageCollector<'repository> {
             .iter()
             .filter_map(|path| {
                 let Ok(content) = std::fs::read_to_string(path) else {
-                    tracing::warn!("Could not read content for file but deleting: {}", path.display());
+                    tracing::warn!(
+                        "Could not read content for file but deleting: {}",
+                        path.display()
+                    );
                     return None;
                 };
 
@@ -191,6 +204,16 @@ impl<'repository> GarbageCollector<'repository> {
         tracing::info!("Garbage collection completed and cleaned up at updated.");
 
         Ok(())
+    }
+
+    // Returns true if no rows were indexed, or otherwise errors were encountered
+    #[tracing::instrument(skip(self))]
+    async fn never_been_indexed(&self) -> bool {
+        if let Ok(table) = self.lancedb.open_table().await {
+            table.count_rows(None).await.map(|n| n == 0).unwrap_or(true)
+        } else {
+            true
+        }
     }
 }
 
