@@ -10,6 +10,7 @@ use swiftide::{
     traits::{Command, SimplePrompt, ToolExecutor},
 };
 use tavily::Tavily;
+use uuid::Uuid;
 
 use crate::{
     commands::CommandResponder, config::SupportedToolExecutors, git::github::GithubSession,
@@ -61,12 +62,15 @@ pub fn available_tools(
     Ok(tools)
 }
 
-async fn start_tool_executor(repository: &Repository) -> Result<Box<dyn ToolExecutor>> {
+async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Box<dyn ToolExecutor>> {
     let boxed = match repository.config().tool_executor {
-        SupportedToolExecutors::Docker => {
-            Box::new(DockerExecutor::from_repository(repository).start().await?)
-                as Box<dyn ToolExecutor>
-        }
+        SupportedToolExecutors::Docker => Box::new(
+            DockerExecutor::from_repository(repository)
+                .with_container_uuid(uuid)
+                .to_owned()
+                .start()
+                .await?,
+        ) as Box<dyn ToolExecutor>,
         SupportedToolExecutors::Local => Box::new(LocalExecutor::new(".")) as Box<dyn ToolExecutor>,
     };
 
@@ -75,6 +79,9 @@ async fn start_tool_executor(repository: &Repository) -> Result<Box<dyn ToolExec
 
 #[tracing::instrument(skip(repository, command_responder))]
 pub async fn build_agent(
+    // Reference to where the agent is running
+    // Enforces the chat, git branch, and docker image have the same name
+    uuid: Uuid,
     repository: &Repository,
     query: &str,
     command_responder: CommandResponder,
@@ -93,43 +100,23 @@ pub async fn build_agent(
 
     let tools = available_tools(&repository, github_session.as_ref())?;
 
-    let system_prompt: Prompt =
-    SystemPrompt::builder()
-        .role(format!("You are an autonomous ai agent tasked with helping a user with a code project. You can solve coding problems yourself and should try to always work towards a full solution. The project is called {} and is written in {}", repository.config().project_name, repository.config().language))
-        .constraints([
-            "Research your solution before providing it",
-            "When writing files, ensure you write and implement everything, everytime. Do NOT leave anything out. Writing a file overwrites the entire file, so it MUST include the full, completed contents of the file. Do not make changes other than the ones requested.",
-            "Tool calls are in parallel. You can run multiple tool calls at the same time, but they must not rely on eachother",
-            "Your first response to ANY user message, must ALWAYS be your thoughts on how to solve the problem",
-            "When writing code or tests, make sure this is ideomatic for the language",
-            "When writing tests, verify that test coverage has changed. If it hasn't, the tests are not doing anything. This means you _must_ run coverage after creating a new test.",
-            "When writing tests, make sure you cover all edge cases",
-            "When writing tests, if a specific test continues to be troublesome, think out of the box and try to solve the problem in a different way, or reset and focus on other tests first",
-            "When writing code, make sure the code runs, tests pass, and is included in the build",
-            "When writing code, make sure all public facing functions, methods, modules, etc are documented ideomatically",
-            "Your changes are automatically added to git, there is no need to commit files yourself",
-            "If you create a pull request, you must ensure the tests pass",
-            "Do NOT rely on your own knowledge, always research and verify!",
-            "Try to solve the problem yourself first, only if you cannot solve it, ask for help",
-            "If you just want to run the tests, prefer running the tests over running coverage, as running tests is faster",
-            "Verify assumptions you make about the code by researching the actual code first",
-            "If you are stuck, consider using git to undo your changes",
-            "Focus on completing the task fully as requested by the user",
-            "Make sure you understand the project layout in terms of files and directories",
-            "Keep a neutral tone, refrain from using superlatives and unnecessary adjectives",
-        ]).build()?.into();
-
+    let system_prompt = build_system_prompt(&repository)?;
     // Run executor and initial context in parallel
     let (executor, initial_context) = tokio::try_join!(
-        start_tool_executor(&repository),
+        start_tool_executor(uuid, &repository),
         generate_initial_context(&repository, query)
     )?;
 
     // Run a series of commands inside the executor so that everything is available
-    let env_setup = EnvSetup::new(&repository, github_session.as_deref(), &*executor);
+    let env_setup = EnvSetup::new(uuid, &repository, github_session.as_deref(), &*executor);
     env_setup.exec_setup_commands().await?;
 
-    let context = DefaultContext::from_executor(executor);
+    let mut context = DefaultContext::from_executor(executor);
+
+    // `endless mode` will run the agent without stopping if no new completions are available
+    if repository.config().endless_mode {
+        context.with_stop_on_assistant(false);
+    }
 
     let command_responder = Arc::new(command_responder);
     // Maybe I'm just too tired but feels off.
@@ -240,4 +227,43 @@ pub async fn build_agent(
         .build()?;
 
     Ok(agent)
+}
+
+fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
+    let mut constraints = vec![
+            "Research your solution before providing it",
+            "When writing files, ensure you write and implement everything, everytime. Do NOT leave anything out. Writing a file overwrites the entire file, so it MUST include the full, completed contents of the file. Do not make changes other than the ones requested.",
+            "Tool calls are in parallel. You can run multiple tool calls at the same time, but they must not rely on eachother",
+            "Your first response to ANY user message, must ALWAYS be your thoughts on how to solve the problem",
+            "When writing code or tests, make sure this is ideomatic for the language",
+            "When writing tests, verify that test coverage has changed. If it hasn't, the tests are not doing anything. This means you _must_ run coverage after creating a new test.",
+            "When writing tests, make sure you cover all edge cases",
+            "When writing tests, if a specific test continues to be troublesome, think out of the box and try to solve the problem in a different way, or reset and focus on other tests first",
+            "When writing code, make sure the code runs, tests pass, and is included in the build",
+            "When writing code, make sure all public facing functions, methods, modules, etc are documented ideomatically",
+            "Your changes are automatically added to git, there is no need to commit files yourself",
+            "If you create a pull request, you must ensure the tests pass",
+            "Do NOT rely on your own knowledge, always research and verify!",
+            "If you just want to run the tests, prefer running the tests over running coverage, as running tests is faster",
+            "Verify assumptions you make about the code by researching the actual code first",
+            "If you are stuck, consider using git to undo your changes",
+            "Focus on completing the task fully as requested by the user",
+            "Do not repeat your answers, if they are exactly the same you should probably stop",
+            "Make sure you understand the project layout in terms of files and directories",
+            "Keep a neutral tone, refrain from using superlatives and unnecessary adjectives",
+        ];
+
+    if repository.config().endless_mode {
+        constraints.push("You cannot ask for feedback and have to try to complete the given task");
+    } else {
+        constraints.push(
+            "Try to solve the problem yourself first, only if you cannot solve it, ask for help",
+        );
+    }
+
+    let prompt = SystemPrompt::builder()
+        .role(format!("You are an autonomous ai agent tasked with helping a user with a code project. You can solve coding problems yourself and should try to always work towards a full solution. The project is called {} and is written in {}", repository.config().project_name, repository.config().language))
+        .constraints(constraints).build()?.into();
+
+    Ok(prompt)
 }

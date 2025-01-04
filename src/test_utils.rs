@@ -36,11 +36,11 @@ pub fn test_repository() -> (Repository, TestGuard) {
     let mut repository = Repository::from_config(config);
 
     let tempdir = tempfile::tempdir().unwrap();
-    repository.path = tempdir.path().to_path_buf();
-    repository.config.cache_dir = tempdir.path().to_path_buf();
-    repository.config.log_dir = tempdir.path().join("logs");
-    std::fs::create_dir_all(&repository.config.cache_dir).unwrap();
-    std::fs::create_dir_all(&repository.config.log_dir).unwrap();
+    *repository.path_mut() = tempdir.path().to_path_buf();
+    repository.config_mut().cache_dir = tempdir.path().to_path_buf();
+    repository.config_mut().log_dir = tempdir.path().join("logs");
+    std::fs::create_dir_all(&repository.config().cache_dir).unwrap();
+    std::fs::create_dir_all(&repository.config().log_dir).unwrap();
 
     (repository, TestGuard { tempdir })
 }

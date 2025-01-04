@@ -7,8 +7,8 @@ use crate::{config::Config, runtime_settings::RuntimeSettings};
 
 #[derive(Debug, Clone)]
 pub struct Repository {
-    pub(crate) config: Config,
-    pub(crate) path: PathBuf,
+    config: Config,
+    path: PathBuf,
 }
 
 impl Repository {
@@ -23,8 +23,16 @@ impl Repository {
         &self.path
     }
 
+    pub fn path_mut(&mut self) -> &mut PathBuf {
+        &mut self.path
+    }
+
     pub fn config(&self) -> &Config {
         &self.config
+    }
+
+    pub fn config_mut(&mut self) -> &mut Config {
+        &mut self.config
     }
 
     pub async fn clear_cache(&self) -> Result<()> {
