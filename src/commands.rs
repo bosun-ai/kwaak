@@ -36,6 +36,7 @@ pub enum Command {
     IndexRepository { uuid: Uuid },
     StopAgent { uuid: Uuid },
     Chat { uuid: Uuid, message: String },
+    DeleteChat { uuid: Uuid },
 }
 
 pub enum CommandResponse {
@@ -117,7 +118,8 @@ impl Command {
             | Command::StopAgent { uuid }
             | Command::ShowConfig { uuid }
             | Command::IndexRepository { uuid }
-            | Command::Chat { uuid, .. } => *uuid,
+            | Command::Chat { uuid, .. }
+            | Command::DeleteChat { uuid } => *uuid,
         }
     }
 
@@ -128,6 +130,7 @@ impl Command {
             Command::ShowConfig { .. } => Command::ShowConfig { uuid },
             Command::IndexRepository { .. } => Command::IndexRepository { uuid },
             Command::Chat { message, .. } => Command::Chat { uuid, message },
+            Command::DeleteChat { .. } => Command::DeleteChat { uuid },
         }
     }
 }
@@ -286,6 +289,10 @@ impl CommandHandler {
                 let agent = self.find_or_start_agent_by_uuid(*uuid, message).await?;
 
                 agent.query(message).await?;
+            }
+            Command::DeleteChat { uuid } => {
+                let _ = ui_tx.send(UIEvent::ChatDeleted(*uuid));
+                // Logic to actually delete the chat from the `App` state can be added here.
             }
             Command::Quit { .. } => unreachable!("Quit should be handled earlier"),
         }

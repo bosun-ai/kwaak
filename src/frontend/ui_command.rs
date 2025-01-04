@@ -22,6 +22,7 @@ pub enum UserInputCommand {
     IndexRepository,
     NextChat,
     NewChat,
+    DeleteChat,
 }
 
 impl UserInputCommand {
@@ -30,6 +31,7 @@ impl UserInputCommand {
             UserInputCommand::Quit => Some(Command::Quit { uuid }),
             UserInputCommand::ShowConfig => Some(Command::ShowConfig { uuid }),
             UserInputCommand::IndexRepository => Some(Command::IndexRepository { uuid }),
+            UserInputCommand::DeleteChat => Some(Command::DeleteChat { uuid }),
             _ => None,
         }
     }
@@ -59,6 +61,7 @@ mod tests {
             ("/index_repository", UserInputCommand::IndexRepository),
             ("/next_chat", UserInputCommand::NextChat),
             ("/new_chat", UserInputCommand::NewChat),
+            ("/delete_chat", UserInputCommand::DeleteChat),
         ];
 
         for (input, expected_command) in test_cases {
