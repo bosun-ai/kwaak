@@ -47,12 +47,27 @@ impl<'repository> GarbageCollector<'repository> {
     }
 
     fn files_changed_since_last_index(&self) -> Vec<PathBuf> {
-        use std::process::Command;
-        let output = Command::new("git")
-            .arg("ls-files")
-            .arg("--deleted")
+        // Get the last commit hash before the last indexed date
+        let last_indexed_commit = std::process::Command::new("git")
+            .args(["log", "--format=%H", "-1", "--before=<date>"])
             .output()
-            .expect("failed to execute git command");
+            .expect("failed to execute process")
+            .stdout;
+        let last_indexed_commit = String::from_utf8_lossy(&last_indexed_commit)
+            .trim()
+            .to_string();
+
+        // Identify deleted files since that commit
+        let output = std::process::Command::new("git")
+            .args([
+                "diff",
+                "--name-only",
+                "--diff-filter=D",
+                &last_indexed_commit,
+                "HEAD",
+            ])
+            .output()
+            .expect("failed to execute git diff command");
 
         let deleted_files = String::from_utf8_lossy(&output.stdout);
         let deleted_paths = deleted_files.lines().map(PathBuf::from).collect::<Vec<_>>();
