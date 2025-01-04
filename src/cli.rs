@@ -30,9 +30,10 @@ pub struct Args {
     pub command: Option<Commands>,
 }
 
-#[derive(Subcommand, Debug, Clone)]
+#[derive(Subcommand, Debug, Clone, Default)]
 pub enum Commands {
     /// Start the TUI (default)
+    #[default]
     Tui,
     /// Query the indexed project
     Query {
@@ -52,10 +53,4 @@ pub enum Commands {
         #[arg()]
         tool_args: Option<String>,
     },
-}
-
-impl Default for Commands {
-    fn default() -> Self {
-        Commands::Tui
-    }
 }
