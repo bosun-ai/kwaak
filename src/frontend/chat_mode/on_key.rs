@@ -61,7 +61,9 @@ pub fn on_key(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Tab => app.send_ui_event(UIEvent::NextChat),
         KeyCode::End => {
-            let current_chat = app.current_chat_mut();
+            let Some(current_chat) = app.current_chat_mut() else {
+                return;
+            };
             let num_lines = current_chat.num_lines;
 
             current_chat.vertical_scroll = num_lines;
@@ -69,14 +71,18 @@ pub fn on_key(app: &mut App, key: KeyEvent) {
                 current_chat.vertical_scroll_state.position(num_lines);
         }
         KeyCode::PageDown => {
-            let current_chat = app.current_chat_mut();
+            let Some(current_chat) = app.current_chat_mut() else {
+                return;
+            };
             current_chat.vertical_scroll = current_chat.vertical_scroll.saturating_add(1);
             current_chat.vertical_scroll_state = current_chat
                 .vertical_scroll_state
                 .position(current_chat.vertical_scroll);
         }
         KeyCode::PageUp => {
-            let current_chat = app.current_chat_mut();
+            let Some(current_chat) = app.current_chat_mut() else {
+                return;
+            };
             current_chat.vertical_scroll = current_chat.vertical_scroll.saturating_sub(1);
             current_chat.vertical_scroll_state = current_chat
                 .vertical_scroll_state

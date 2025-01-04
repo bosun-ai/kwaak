@@ -213,7 +213,7 @@ impl CommandHandler {
                 let this_handler = Arc::clone(&this_handler);
 
                 joinset.spawn(async move {
-                    let result = this_handler.handle_command(&repository, &ui_tx, &cmd).await;
+                    let result = this_handler.handle_command(&repository,  &cmd).await;
                     ui_tx.send(UIEvent::CommandDone(cmd.uuid())).unwrap();
 
                     if let Err(error) = result {
@@ -239,76 +239,45 @@ impl CommandHandler {
     /// TODO: Most commands should probably be handled in a tokio task
     /// Maybe generalize tasks to make ui updates easier?
     #[tracing::instrument(skip_all, fields(otel.name = %cmd.to_string(), uuid = %cmd.uuid()), err)]
-    async fn handle_command(
-        &self,
-        repository: &Repository,
-        ui_tx: &mpsc::UnboundedSender<UIEvent>,
-        cmd: &Command,
-    ) -> Result<()> {
+    async fn handle_command(&self, repository: &Repository, cmd: &Command) -> Result<()> {
         let now = std::time::Instant::now();
         tracing::warn!("Handling command {cmd}");
 
         #[allow(clippy::match_wildcard_for_single_variants)]
         match cmd {
-            Command::StopAgent { uuid } => {
-                let mut locked_agents = self.agents.write().await;
-                let Some(agent) = locked_agents.get_mut(uuid) else {
-                    let _ = ui_tx.send(
-                        ChatMessage::new_system("No agent found (yet), is it starting up?")
-                            .uuid(*uuid)
-                            .into(),
-                    );
-                    return Ok(());
-                };
-
-                let _ = ui_tx.send(
-                    ChatMessage::new_system("Agent will finish its current completions and stop")
-                        .uuid(*uuid)
-                        .into(),
-                );
-
-                // TODO: Concerned this might not work as expected, since the agent also runs as
-                // &mut. It 'seems' to work, but I'm not sure if it's correct.
-                agent.stop().await;
+            Command::StopAgent { uuid } => self.stop_agent(*uuid).await?,
+            Command::DeleteChat { uuid } => {
+                self.stop_agent(*uuid).await?;
+                self.send_ui_event(UIEvent::ChatDeleted(*uuid));
             }
             Command::IndexRepository { .. } => {
                 let (command_responder, _guard) = self.spawn_command_responder(&cmd.uuid());
                 indexing::index_repository(repository, Some(command_responder)).await?;
             }
             Command::ShowConfig { uuid } => {
-                ui_tx
-                    .send(
-                        ChatMessage::new_system(toml::to_string_pretty(repository.config())?)
-                            .uuid(*uuid)
-                            .to_owned()
-                            .into(),
-                    )
-                    .unwrap();
+                self.send_ui_event(
+                    ChatMessage::new_system(toml::to_string_pretty(repository.config())?)
+                        .uuid(*uuid)
+                        .to_owned(),
+                );
             }
             Command::Chat { uuid, ref message } => {
                 let agent = self.find_or_start_agent_by_uuid(*uuid, message).await?;
 
                 agent.query(message).await?;
             }
-            Command::DeleteChat { uuid } => {
-                let _ = ui_tx.send(UIEvent::ChatDeleted(*uuid));
-                // Logic to actually delete the chat from the `App` state can be added here.
-            }
             Command::Quit { .. } => unreachable!("Quit should be handled earlier"),
         }
         // Sleep for a tiny bit to avoid racing with agent responses
         tokio::time::sleep(Duration::from_millis(50)).await;
         let elapsed = now.elapsed();
-        ui_tx
-            .send(
-                ChatMessage::new_system(format!(
-                    "Command {cmd} successful in {} seconds",
-                    elapsed.as_secs_f64().round()
-                ))
-                .uuid(cmd.uuid())
-                .into(),
-            )
-            .unwrap();
+        self.send_ui_event(
+            ChatMessage::new_system(format!(
+                "Command {cmd} successful in {} seconds",
+                elapsed.as_secs_f64().round()
+            ))
+            .uuid(cmd.uuid()),
+        );
 
         Ok(())
     }
@@ -331,6 +300,30 @@ impl CommandHandler {
         self.agents.write().await.insert(uuid, running_agent);
 
         Ok(cloned)
+    }
+
+    async fn stop_agent(&self, uuid: Uuid) -> Result<()> {
+        let mut locked_agents = self.agents.write().await;
+        let Some(agent) = locked_agents.get_mut(&uuid) else {
+            self.send_ui_event(
+                ChatMessage::new_system("No agent found (yet), is it starting up?").uuid(uuid),
+            );
+            return Ok(());
+        };
+
+        self.send_ui_event(
+            ChatMessage::new_system("Agent will finish its current completions and stop")
+                .uuid(uuid),
+        );
+
+        agent.stop().await;
+        Ok(())
+    }
+
+    // Try to send a UI event, ignore if the UI is not connected
+    fn send_ui_event(&self, event: impl Into<UIEvent>) {
+        let Some(ui_tx) = &self.ui_tx else { return };
+        let _ = ui_tx.send(event.into());
     }
 
     /// Forwards updates from the backend (i.e. agents) to the UI

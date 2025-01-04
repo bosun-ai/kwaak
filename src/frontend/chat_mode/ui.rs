@@ -65,7 +65,9 @@ pub fn ui(f: &mut ratatui::Frame, area: Rect, app: &mut App) {
 }
 
 fn render_chat_messages(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
-    let current_chat = app.current_chat_mut();
+    let Some(current_chat) = app.current_chat_mut() else {
+        return;
+    };
     let messages = current_chat.messages.clone();
     let chat_content: Text = messages
         .iter()
@@ -169,8 +171,8 @@ fn render_input_bar(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
         .padding(Padding::horizontal(1))
         .borders(Borders::ALL);
 
-    if app.current_chat().is_loading() {
-        let loading_msg = match &app.current_chat().state {
+    if app.current_chat().is_some_and(Chat::is_loading) {
+        let loading_msg = match &app.current_chat().expect("infallible").state {
             ChatState::Loading => "Kwaaking ...".to_string(),
             ChatState::LoadingWithMessage(msg) => format!("Kwaaking ({msg}) ..."),
             ChatState::Ready => unreachable!(),

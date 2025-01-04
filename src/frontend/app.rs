@@ -195,7 +195,9 @@ impl App<'_> {
 
     #[tracing::instrument(skip(self))]
     pub fn dispatch_command(&mut self, cmd: &Command) {
-        self.current_chat_mut().transition(ChatState::Loading);
+        if let Some(chat) = self.current_chat_mut() {
+            chat.transition(ChatState::Loading);
+        }
 
         self.command_tx
             .as_ref()
@@ -208,8 +210,9 @@ impl App<'_> {
         if message.uuid() == Some(self.boot_uuid) {
             return;
         }
-        let chat = self.find_chat_mut(message.uuid().unwrap_or(self.current_chat));
-        chat.add_message(message);
+        if let Some(chat) = self.find_chat_mut(message.uuid().unwrap_or(self.current_chat)) {
+            chat.add_message(message);
+        }
     }
 
     #[tracing::instrument(skip_all)]
@@ -264,17 +267,18 @@ impl App<'_> {
                     UIEvent::CommandDone(uuid) => {
                         if uuid == self.boot_uuid {
                             has_indexed_on_boot = true;
-                            self.current_chat_mut().transition(ChatState::Ready);
-                        } else {
-                            self.find_chat_mut(uuid).transition(ChatState::Ready);
+                            self.current_chat_mut()
+                                .expect("Boot uuid should always be present")
+                                .transition(ChatState::Ready);
+                        } else if let Some(chat) = self.find_chat_mut(uuid) {
+                            chat.transition(ChatState::Ready);
                         }
                     }
                     UIEvent::ActivityUpdate(uuid, activity) => {
                         if uuid == self.boot_uuid {
                             splash.set_message(activity);
-                        } else {
-                            self.find_chat_mut(uuid)
-                                .transition(ChatState::LoadingWithMessage(activity));
+                        } else if let Some(chat) = self.find_chat_mut(uuid) {
+                            chat.transition(ChatState::LoadingWithMessage(activity));
                         }
                     }
                     UIEvent::ChatMessage(message) => {
@@ -294,13 +298,22 @@ impl App<'_> {
                         self.change_mode(AppMode::Quit);
                     }
                     UIEvent::ChatDeleted(uuid) => {
+                        self.dispatch_command(&Command::StopAgent { uuid });
                         // Remove the chat with the given UUID
                         self.chats.retain(|chat| chat.uuid != uuid);
-                        // Select the first chat if available
-                        if !self.chats.is_empty() {
-                            self.current_chat = self.chats[0].uuid;
+
+                        if self.chats.is_empty() {
+                            self.add_chat(Chat::default());
+                            self.chats_state.select(Some(0));
+                            self.add_chat_message(
+                                ChatMessage::new_system(
+                                    "Nice, you managed to delete the last chat!",
+                                )
+                                .build(),
+                            );
+                        } else {
+                            self.next_chat();
                         }
-                        self.chats_state.select(Some(0));
                     }
                 }
             }
@@ -313,25 +326,19 @@ impl App<'_> {
         Ok(())
     }
 
-    fn find_chat_mut(&mut self, uuid: Uuid) -> &mut Chat {
-        self.chats
-            .iter_mut()
-            .find(|chat| chat.uuid == uuid)
-            .unwrap_or_else(|| panic!("Could not find chat for {uuid}"))
+    fn find_chat_mut(&mut self, uuid: Uuid) -> Option<&mut Chat> {
+        self.chats.iter_mut().find(|chat| chat.uuid == uuid)
     }
 
-    fn find_chat(&self, uuid: Uuid) -> &Chat {
-        self.chats
-            .iter()
-            .find(|chat| chat.uuid == uuid)
-            .unwrap_or_else(|| panic!("Could not find chat for {uuid}"))
+    fn find_chat(&self, uuid: Uuid) -> Option<&Chat> {
+        self.chats.iter().find(|chat| chat.uuid == uuid)
     }
 
-    pub(crate) fn current_chat(&self) -> &Chat {
+    pub(crate) fn current_chat(&self) -> Option<&Chat> {
         self.find_chat(self.current_chat)
     }
 
-    pub(crate) fn current_chat_mut(&mut self) -> &mut Chat {
+    pub(crate) fn current_chat_mut(&mut self) -> Option<&mut Chat> {
         self.find_chat_mut(self.current_chat)
     }
 
