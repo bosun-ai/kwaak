@@ -27,6 +27,8 @@ pub enum UIEvent {
     ActivityUpdate(Uuid, String),
     /// Quit from the frontend
     Quit,
+    /// Chat deleted
+    ChatDeleted(Uuid),
 }
 
 impl From<ChatMessage> for UIEvent {
