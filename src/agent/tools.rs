@@ -2,7 +2,6 @@
 use std::sync::Arc;
 
 use anyhow::{Context as _, Result};
-use indoc::formatdoc;
 use swiftide::{
     chat_completion::{errors::ToolError, ToolOutput},
     query::{search_strategies, states},
@@ -11,7 +10,6 @@ use swiftide::{
 use swiftide_macros::{tool, Tool};
 use tavily::Tavily;
 use tokio::sync::Mutex;
-use url::Url;
 
 use crate::{
     config::ApiKey, git::github::GithubSession, templates::Templates, util::accept_non_zero_exit,
