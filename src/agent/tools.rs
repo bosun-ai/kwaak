@@ -154,7 +154,7 @@ impl<'a> ExplainCode<'a> {
 
 #[derive(Tool, Clone, Debug)]
 #[tool(
-    description = "Creates or updates a pull request on Github. Always present the url of the pull request to the user after the tool call. Present the user with the url of the pull request after completion. Use [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) format for the title, such as `feat:`, `fix:`, `docs:`.",
+    description = "Creates or updates a pull request on Github. Always present the url of the pull request to the user after the tool call. Present the user with the url of the pull request after completion. Use conventional commits format for the title, such as `feat:`, `fix:`, `docs:`.",
     param(name = "title", description = "Title of the pull request"),
     param(name = "pull_request_body", description = "Body of the pull request")
 )]
