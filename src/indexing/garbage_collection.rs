@@ -49,9 +49,9 @@ impl<'repository> GarbageCollector<'repository> {
     fn files_changed_since_last_index(&self) -> Vec<PathBuf> {
         tracing::info!("Checking for files changed since last index.");
 
-        // Obtain last indexed commit hash directly associated with the last cleaning
+        // Adjust git command to ensure accurate detection
         let last_indexed_commit_command = std::process::Command::new("git")
-            .args(["rev-list", "-1", "--before=<date>", "HEAD"])
+            .args(["rev-list", "-1", "HEAD"])
             .output()
             .expect("Failed to execute git rev-list command");
 
@@ -61,7 +61,7 @@ impl<'repository> GarbageCollector<'repository> {
 
         tracing::debug!("Determined last indexed commit: {}", last_indexed_commit);
 
-        // Detect deleted files since that commit
+        // Ensure deleted files are correctly tracked from last indexed state
         let output = std::process::Command::new("git")
             .args([
                 "diff",
