@@ -309,6 +309,9 @@ mod tests {
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
+        // Simulate a file being deleted by removing it
+        std::fs::remove_file(&context.node.path).unwrap();
+
         // Now run the garbage collector
         context.subject.clean_up().await.unwrap();
 
@@ -332,5 +335,21 @@ mod tests {
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
         assert!(context.redb.get(&context.node).await);
+    }
+
+    #[test_log::test(tokio::test)]
+    async fn test_detect_deleted_file() {
+        let context = setup().await;
+
+        assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
+
+        // Simulate file deletion
+        std::fs::remove_file(&context.node.path).unwrap();
+
+        // Now run the garbage collector
+        context.subject.clean_up().await.unwrap();
+
+        assert_rows_with_path_in_lancedb!(&context, context.node.path, 0);
+        assert!(!context.redb.get(&context.node).await);
     }
 }
