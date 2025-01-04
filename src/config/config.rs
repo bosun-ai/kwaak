@@ -54,6 +54,14 @@ pub struct Config {
     /// WARN: There currently is _no_ limit for endless mode
     #[serde(default)]
     pub endless_mode: bool,
+
+    /// OpenTelemetry tracing feature toggle
+    #[serde(default = "default_otel_enabled")]
+    pub otel_enabled: bool,
+}
+
+fn default_otel_enabled() -> bool {
+    true
 }
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize, Default)]
@@ -167,7 +175,6 @@ mod tests {
             provider = "OpenAI"
             api_key = "text:test-key"
             prompt_model = "gpt-4o-mini"
-
             "#;
 
         let config: Config = toml::from_str(toml).unwrap();
@@ -184,6 +191,9 @@ mod tests {
         } else {
             panic!("Expected single OpenAI configuration");
         }
+
+        // Verify default otel_enabled
+        assert!(config.otel_enabled);
     }
 
     #[test]
@@ -261,5 +271,8 @@ mod tests {
         } else {
             panic!("Expected multiple LLM configurations");
         }
+
+        // Verify default otel_enabled
+        assert!(config.otel_enabled);
     }
 }
