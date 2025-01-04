@@ -51,37 +51,14 @@ mod test_utils;
 async fn main() -> Result<()> {
     let args = cli::Args::parse();
 
-    if args.init {
-        if std::fs::metadata("kwaak.toml").is_ok() {
-            println!("kwaak.toml already exists in current directory, skipping initialization");
-            return Ok(());
-        }
-        let config = onboarding::create_template_config()?;
-        std::fs::write("kwaak.toml", config)?;
-
-        println!("Initialized kwaak project in current directory, please review and customize the created `kwaak.toml` file.\n Kwaak also needs a `Dockerfile` to execute your code in, with `ripgrep` and `fd` installed. Refer to https://github.com/bosun-ai/kwaak for an up to date list.");
-        return Ok(());
-    }
-
     init_panic_hook();
+
     // Load configuration
     let config = Config::load(&args.config_path).await?;
     let repository = repository::Repository::from_config(config);
 
-    if args.print_config {
-        println!("{}", toml::to_string_pretty(repository.config())?);
-        return Ok(());
-    }
-
     fs::create_dir_all(repository.config().cache_dir()).await?;
     fs::create_dir_all(repository.config().log_dir()).await?;
-
-    if args.clear_cache {
-        repository.clear_cache().await?;
-        println!("Cache cleared");
-
-        return Ok(());
-    }
 
     {
         let _guard = crate::kwaak_tracing::init(&repository)?;
@@ -98,12 +75,35 @@ async fn main() -> Result<()> {
             cli::Commands::TestTool {
                 tool_name,
                 tool_args,
-            } => test_tool(&repository, tool_name, tool_args).await,
+            } => test_tool(&repository, tool_name, tool_args.as_deref()).await,
             cli::Commands::Query { query: query_param } => {
                 let result = indexing::query(&repository, query_param.clone()).await?;
 
                 println!("{result}");
 
+                Ok(())
+            }
+            cli::Commands::Init => {
+                if std::fs::metadata("kwaak.toml").is_ok() {
+                    println!(
+                        "kwaak.toml already exists in current directory, skipping initialization"
+                    );
+                    return Ok(());
+                }
+                let config = onboarding::create_template_config()?;
+                std::fs::write("kwaak.toml", config)?;
+
+                println!("Initialized kwaak project in current directory, please review and customize the created `kwaak.toml` file.\n Kwaak also needs a `Dockerfile` to execute your code in, with `ripgrep` and `fd` installed. Refer to https://github.com/bosun-ai/kwaak for an up to date list.");
+                return Ok(());
+            }
+            cli::Commands::ClearCache => {
+                repository.clear_cache().await?;
+                println!("Cache cleared");
+
+                Ok(())
+            }
+            cli::Commands::PrintConfig => {
+                println!("{}", toml::to_string_pretty(repository.config())?);
                 Ok(())
             }
         }?;
@@ -119,7 +119,7 @@ async fn main() -> Result<()> {
 async fn test_tool(
     repository: &repository::Repository,
     tool_name: &str,
-    tool_args: &Option<String>,
+    tool_args: Option<&str>,
 ) -> Result<()> {
     let github_session = Arc::new(GithubSession::from_repository(&repository)?);
     let tool = available_tools(repository, Some(&github_session))?
@@ -130,7 +130,7 @@ async fn test_tool(
     let agent_context = DefaultContext::default();
 
     let output = tool
-        .invoke(&agent_context as &dyn AgentContext, tool_args.as_deref())
+        .invoke(&agent_context as &dyn AgentContext, tool_args)
         .await?;
     println!("{output}");
 

@@ -9,18 +9,6 @@ pub struct Args {
     #[arg(short, long, default_value = "kwaak.toml")]
     pub config_path: PathBuf,
 
-    /// Print the configuration and exit
-    #[arg(long)]
-    pub print_config: bool,
-
-    /// Clear the index and cache for this project and exit
-    #[arg(long, name = "clear-cache", default_value_t = false)]
-    pub clear_cache: bool,
-
-    /// Initializes a new kwaak project in the current directory
-    #[arg(long, default_value_t = false)]
-    pub init: bool,
-
     /// Skip initial indexing and splash screen
     #[arg(short, long, default_value_t = false)]
     pub skip_indexing: bool,
@@ -32,6 +20,8 @@ pub struct Args {
 
 #[derive(Subcommand, Debug, Clone, Default)]
 pub enum Commands {
+    /// Initializes a new kwaak project in the current directory
+    Init,
     /// Start the TUI (default)
     #[default]
     Tui,
@@ -50,7 +40,10 @@ pub enum Commands {
     /// Tests a tool
     TestTool {
         tool_name: String,
-        #[arg()]
         tool_args: Option<String>,
     },
+    /// Print the configuration and exit
+    PrintConfig,
+    /// Clear the index and cache for this project and exit
+    ClearCache,
 }
