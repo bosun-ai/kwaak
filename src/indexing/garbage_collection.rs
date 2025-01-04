@@ -47,9 +47,18 @@ impl<'repository> GarbageCollector<'repository> {
     }
 
     fn files_changed_since_last_index(&self) -> Vec<PathBuf> {
-        // Currently walks all files not in ignore, which might be more than necessary
+        use std::process::Command;
+        let output = Command::new("git")
+            .arg("ls-files")
+            .arg("--deleted")
+            .output()
+            .expect("failed to execute git command");
+
+        let deleted_files = String::from_utf8_lossy(&output.stdout);
+        let deleted_paths = deleted_files.lines().map(PathBuf::from).collect::<Vec<_>>();
+
         let last_cleaned_up_at = self.get_last_cleaned_up_at();
-        ignore::Walk::new(self.repository.path())
+        let modified_files = ignore::Walk::new(self.repository.path())
             .filter_map(Result::ok)
             .filter(|entry| entry.file_type().is_some_and(|ft| ft.is_file()))
             .filter(|entry| {
@@ -73,7 +82,9 @@ impl<'repository> GarbageCollector<'repository> {
                 modified_at > last_cleaned_up_at
             })
             .map(ignore::DirEntry::into_path)
-            .collect()
+            .collect::<Vec<_>>();
+
+        [modified_files, deleted_paths].concat()
     }
 
     async fn delete_files_from_index(&self, files: Vec<PathBuf>) -> Result<()> {
