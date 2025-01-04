@@ -49,9 +49,10 @@ impl<'repository> GarbageCollector<'repository> {
     fn files_changed_since_last_index(&self) -> Vec<PathBuf> {
         tracing::info!("Checking for files changed since last index.");
 
-        let timestamp = self
-            .get_last_cleaned_up_at()
-            .expect("should be present at this point");
+        let Some(timestamp) = self.get_last_cleaned_up_at() else {
+            tracing::warn!("No last cleaned up date found; not running garbage collector. If this is an error, please clean up your cache manually.");
+            return vec![];
+        };
         let before = format!(
             "--before={}",
             timestamp
@@ -397,6 +398,10 @@ mod tests {
     #[test_log::test(tokio::test)]
     async fn test_detect_deleted_file() {
         let context = setup().await;
+        context
+            .subject
+            .update_last_cleaned_up_at(SystemTime::now())
+            .unwrap();
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
