@@ -1,9 +1,7 @@
 use std::path::PathBuf;
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
-// TODO: Move to subcommands
-#[allow(clippy::struct_excessive_bools)]
 #[derive(Parser, Debug, Clone)]
 #[clap(author, about, version)]
 pub struct Args {
@@ -11,29 +9,11 @@ pub struct Args {
     #[arg(short, long, default_value = "kwaak.toml")]
     pub config_path: PathBuf,
 
-    /// Run kwaak as a tui (default) or run an agent directly
-    #[arg(short, long, default_value = "tui")]
-    pub mode: ModeArgs,
-    /// When running the agent directly, the initial message to send to the agent
-    #[arg(short, long, required_if_eq("mode", "run-agent"))]
-    pub initial_message: Option<String>,
-
-    /// When querying the indexed project, the query to run
-    #[arg(short, long, required_if_eq("mode", "query"))]
-    pub query: Option<String>,
-
-    #[arg(required_if_eq("mode", "test-tool"))]
-    /// The tool name when testing a tool
-    pub tool_name: Option<String>,
-    /// Optional argument for testing a tool, expects the raw json
-    #[allow(clippy::struct_field_names)]
-    pub tool_args: Option<String>,
-
     /// Print the configuration and exit
     #[arg(long)]
     pub print_config: bool,
 
-    /// Clear the the index and cache for this project and exit
+    /// Clear the index and cache for this project and exit
     #[arg(long, name = "clear-cache", default_value_t = false)]
     pub clear_cache: bool,
 
@@ -44,19 +24,38 @@ pub struct Args {
     /// Skip initial indexing and splash screen
     #[arg(short, long, default_value_t = false)]
     pub skip_indexing: bool,
+
+    /// Subcommands corresponding to each mode
+    #[clap(subcommand)]
+    pub command: Option<Commands>,
 }
 
-#[derive(clap::ValueEnum, Clone, Debug, Default, strum_macros::AsRefStr)]
-pub enum ModeArgs {
+#[derive(Subcommand, Debug, Clone)]
+pub enum Commands {
+    /// Start the TUI (default)
+    Tui,
+    /// Query the indexed project
+    Query {
+        #[arg(short, long)]
+        query: String,
+    },
+    /// Run an agent directly
+    RunAgent {
+        #[arg(short, long)]
+        initial_message: String,
+    },
     /// Index the current project
     Index,
-    /// Query the indexed project
-    Query,
-    /// Run an agent directly
-    RunAgent,
-    /// Start the TUI
-    #[default]
-    Tui,
-    /// Runs a tool and check the output. Warning: Will not run in a sandbox
-    TestTool,
+    /// Tests a tool
+    TestTool {
+        tool_name: String,
+        #[arg()]
+        tool_args: Option<String>,
+    },
+}
+
+impl Default for Commands {
+    fn default() -> Self {
+        Commands::Tui
+    }
 }
