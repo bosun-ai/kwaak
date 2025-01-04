@@ -88,22 +88,25 @@ async fn main() -> Result<()> {
 
         let _root_span = tracing::info_span!(
             "main",
-            "otel.name" = format!("main.{}", args.mode.as_ref().to_lowercase())
+            "otel.name" = "main"
         )
         .entered();
-        match args.mode {
-            cli::ModeArgs::RunAgent => start_agent(repository, &args).await,
-            cli::ModeArgs::Tui => start_tui(&repository, &args).await,
-            cli::ModeArgs::Index => index_repository(&repository, None).await,
-            cli::ModeArgs::TestTool => test_tool(&repository, &args).await,
-            cli::ModeArgs::Query => {
-                let result = query(&repository, args.query.expect("Expected a query")).await?;
+        
+        if let Some(command) = args.command.as_ref().unwrap_or(&cli::Commands::Tui) {
+            match command {
+                cli::Commands::RunAgent { initial_message } => start_agent(repository, initial_message).await,
+                cli::Commands::Tui => start_tui(&repository, &args).await,
+                cli::Commands::Index => index_repository(&repository, None).await,
+                cli::Commands::TestTool { tool_name, tool_args } => test_tool(&repository, tool_name, tool_args).await,
+                cli::Commands::Query { query } => {
+                    let result = query(&repository, query.clone()).await?;
 
-                println!("{result}");
+                    println!("{result}");
 
-                Ok(())
-            }
-        }?;
+                    Ok(())
+                }
+            }?;
+        }
     }
 
     if cfg!(feature = "otel") {
@@ -113,9 +116,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn test_tool(repository: &repository::Repository, args: &cli::Args) -> Result<()> {
-    let tool_name = args.tool_name.as_ref().expect("Expected a tool name");
-    let tool_args = args.tool_args.as_deref();
+async fn test_tool(repository: &repository::Repository, tool_name: &str, tool_args: &Option<String>) -> Result<()> {
     let github_session = Arc::new(GithubSession::from_repository(&repository)?);
     let tool = available_tools(repository, Some(&github_session))?
         .into_iter()
@@ -125,7 +126,7 @@ async fn test_tool(repository: &repository::Repository, args: &cli::Args) -> Res
     let agent_context = DefaultContext::default();
 
     let output = tool
-        .invoke(&agent_context as &dyn AgentContext, tool_args)
+        .invoke(&agent_context as &dyn AgentContext, tool_args.as_deref())
         .await?;
     println!("{output}");
 
@@ -133,7 +134,7 @@ async fn test_tool(repository: &repository::Repository, args: &cli::Args) -> Res
 }
 
 #[instrument]
-async fn start_agent(mut repository: repository::Repository, args: &cli::Args) -> Result<()> {
+async fn start_agent(mut repository: repository::Repository, initial_message: &str) -> Result<()> {
     repository.config_mut().endless_mode = true;
 
     indexing::index_repository(&repository, None).await?;
@@ -156,11 +157,7 @@ async fn start_agent(mut repository: repository::Repository, args: &cli::Args) -
         }
     });
 
-    let query = args
-        .initial_message
-        .as_deref()
-        .expect("Expected initial query for the agent")
-        .to_string();
+    let query = initial_message.to_string();
     let mut agent =
         agent::build_agent(Uuid::new_v4(), &repository, &query, responder_for_agent).await?;
 
@@ -293,4 +290,4 @@ query::Pipeline::default()
     .then_answer(Simple::from_client(openai_client.clone()))
     .query("How can I use the query pipeline in Swiftide?")
     .await?;
-"#;
+";
