@@ -135,7 +135,7 @@ cargo install kwaak
 
 #### Setup
 
-Once installed, you can run `kwaak --init` in the project you want to use Kwaak in. This will create a `kwaak.toml` in your project root. You can edit this file to configure Kwaak.
+Once installed, you can run `kwaak init` in the project you want to use Kwaak in. This will create a `kwaak.toml` in your project root. You can edit this file to configure Kwaak.
 
 After verifying the default configuration, one required step is to set up the `test` and `coverage` commands. There are also some optional settings you can consider.
 

@@ -12,7 +12,7 @@ use commands::{CommandResponder, CommandResponse};
 use config::Config;
 use frontend::App;
 use git::github::GithubSession;
-use indexing::{index_repository, query};
+use indexing::index_repository;
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     Terminal,
@@ -51,56 +51,59 @@ mod test_utils;
 async fn main() -> Result<()> {
     let args = cli::Args::parse();
 
-    if args.init {
-        if std::fs::metadata("kwaak.toml").is_ok() {
-            println!("kwaak.toml already exists in current directory, skipping initialization");
-            return Ok(());
-        }
-        let config = onboarding::create_template_config()?;
-        std::fs::write("kwaak.toml", config)?;
-
-        println!("Initialized kwaak project in current directory, please review and customize the created `kwaak.toml` file.\n Kwaak also needs a `Dockerfile` to execute your code in, with `ripgrep` and `fd` installed. Refer to https://github.com/bosun-ai/kwaak for an up to date list.");
-        return Ok(());
-    }
-
     init_panic_hook();
+
     // Load configuration
     let config = Config::load(&args.config_path).await?;
     let repository = repository::Repository::from_config(config);
 
-    if args.print_config {
-        println!("{}", toml::to_string_pretty(repository.config())?);
-        return Ok(());
-    }
-
     fs::create_dir_all(repository.config().cache_dir()).await?;
     fs::create_dir_all(repository.config().log_dir()).await?;
-
-    if args.clear_cache {
-        repository.clear_cache().await?;
-        println!("Cache cleared");
-
-        return Ok(());
-    }
 
     {
         let _guard = crate::kwaak_tracing::init(&repository)?;
 
-        let _root_span = tracing::info_span!(
-            "main",
-            "otel.name" = format!("main.{}", args.mode.as_ref().to_lowercase())
-        )
-        .entered();
-        match args.mode {
-            cli::ModeArgs::RunAgent => start_agent(repository, &args).await,
-            cli::ModeArgs::Tui => start_tui(&repository, &args).await,
-            cli::ModeArgs::Index => index_repository(&repository, None).await,
-            cli::ModeArgs::TestTool => test_tool(&repository, &args).await,
-            cli::ModeArgs::Query => {
-                let result = query(&repository, args.query.expect("Expected a query")).await?;
+        let _root_span = tracing::info_span!("main", "otel.name" = "main").entered();
+
+        let command = args.command.as_ref().unwrap_or(&cli::Commands::Tui);
+        match command {
+            cli::Commands::RunAgent { initial_message } => {
+                start_agent(repository, initial_message).await
+            }
+            cli::Commands::Tui => start_tui(&repository, &args).await,
+            cli::Commands::Index => index_repository(&repository, None).await,
+            cli::Commands::TestTool {
+                tool_name,
+                tool_args,
+            } => test_tool(&repository, tool_name, tool_args.as_deref()).await,
+            cli::Commands::Query { query: query_param } => {
+                let result = indexing::query(&repository, query_param.clone()).await?;
 
                 println!("{result}");
 
+                Ok(())
+            }
+            cli::Commands::Init => {
+                if std::fs::metadata("kwaak.toml").is_ok() {
+                    println!(
+                        "kwaak.toml already exists in current directory, skipping initialization"
+                    );
+                    return Ok(());
+                }
+                let config = onboarding::create_template_config()?;
+                std::fs::write("kwaak.toml", config)?;
+
+                println!("Initialized kwaak project in current directory, please review and customize the created `kwaak.toml` file.\n Kwaak also needs a `Dockerfile` to execute your code in, with `ripgrep` and `fd` installed. Refer to https://github.com/bosun-ai/kwaak for an up to date list.");
+                return Ok(());
+            }
+            cli::Commands::ClearCache => {
+                repository.clear_cache().await?;
+                println!("Cache cleared");
+
+                Ok(())
+            }
+            cli::Commands::PrintConfig => {
+                println!("{}", toml::to_string_pretty(repository.config())?);
                 Ok(())
             }
         }?;
@@ -113,9 +116,11 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn test_tool(repository: &repository::Repository, args: &cli::Args) -> Result<()> {
-    let tool_name = args.tool_name.as_ref().expect("Expected a tool name");
-    let tool_args = args.tool_args.as_deref();
+async fn test_tool(
+    repository: &repository::Repository,
+    tool_name: &str,
+    tool_args: Option<&str>,
+) -> Result<()> {
     let github_session = Arc::new(GithubSession::from_repository(&repository)?);
     let tool = available_tools(repository, Some(&github_session))?
         .into_iter()
@@ -133,7 +138,7 @@ async fn test_tool(repository: &repository::Repository, args: &cli::Args) -> Res
 }
 
 #[instrument]
-async fn start_agent(mut repository: repository::Repository, args: &cli::Args) -> Result<()> {
+async fn start_agent(mut repository: repository::Repository, initial_message: &str) -> Result<()> {
     repository.config_mut().endless_mode = true;
 
     indexing::index_repository(&repository, None).await?;
@@ -156,11 +161,7 @@ async fn start_agent(mut repository: repository::Repository, args: &cli::Args) -
         }
     });
 
-    let query = args
-        .initial_message
-        .as_deref()
-        .expect("Expected initial query for the agent")
-        .to_string();
+    let query = initial_message.to_string();
     let mut agent =
         agent::build_agent(Uuid::new_v4(), &repository, &query, responder_for_agent).await?;
 

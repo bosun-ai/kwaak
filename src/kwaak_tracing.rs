@@ -61,7 +61,7 @@ pub fn init(repository: &Repository) -> Result<Guard> {
     ];
 
     let mut provider_for_guard = None;
-    if cfg!(feature = "otel") {
+    if cfg!(feature = "otel") && repository.config().otel_enabled {
         dbg!("OpenTelemetry tracing enabled");
         let provider = init_otel();
         let tracer = provider.tracer("kwaak");
