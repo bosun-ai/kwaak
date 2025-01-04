@@ -47,6 +47,8 @@ impl<'repository> GarbageCollector<'repository> {
     }
 
     fn files_changed_since_last_index(&self) -> Vec<PathBuf> {
+        tracing::info!("Checking for files changed since last index.");
+
         // Get the last commit hash before the last indexed date
         let last_indexed_commit = std::process::Command::new("git")
             .args(["log", "--format=%H", "-1", "--before=<date>"])
@@ -101,31 +103,34 @@ impl<'repository> GarbageCollector<'repository> {
             .map(ignore::DirEntry::into_path)
             .collect::<Vec<_>>();
 
+        tracing::info!("Found {} modified and {} deleted paths.", modified_files.len(), deleted_paths.len());
+
         [modified_files, deleted_paths].concat()
     }
 
     async fn delete_files_from_index(&self, files: Vec<PathBuf>) -> Result<()> {
         // Ensure the table is set up
+        tracing::info!("Setting up LanceDB table for deletion of files: {:?}", files);
         self.lancedb.setup().await?;
 
         let table = self.lancedb.open_table().await?;
 
         for file in files {
             let predicate = format!("path = \"{}\"", file.display());
+            tracing::debug!("Deleting file from LanceDB index with predicate: {}", predicate);
             table.delete(&predicate).await?;
         }
         Ok(())
     }
 
-    // This works under the assumption that relatively little files change at a time
-    //
-    // There are much better ways to do this, but for now this is the simplest
     fn delete_files_from_cache(&self, files: &[PathBuf]) -> Result<()> {
+        tracing::info!("Deleting files from cache: {:?}", files);
         // Read all files and build a fake node
         let node_ids = files
             .iter()
             .filter_map(|path| {
                 let Ok(content) = std::fs::read_to_string(path) else {
+                    tracing::warn!("Could not read content for file but deleting: {}", path.display());
                     return None;
                 };
 
@@ -143,6 +148,7 @@ impl<'repository> GarbageCollector<'repository> {
         {
             let mut table = write_tx.open_table(self.redb.table_definition())?;
             for id in &node_ids {
+                tracing::debug!("Removing ID from cache: {}", id);
                 table.remove(id).ok();
             }
         }
@@ -150,16 +156,6 @@ impl<'repository> GarbageCollector<'repository> {
         write_tx.commit()?;
 
         Ok(())
-    }
-
-    // Returns true if no rows were indexed, or otherwise errors were encountered
-    #[tracing::instrument(skip(self))]
-    async fn never_been_indexed(&self) -> bool {
-        if let Ok(table) = self.lancedb.open_table().await {
-            table.count_rows(None).await.map(|n| n == 0).unwrap_or(true)
-        } else {
-            true
-        }
     }
 
     #[tracing::instrument(skip(self))]
@@ -185,16 +181,14 @@ impl<'repository> GarbageCollector<'repository> {
 
         tracing::debug!(?files, "Files changed since last index");
 
-        // should delete files from cache and index
-        // should early return if no files are found, or index is empty
-        // if index is empty and cache not => clear cache
-
         {
             self.delete_files_from_cache(&files)?;
             self.delete_files_from_index(files).await?;
         }
 
         self.update_last_cleaned_up_at(SystemTime::now())?;
+
+        tracing::info!("Garbage collection completed and cleaned up at updated.");
 
         Ok(())
     }
@@ -213,8 +207,6 @@ mod tests {
 
     use super::*;
 
-    // In kwaak the storage providers are statics. In these tests however, we need to recreate them
-    // for each in a unique test directory
     struct TestContext {
         redb: Arc<Redb>,
         lancedb: Arc<LanceDB>,
@@ -223,10 +215,6 @@ mod tests {
         _guard: TestGuard,
     }
 
-    // Would be nice if this (part of) was part of the test repository helper
-    //
-    // Creates a repository, temporary folders, adds a node to both the cache and the index as if
-    // it was indexed
     async fn setup() -> TestContext {
         let (repository, guard) = test_utils::test_repository();
 
@@ -256,7 +244,6 @@ mod tests {
                 .build()
                 .unwrap(),
         );
-        // Ignore any errors here
         if let Err(error) = lancedb.setup().await {
             tracing::warn!(%error, "Error setting up LanceDB");
         }
@@ -295,7 +282,7 @@ mod tests {
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
-        // Now run the garbage collector
+        tracing::info!("Executing clean up for never done before test.");
         context.subject.clean_up().await.unwrap();
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 0);
@@ -313,14 +300,11 @@ mod tests {
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
-        // Improved: Commit, remove, then commit again for deletion effect
-        dbg!("Staging file before removal");
         std::process::Command::new("git")
             .arg("add")
             .arg(&context.node.path)
             .output()
             .expect("failed to stage file for git");
-
         std::process::Command::new("git")
             .arg("commit")
             .arg("-m")
@@ -328,9 +312,8 @@ mod tests {
             .output()
             .expect("failed to commit file");
 
-        // Simulating file deletion & committing
-        dbg!("Removing file and staging deletion");
         std::fs::remove_file(&context.node.path).unwrap();
+        tracing::info!("File removed, staging deletion.");
 
         std::process::Command::new("git")
             .arg("add")
@@ -345,7 +328,7 @@ mod tests {
             .output()
             .expect("failed to commit file deletion");
 
-        // Now run the garbage collector
+        tracing::info!("Clean up after file changes.");
         context.subject.clean_up().await.unwrap();
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 0);
@@ -363,7 +346,7 @@ mod tests {
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
-        // Now run the garbage collector
+        tracing::info!("Executing clean up for nothing changed scenario.");
         context.subject.clean_up().await.unwrap();
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
@@ -376,14 +359,11 @@ mod tests {
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
-        // Improved: Commit, remove, then commit again for deletion effect
-        dbg!("Staging file before removal");
         std::process::Command::new("git")
             .arg("add")
             .arg(&context.node.path)
             .output()
             .expect("failed to stage file for git");
-
         std::process::Command::new("git")
             .arg("commit")
             .arg("-m")
@@ -391,9 +371,8 @@ mod tests {
             .output()
             .expect("failed to commit file");
 
-        // Simulating file deletion & committing
-        dbg!("Removing file and staging deletion");
         std::fs::remove_file(&context.node.path).unwrap();
+        tracing::info!("File removal staged for deletion test.");
 
         std::process::Command::new("git")
             .arg("add")
@@ -408,7 +387,7 @@ mod tests {
             .output()
             .expect("failed to commit file deletion");
 
-        // Now run the garbage collector
+        tracing::info!("Starting clean up after detecting file deletion.");
         context.subject.clean_up().await.unwrap();
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 0);
