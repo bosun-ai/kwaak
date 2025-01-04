@@ -49,18 +49,19 @@ impl<'repository> GarbageCollector<'repository> {
     fn files_changed_since_last_index(&self) -> Vec<PathBuf> {
         tracing::info!("Checking for files changed since last index.");
 
-        // Get the last commit hash before the last indexed date
-        let last_indexed_commit = std::process::Command::new("git")
-            .args(["log", "--format=%H", "-1", "--skip=1"])
+        // Obtain last indexed commit hash directly associated with the last cleaning
+        let last_indexed_commit_command = std::process::Command::new("git")
+            .args(["rev-list", "-1", "--before=<date>", "HEAD"])
             .output()
-            .expect("failed to execute process")
-            .stdout;
+            .expect("Failed to execute git rev-list command");
 
-        let last_indexed_commit = String::from_utf8_lossy(&last_indexed_commit)
+        let last_indexed_commit = String::from_utf8_lossy(&last_indexed_commit_command.stdout)
             .trim()
             .to_string();
 
-        // Identify deleted files since that commit
+        tracing::debug!("Determined last indexed commit: {}");
+
+        // Detect deleted files since that commit
         let output = std::process::Command::new("git")
             .args([
                 "diff",
@@ -70,7 +71,7 @@ impl<'repository> GarbageCollector<'repository> {
                 "HEAD",
             ])
             .output()
-            .expect("failed to execute git diff command");
+            .expect("Failed to execute git diff command");
 
         let deleted_files = String::from_utf8_lossy(&output.stdout);
         tracing::debug!("Deleted files detected: {deleted_files}");
@@ -173,6 +174,9 @@ impl<'repository> GarbageCollector<'repository> {
 
     #[tracing::instrument(skip(self))]
     pub async fn clean_up(&self) -> Result<()> {
+        // Introduce logging for step-by-step tracing
+        tracing::info!("Starting cleanup process.");
+
         let files = self.files_changed_since_last_index();
 
         tracing::debug!("Files detected as changed: {:?}", files);
@@ -347,6 +351,7 @@ mod tests {
         std::process::Command::new("git")
             .arg("commit")
             .arg("-m")
+            .arg("Remove file")
             .output()
             .expect("failed to commit file deletion");
 
