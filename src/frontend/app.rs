@@ -293,6 +293,15 @@ impl App<'_> {
                         });
                         self.change_mode(AppMode::Quit);
                     }
+                    UIEvent::ChatDeleted(uuid) => {
+                        // Remove the chat with the given UUID
+                        self.chats.retain(|chat| chat.uuid != uuid);
+                        // Select the first chat if available
+                        if !self.chats.is_empty() {
+                            self.current_chat = self.chats[0].uuid;
+                        }
+                        self.chats_state.select(Some(0));
+                    }
                 }
             }
         }
