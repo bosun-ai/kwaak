@@ -49,45 +49,48 @@ impl<'repository> GarbageCollector<'repository> {
     fn files_changed_since_last_index(&self) -> Vec<PathBuf> {
         tracing::info!("Checking for files changed since last index.");
 
-        let Some(timestamp) = self.get_last_cleaned_up_at() else {
-            tracing::warn!("No last cleaned up date found; not running garbage collector. If this is an error, please clean up your cache manually.");
-            return vec![];
+        let deleted_paths = {
+            if let Some(timestamp) = self.get_last_cleaned_up_at() {
+                let before = format!(
+                    "--before={}",
+                    timestamp
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs()
+                );
+
+                // Adjust git command to ensure accurate detection
+                let last_indexed_commit_command = std::process::Command::new("git")
+                    .args(["rev-list", "-1", &before, "HEAD"])
+                    .output()
+                    .expect("Failed to execute git rev-list command");
+
+                let last_indexed_commit =
+                    String::from_utf8_lossy(&last_indexed_commit_command.stdout)
+                        .trim()
+                        .to_string();
+
+                tracing::debug!("Determined last indexed commit: {}", last_indexed_commit);
+
+                // Ensure deleted files are correctly tracked from last indexed state
+                let output = std::process::Command::new("git")
+                    .args([
+                        "diff",
+                        "--name-only",
+                        "--diff-filter=D",
+                        &last_indexed_commit,
+                        "HEAD",
+                    ])
+                    .output()
+                    .expect("Failed to execute git diff command");
+
+                let deleted_files = String::from_utf8_lossy(&output.stdout);
+                tracing::debug!("Deleted files detected: {deleted_files}");
+                deleted_files.lines().map(PathBuf::from).collect::<Vec<_>>()
+            } else {
+                vec![]
+            }
         };
-        let before = format!(
-            "--before={}",
-            timestamp
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-        );
-
-        // Adjust git command to ensure accurate detection
-        let last_indexed_commit_command = std::process::Command::new("git")
-            .args(["rev-list", "-1", &before, "HEAD"])
-            .output()
-            .expect("Failed to execute git rev-list command");
-
-        let last_indexed_commit = String::from_utf8_lossy(&last_indexed_commit_command.stdout)
-            .trim()
-            .to_string();
-
-        tracing::debug!("Determined last indexed commit: {}", last_indexed_commit);
-
-        // Ensure deleted files are correctly tracked from last indexed state
-        let output = std::process::Command::new("git")
-            .args([
-                "diff",
-                "--name-only",
-                "--diff-filter=D",
-                &last_indexed_commit,
-                "HEAD",
-            ])
-            .output()
-            .expect("Failed to execute git diff command");
-
-        let deleted_files = String::from_utf8_lossy(&output.stdout);
-        tracing::debug!("Deleted files detected: {deleted_files}");
-        let deleted_paths = deleted_files.lines().map(PathBuf::from).collect::<Vec<_>>();
 
         let last_cleaned_up_at = self.get_last_cleaned_up_at();
         let modified_files = ignore::Walk::new(self.repository.path())
@@ -251,7 +254,7 @@ mod tests {
         lancedb: Arc<LanceDB>,
         node: Node,
         subject: GarbageCollector<'static>,
-        _guard: TestGuard,
+        guard: TestGuard,
     }
 
     async fn setup() -> TestContext {
@@ -298,7 +301,7 @@ mod tests {
             lancedb,
             node,
             subject,
-            _guard: guard,
+            guard,
         }
     }
 
@@ -400,20 +403,27 @@ mod tests {
         let context = setup().await;
         context
             .subject
-            .update_last_cleaned_up_at(SystemTime::now())
+            .update_last_cleaned_up_at(SystemTime::now() + Duration::from_secs(600))
             .unwrap();
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
         std::process::Command::new("git")
+            .arg("init")
+            .current_dir(&context.guard.tempdir)
+            .output()
+            .expect("failed to stage file for git");
+        std::process::Command::new("git")
             .arg("add")
             .arg(&context.node.path)
+            .current_dir(&context.guard.tempdir)
             .output()
             .expect("failed to stage file for git");
         std::process::Command::new("git")
             .arg("commit")
             .arg("-m")
             .arg("Add file before removal")
+            .current_dir(&context.guard.tempdir)
             .output()
             .expect("failed to commit file");
 
@@ -423,6 +433,7 @@ mod tests {
         std::process::Command::new("git")
             .arg("add")
             .arg("-u")
+            .current_dir(&context.guard.tempdir)
             .output()
             .expect("failed to stage file for deletion");
 
@@ -430,6 +441,7 @@ mod tests {
             .arg("commit")
             .arg("-m")
             .arg("Remove file")
+            .current_dir(&context.guard.tempdir)
             .output()
             .expect("failed to commit file deletion");
 
