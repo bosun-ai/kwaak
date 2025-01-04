@@ -290,4 +290,4 @@ query::Pipeline::default()
     .then_answer(Simple::from_client(openai_client.clone()))
     .query("How can I use the query pipeline in Swiftide?")
     .await?;
-";
+"#;
