@@ -319,7 +319,7 @@ impl SearchWeb {
     description = "Search code in github with the github search api",
     param(
         name = "query",
-        description = "Github search query (comptabile with github search api"
+        description = "Github search query (compatible with github search api"
     )
 )]
 pub struct GithubSearchCode {
