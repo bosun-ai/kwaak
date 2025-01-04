@@ -53,6 +53,7 @@ impl<'repository> GarbageCollector<'repository> {
             .output()
             .expect("failed to execute process")
             .stdout;
+
         let last_indexed_commit = String::from_utf8_lossy(&last_indexed_commit)
             .trim()
             .to_string();
@@ -70,6 +71,7 @@ impl<'repository> GarbageCollector<'repository> {
             .expect("failed to execute git diff command");
 
         let deleted_files = String::from_utf8_lossy(&output.stdout);
+        tracing::debug!("Deleted files detected: {deleted_files}");
         let deleted_paths = deleted_files.lines().map(PathBuf::from).collect::<Vec<_>>();
 
         let last_cleaned_up_at = self.get_last_cleaned_up_at();
@@ -311,7 +313,20 @@ mod tests {
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
-        // Simulate a file being deleted by removing it
+        // Stage and simulate a file being deleted by removing it
+        std::process::Command::new("git")
+            .arg("add")
+            .arg(&context.node.path)
+            .output()
+            .expect("failed to stage file for git");
+
+        std::process::Command::new("git")
+            .arg("commit")
+            .arg("-m")
+            .arg("Test commit before remove")
+            .output()
+            .expect("failed to commit file");
+
         std::fs::remove_file(&context.node.path).unwrap();
 
         tracing::debug!(
@@ -350,7 +365,20 @@ mod tests {
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
-        // Simulate file deletion
+        // Stage and simulate file deletion
+        std::process::Command::new("git")
+            .arg("add")
+            .arg(&context.node.path)
+            .output()
+            .expect("failed to stage file for git");
+
+        std::process::Command::new("git")
+            .arg("commit")
+            .arg("-m")
+            .arg("Test commit before remove")
+            .output()
+            .expect("failed to commit file");
+
         std::fs::remove_file(&context.node.path).unwrap();
 
         tracing::debug!(
