@@ -51,7 +51,7 @@ impl<'repository> GarbageCollector<'repository> {
 
         // Get the last commit hash before the last indexed date
         let last_indexed_commit = std::process::Command::new("git")
-            .args(["log", "--format=%H", "-1", "--before=<date>"])
+            .args(["log", "--format=%H", "-1", "--skip=1"])
             .output()
             .expect("failed to execute process")
             .stdout;
@@ -347,7 +347,6 @@ mod tests {
         std::process::Command::new("git")
             .arg("commit")
             .arg("-m")
-            .arg("Remove file")
             .output()
             .expect("failed to commit file deletion");
 
