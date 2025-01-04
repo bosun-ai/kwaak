@@ -285,34 +285,45 @@ impl SearchWeb {
         _context: &dyn AgentContext,
         query: &str,
     ) -> Result<ToolOutput, ToolError> {
-        let _request = tavily::SearchRequest::new(self.api_key.expose_secret(), query)
+        let request = tavily::SearchRequest::new(self.api_key.expose_secret(), query)
             .search_depth("advanced")
             .include_answer(true)
             .include_images(false)
             .include_raw_content(false)
-            .max_results(10);
+            .max_results(5);
 
         let results = self
             .tavily_client
-            .search(query)
+            .call(&request)
             .await
             .map_err(anyhow::Error::from)?;
 
         tracing::debug!(results = ?results, "Search results from tavily");
 
-        // Return the generated answer if available, otherwise concat the documents as is
-        // NOTE: Generating our own answer from documents might yield better results
-        Ok(results
-            .answer
-            .unwrap_or_else(|| {
-                results
-                    .results
-                    .iter()
-                    .map(|r| r.content.clone())
-                    .collect::<Vec<_>>()
-                    .join("---\n")
-            })
-            .into())
+        let mut context = tera::Context::new();
+
+        context.insert("answer", &results.answer);
+        context.insert(
+            "results",
+            &results
+                .results
+                .iter()
+                .filter(|r| r.score >= 0.5)
+                .map(|r| {
+                    serde_json::json!({
+                        "title": r.title,
+                        "content": r.content,
+                        "url": r.url,
+                    })
+                })
+                .collect::<Vec<_>>(),
+        );
+        context.insert("follow_up_questions", &results.follow_up_questions);
+
+        let rendered = Templates::render("tavily_search_results.md", &context)
+            .context("Failed to render search web results")?;
+
+        Ok(rendered.into())
     }
 }
 
