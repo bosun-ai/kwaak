@@ -12,7 +12,7 @@ use commands::{CommandResponder, CommandResponse};
 use config::Config;
 use frontend::App;
 use git::github::GithubSession;
-use indexing::{index_repository, query};
+use indexing::index_repository;
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     Terminal,
@@ -98,8 +98,8 @@ async fn main() -> Result<()> {
                 cli::Commands::Tui => start_tui(&repository, &args).await,
                 cli::Commands::Index => index_repository(&repository, None).await,
                 cli::Commands::TestTool { tool_name, tool_args } => test_tool(&repository, tool_name, tool_args).await,
-                cli::Commands::Query { query } => {
-                    let result = query(&repository, query.clone()).await?;
+                cli::Commands::Query { query: query_param } => {
+                    let result = indexing::query(&repository, query_param.clone()).await?;
 
                     println!("{result}");
 
