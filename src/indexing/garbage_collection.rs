@@ -314,6 +314,7 @@ mod tests {
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
         // Improved: Commit, remove, then commit again for deletion effect
+        dbg!("Staging file before removal");
         std::process::Command::new("git")
             .arg("add")
             .arg(&context.node.path)
@@ -328,6 +329,7 @@ mod tests {
             .expect("failed to commit file");
 
         // Simulating file deletion & committing
+        dbg!("Removing file and staging deletion");
         std::fs::remove_file(&context.node.path).unwrap();
 
         std::process::Command::new("git")
@@ -375,6 +377,7 @@ mod tests {
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
         // Improved: Commit, remove, then commit again for deletion effect
+        dbg!("Staging file before removal");
         std::process::Command::new("git")
             .arg("add")
             .arg(&context.node.path)
@@ -389,6 +392,7 @@ mod tests {
             .expect("failed to commit file");
 
         // Simulating file deletion & committing
+        dbg!("Removing file and staging deletion");
         std::fs::remove_file(&context.node.path).unwrap();
 
         std::process::Command::new("git")
