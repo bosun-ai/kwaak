@@ -59,7 +59,7 @@ impl<'repository> GarbageCollector<'repository> {
             .trim()
             .to_string();
 
-        tracing::debug!("Determined last indexed commit: {}");
+        tracing::debug!("Determined last indexed commit: {}", last_indexed_commit);
 
         // Detect deleted files since that commit
         let output = std::process::Command::new("git")
