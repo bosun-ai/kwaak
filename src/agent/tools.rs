@@ -64,6 +64,7 @@ pub async fn write_file(
 
     Ok(success_message.into())
 }
+}
 
 #[tool(
     description = "Searches for a file inside the current project, leave the argument empty to list all files. Uses `find`.",
@@ -285,12 +286,12 @@ impl SearchWeb {
         _context: &dyn AgentContext,
         query: &str,
     ) -> Result<ToolOutput, ToolError> {
-        let mut request = tavily::SearchRequest::new(self.api_key.expose_secret(), query);
-        request.search_depth("advanced");
-        request.include_answer(true);
-        request.include_images(false);
-        request.include_raw_content(false);
-        request.max_results(10);
+        let request = tavily::SearchRequest::new(self.api_key.expose_secret(), query)
+            .search_depth("advanced")
+            .include_answer(true)
+            .include_images(false)
+            .include_raw_content(false)
+            .max_results(10);
 
         let results = self
             .tavily_client
@@ -340,7 +341,7 @@ impl GithubSearchCode {
         _context: &dyn AgentContext,
         query: &str,
     ) -> Result<ToolOutput, ToolError> {
-        let mut results = self
+        let results = self
             .github_session
             .search_code(query)
             .await
@@ -348,7 +349,7 @@ impl GithubSearchCode {
 
         tracing::debug!(?results, "Github search results");
 
-        let mut context = tera::Context::new();
+        let context = tera::Context::new();
         context.insert("items", &results.take_items());
 
         let rendered = Templates::render("github_search_results.md", &context)

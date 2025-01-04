@@ -53,9 +53,7 @@ pub fn available_tools(
     }
 
     if let Some(tavily_api_key) = &repository.config().tavily_api_key {
-        // Client is a bit weird that it needs the api key twice
-        // Maybe roll our own? It's just a rest api
-        let tavily = Tavily::new(tavily_api_key.expose_secret());
+        let tavily = Tavily::builder(tavily_api_key.expose_secret()).build()?;
         tools.push(tools::SearchWeb::new(tavily, tavily_api_key.clone()).boxed());
     };
 
@@ -92,8 +90,6 @@ async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Box<
 
 #[tracing::instrument(skip(repository, command_responder))]
 pub async fn build_agent(
-    // Reference to where the agent is running
-    // Enforces the chat, git branch, and docker image have the same name
     uuid: Uuid,
     repository: &Repository,
     query: &str,
@@ -114,33 +110,26 @@ pub async fn build_agent(
     let tools = available_tools(&repository, github_session.as_ref())?;
 
     let system_prompt = build_system_prompt(&repository)?;
-    // Run executor and initial context in parallel
     let (executor, initial_context) = tokio::try_join!(
         start_tool_executor(uuid, &repository),
         generate_initial_context(&repository, query)
     )?;
 
-    // Run a series of commands inside the executor so that everything is available
     let env_setup = EnvSetup::new(uuid, &repository, github_session.as_deref(), &*executor);
     env_setup.exec_setup_commands().await?;
 
     let mut context = DefaultContext::from_executor(executor);
 
-    // `endless mode` will run the agent without stopping if no new completions are available
     if repository.config().endless_mode {
         context.with_stop_on_assistant(false);
     }
 
     let command_responder = Arc::new(command_responder);
-    // Maybe I'm just too tired but feels off.
     let tx_2 = command_responder.clone();
     let tx_3 = command_responder.clone();
     let tx_4 = command_responder.clone();
 
-    let tool_summarizer =
-        ToolSummarizer::new(fast_query_provider, &["run_tests", "run_coverage"], &tools);
-
-    // Would be nice if the summarizer also captured the initial query
+    let tool_summarizer = ToolSummarizer::new(fast_query_provider, &["run_tests", "run_coverage"], &tools);
     let conversation_summarizer = ConversationSummarizer::new(query_provider.clone(), &tools);
     let maybe_lint_fix_command = repository.config().commands.lint_and_fix.clone();
 
@@ -152,12 +141,10 @@ pub async fn build_agent(
             let initial_context = initial_context.clone();
 
             Box::pin(async move {
-                // Add initial context
                 context
                     .add_message(chat_completion::ChatMessage::new_user(initial_context))
                     .await;
 
-                // Add a high level overview of the project
                 let top_level_project_overview = context.exec_cmd(&Command::shell("fd -d2")).await?.output;
                 context.add_message(chat_completion::ChatMessage::new_user(format!("The following is a max depth 2, high level overview of the directory structure of the project: \n ```{top_level_project_overview}```"))).await;
 
@@ -190,13 +177,10 @@ pub async fn build_agent(
             })
         })
         .after_tool(tool_summarizer.summarize_hook())
-        // After each completion, lint and fix and commit
         .after_each(move |context| {
             let maybe_lint_fix_command = maybe_lint_fix_command.clone();
             let command_responder = command_responder.clone();
             Box::pin(async move {
-                // TODO: Refactor to a separate tool so it can be tested in isolation and is less
-                // messy
                 if accept_non_zero_exit(
                     context
                         .exec_cmd(&Command::shell("git status --porcelain"))
@@ -216,7 +200,6 @@ pub async fn build_agent(
                         .context("Could not run lint and fix")?;
                 };
 
-                // Then commit the changes
                 accept_non_zero_exit(context.exec_cmd(&Command::shell("git add .")).await)
                     .context("Could not add files to git")?;
 
