@@ -64,7 +64,6 @@ pub async fn write_file(
 
     Ok(success_message.into())
 }
-}
 
 #[tool(
     description = "Searches for a file inside the current project, leave the argument empty to list all files. Uses `find`.",
