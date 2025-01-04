@@ -313,7 +313,7 @@ mod tests {
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
-        // Stage and simulate a file being deleted by removing it
+        // Improved: Commit, remove, then commit again for deletion effect
         std::process::Command::new("git")
             .arg("add")
             .arg(&context.node.path)
@@ -323,16 +323,25 @@ mod tests {
         std::process::Command::new("git")
             .arg("commit")
             .arg("-m")
-            .arg("Test commit before remove")
+            .arg("Add file before removal")
             .output()
             .expect("failed to commit file");
 
+        // Simulating file deletion & committing
         std::fs::remove_file(&context.node.path).unwrap();
 
-        tracing::debug!(
-            "Test setup: file {} is removed",
-            context.node.path.display()
-        );
+        std::process::Command::new("git")
+            .arg("add")
+            .arg("-u")
+            .output()
+            .expect("failed to stage file for deletion");
+
+        std::process::Command::new("git")
+            .arg("commit")
+            .arg("-m")
+            .arg("Remove file")
+            .output()
+            .expect("failed to commit file deletion");
 
         // Now run the garbage collector
         context.subject.clean_up().await.unwrap();
@@ -365,7 +374,7 @@ mod tests {
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
-        // Stage and simulate file deletion
+        // Improved: Commit, remove, then commit again for deletion effect
         std::process::Command::new("git")
             .arg("add")
             .arg(&context.node.path)
@@ -375,16 +384,25 @@ mod tests {
         std::process::Command::new("git")
             .arg("commit")
             .arg("-m")
-            .arg("Test commit before remove")
+            .arg("Add file before removal")
             .output()
             .expect("failed to commit file");
 
+        // Simulating file deletion & committing
         std::fs::remove_file(&context.node.path).unwrap();
 
-        tracing::debug!(
-            "Test setup: file {} is removed",
-            context.node.path.display()
-        );
+        std::process::Command::new("git")
+            .arg("add")
+            .arg("-u")
+            .output()
+            .expect("failed to stage file for deletion");
+
+        std::process::Command::new("git")
+            .arg("commit")
+            .arg("-m")
+            .arg("Remove file")
+            .output()
+            .expect("failed to commit file deletion");
 
         // Now run the garbage collector
         context.subject.clean_up().await.unwrap();
