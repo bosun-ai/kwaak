@@ -354,8 +354,11 @@ mod tests {
         tracing::info!("Clean up after file changes.");
         context.subject.clean_up().await.unwrap();
 
+        let cache_result = context.redb.get(&context.node).await;
+        tracing::debug!("Cache result after clean up: {:?}", cache_result);
+
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 0);
-        assert!(!context.redb.get(&context.node).await);
+        assert!(!cache_result);
     }
 
     #[test_log::test(tokio::test)]
@@ -413,7 +416,10 @@ mod tests {
         tracing::info!("Starting clean up after detecting file deletion.");
         context.subject.clean_up().await.unwrap();
 
+        let cache_result = context.redb.get(&context.node).await;
+        tracing::debug!("Cache result after detection clean up: {:?}", cache_result);
+
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 0);
-        assert!(!context.redb.get(&context.node).await);
+        assert!(!cache_result);
     }
 }
