@@ -288,8 +288,9 @@ impl App<'_> {
                         self.add_chat(Chat::default());
                     }
                     UIEvent::RenameChat(uuid, name) => {
-                        let chat = self.find_chat_mut(uuid);
-                        chat.name = name;
+                        if let Some(chat) = self.find_chat_mut(uuid) {
+                            chat.name = name;
+                        };
                     }
                     UIEvent::NextChat => self.next_chat(),
                     UIEvent::ChangeMode(mode) => self.change_mode(mode),
