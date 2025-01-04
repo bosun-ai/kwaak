@@ -1,5 +1,4 @@
 mod conversation_summarizer;
-mod docker_tool_executor;
 mod env_setup;
 mod tool_summarizer;
 mod tools;

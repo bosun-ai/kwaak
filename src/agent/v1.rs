@@ -12,15 +12,15 @@ use swiftide::{
 use tavily::Tavily;
 use uuid::Uuid;
 
+use super::{
+    conversation_summarizer::ConversationSummarizer, env_setup::EnvSetup,
+    tool_summarizer::ToolSummarizer, tools,
+};
 use crate::{
     commands::CommandResponder, config::SupportedToolExecutors, git::github::GithubSession,
     indexing, repository::Repository, util::accept_non_zero_exit,
 };
-
-use super::{
-    conversation_summarizer::ConversationSummarizer, docker_tool_executor::DockerExecutor,
-    env_setup::EnvSetup, tool_summarizer::ToolSummarizer, tools,
-};
+use swiftide_docker_executor::DockerExecutor;
 
 async fn generate_initial_context(repository: &Repository, query: &str) -> Result<String> {
     let retrieved_context = indexing::query(repository, &query).await?;
@@ -62,13 +62,26 @@ fn configure_tools(
 
 async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Box<dyn ToolExecutor>> {
     let boxed = match repository.config().tool_executor {
-        SupportedToolExecutors::Docker => Box::new(
-            DockerExecutor::from_repository(repository)
+        SupportedToolExecutors::Docker => {
+            let mut executor = DockerExecutor::default();
+            let dockerfile = &repository.config().docker.dockerfile;
+
+            if std::fs::metadata(dockerfile).is_err() {
+                tracing::error!("Dockerfile not found at {}", dockerfile.display());
+                // TODO: Clean me up
+                panic!("Running in docker requires a Dockerfile");
+            }
+            let running_executor = executor
+                .with_context_path(&repository.config().docker.context)
+                .with_image_name(&repository.config().project_name)
+                .with_dockerfile(dockerfile)
                 .with_container_uuid(uuid)
                 .to_owned()
                 .start()
-                .await?,
-        ) as Box<dyn ToolExecutor>,
+                .await?;
+
+            Box::new(running_executor) as Box<dyn ToolExecutor>
+        }
         SupportedToolExecutors::Local => Box::new(LocalExecutor::new(".")) as Box<dyn ToolExecutor>,
     };
 
