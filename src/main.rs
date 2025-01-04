@@ -92,21 +92,20 @@ async fn main() -> Result<()> {
         )
         .entered();
         
-        if let Some(command) = args.command.as_ref().unwrap_or(&cli::Commands::Tui) {
-            match command {
-                cli::Commands::RunAgent { initial_message } => start_agent(repository, initial_message).await,
-                cli::Commands::Tui => start_tui(&repository, &args).await,
-                cli::Commands::Index => index_repository(&repository, None).await,
-                cli::Commands::TestTool { tool_name, tool_args } => test_tool(&repository, tool_name, tool_args).await,
-                cli::Commands::Query { query: query_param } => {
-                    let result = indexing::query(&repository, query_param.clone()).await?;
+        let command = args.command.unwrap_or(cli::Commands::Tui);
+        match command {
+            cli::Commands::RunAgent { initial_message } => start_agent(repository, &initial_message).await,
+            cli::Commands::Tui => start_tui(&repository, &args).await,
+            cli::Commands::Index => index_repository(&repository, None).await,
+            cli::Commands::TestTool { tool_name, tool_args } => test_tool(&repository, &tool_name, &tool_args).await,
+            cli::Commands::Query { query: query_param } => {
+                let result = indexing::query(&repository, query_param).await?;
 
-                    println!("{result}");
+                println!("{result}");
 
-                    Ok(())
-                }
-            }?;
-        }
+                Ok(())
+            }
+        }?;
     }
 
     if cfg!(feature = "otel") {
