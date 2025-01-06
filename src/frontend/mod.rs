@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 mod app;
 mod splash;
 mod ui_command;
