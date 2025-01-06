@@ -104,7 +104,7 @@ fn render_chat_messages(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
     #[allow(clippy::cast_possible_truncation)]
     let chat_messages = Paragraph::new(chat_content)
         .block(message_block)
-        // .wrap(Wrap { trim: false })
+        .wrap(Wrap { trim: false })
         .scroll((current_chat.vertical_scroll as u16, 0));
 
     f.render_widget(chat_messages, area);
