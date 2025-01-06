@@ -78,7 +78,6 @@ fn render_chat_messages(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
     current_chat.new_message_count = 0;
 
     // We need to consider the available area height to calculate how much can be shown
-    let view_height = area.height as usize;
     current_chat.num_lines = chat_content.lines.len();
 
     // Record the number of lines in the chat for multi line scrolling
@@ -133,25 +132,29 @@ fn render_chat_list(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
                 .title("Chats".bold())
                 .title_alignment(Alignment::Center)
                 .borders(Borders::TOP | Borders::RIGHT)
-                .padding(Padding::right(1)),
+                .padding(Padding::horizontal(1)),
         );
 
     f.render_stateful_widget(list, area, &mut app.chats_state);
 }
 
 fn format_chat_in_list(chat: &Chat) -> ListItem {
-    let suffix = if chat.is_loading() { " ..." } else { "" };
+    const ELIPSIS: &str = "…";
+    const CAN_MESSAGE: &str = "󰍩";
+    const NEW_MESSAGE: &str = "󱥁";
+    const MESSAGE_LOCK: &str = "󱅳";
 
-    let new_message_count = if chat.new_message_count > 0 {
-        format!(" ({})", chat.new_message_count)
+    let prefix = if chat.is_loading() && chat.new_message_count > 0 {
+        MESSAGE_LOCK
+    } else if chat.is_loading() {
+        ELIPSIS
+    } else if chat.new_message_count > 0 {
+        NEW_MESSAGE
     } else {
-        String::new()
+        CAN_MESSAGE
     };
 
-    ListItem::from(format!(
-        "{name}{suffix}{new_message_count}",
-        name = chat.name
-    ))
+    ListItem::from(format!("{prefix}  {name}", name = chat.name))
 }
 
 fn render_input_bar(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
