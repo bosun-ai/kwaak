@@ -276,7 +276,7 @@ async fn rename_chat(
 ) -> Result<()> {
     let chat_name = fast_query_provider
         .prompt(
-            format!("Give a good, short, max 40 chars title for the following query:\n{query}")
+            format!("Give a good, short, max 20 chars title for the following query:\n{query}")
                 .into(),
         )
         .await
