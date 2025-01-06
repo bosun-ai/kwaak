@@ -54,9 +54,7 @@ async fn main() -> Result<()> {
     // Handle the `init` command immediately after parsing args
     if let Some(cli::Commands::Init) = args.command {
         if std::fs::metadata("kwaak.toml").is_ok() {
-            println!(
-                "kwaak.toml already exists in current directory, skipping initialization"
-            );
+            println!("kwaak.toml already exists in current directory, skipping initialization");
             return Ok(());
         }
         let config = onboarding::create_template_config()?;
@@ -108,6 +106,7 @@ async fn main() -> Result<()> {
                 println!("{}", toml::to_string_pretty(repository.config())?);
                 Ok(())
             }
+            cli::Commands::Init => unreachable!(),
         }?;
     }
 
