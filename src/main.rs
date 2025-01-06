@@ -53,12 +53,9 @@ async fn main() -> Result<()> {
 
     // Handle the `init` command immediately after parsing args
     if let Some(cli::Commands::Init) = args.command {
-        match onboarding::run() {
-            Err(error) => {
-                eprintln!("Error: {}", error);
-                std::process::exit(1);
-            }
-            _ => {}
+        if let Err(error) = onboarding::run() {
+            eprintln!("Error: {error}");
+            std::process::exit(1);
         }
         return Ok(());
     }
