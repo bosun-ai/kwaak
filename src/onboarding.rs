@@ -6,7 +6,22 @@ use anyhow::{Context as _, Result};
 use serde_json::json;
 use swiftide::integrations::treesitter::SupportedLanguages;
 
-pub fn create_template_config() -> Result<String> {
+pub fn run() -> Result<()> {
+    if std::fs::metadata(".git").is_err() {
+        anyhow::bail!("Not a git repository, please run `git init` first");
+    }
+    if std::fs::metadata("kwaak.toml").is_ok() {
+        anyhow::bail!("kwaak.toml already exists in current directory, skipping initialization");
+    }
+    let config = create_template_config()?;
+    std::fs::write("kwaak.toml", &config)?;
+
+    println!("Initialized kwaak project in current directory, please review and customize the created `kwaak.toml` file.\n Kwaak also needs a `Dockerfile` to execute your code in, with `ripgrep` and `fd` installed. Refer to https://github.com/bosun-ai/kwaak for an up to date list.");
+
+    Ok(())
+}
+
+fn create_template_config() -> Result<String> {
     let mut context = tera::Context::new();
 
     context.insert(
