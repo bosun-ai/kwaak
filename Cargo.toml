@@ -54,7 +54,7 @@ tui-logger = { features = ["tracing-support"], version = "0.14.1" }
 log = "0.4.22"
 throbber-widgets-tui = "0.8.0"
 ignore = "0.4.23"
-async-trait = "0.1.84"
+async-trait = "0.1.85"
 url = "2.5.4"
 octocrab = "0.42.0"
 indoc = "2.0.5"
