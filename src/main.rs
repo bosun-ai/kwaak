@@ -51,6 +51,21 @@ mod test_utils;
 async fn main() -> Result<()> {
     let args = cli::Args::parse();
 
+    // Handle the `init` command immediately after parsing args
+    if let Some(cli::Commands::Init) = args.command {
+        if std::fs::metadata("kwaak.toml").is_ok() {
+            println!(
+                "kwaak.toml already exists in current directory, skipping initialization"
+            );
+            return Ok(());
+        }
+        let config = onboarding::create_template_config()?;
+        std::fs::write("kwaak.toml", config)?;
+
+        println!("Initialized kwaak project in current directory, please review and customize the created `kwaak.toml` file.\n Kwaak also needs a `Dockerfile` to execute your code in, with `ripgrep` and `fd` installed. Refer to https://github.com/bosun-ai/kwaak for an up to date list.");
+        return Ok(());
+    }
+
     init_panic_hook();
 
     // Load configuration
@@ -82,19 +97,6 @@ async fn main() -> Result<()> {
                 println!("{result}");
 
                 Ok(())
-            }
-            cli::Commands::Init => {
-                if std::fs::metadata("kwaak.toml").is_ok() {
-                    println!(
-                        "kwaak.toml already exists in current directory, skipping initialization"
-                    );
-                    return Ok(());
-                }
-                let config = onboarding::create_template_config()?;
-                std::fs::write("kwaak.toml", config)?;
-
-                println!("Initialized kwaak project in current directory, please review and customize the created `kwaak.toml` file.\n Kwaak also needs a `Dockerfile` to execute your code in, with `ripgrep` and `fd` installed. Refer to https://github.com/bosun-ai/kwaak for an up to date list.");
-                return Ok(());
             }
             cli::Commands::ClearCache => {
                 repository.clear_cache().await?;
