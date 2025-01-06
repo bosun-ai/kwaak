@@ -139,7 +139,7 @@ fn render_chat_list(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
 }
 
 fn format_chat_in_list(chat: &Chat) -> ListItem {
-    const ELIPSIS: &str = "…";
+    const ELLIPSIS: &str = "…";
     const CAN_MESSAGE: &str = "󰍩";
     const NEW_MESSAGE: &str = "󱥁";
     const MESSAGE_LOCK: &str = "󱅳";
@@ -147,7 +147,7 @@ fn format_chat_in_list(chat: &Chat) -> ListItem {
     let prefix = if chat.is_loading() && chat.new_message_count > 0 {
         MESSAGE_LOCK
     } else if chat.is_loading() {
-        ELIPSIS
+        ELLIPSIS
     } else if chat.new_message_count > 0 {
         NEW_MESSAGE
     } else {
