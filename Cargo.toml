@@ -11,14 +11,14 @@ description = "Run a team of autonomous agents on your code, right from your ter
 license = "MIT"
 
 [dependencies]
-anyhow = "1.0.88"
+anyhow = "1.0.95"
 crossterm = "0.28.1"
 ratatui = "0.29.0"
 tui-textarea = "0.7.0"
 tokio = { version = "1.42.0", features = ["full"] }
 strum = "0.26.3"
 strum_macros = "0.26.4"
-swiftide-docker-executor = "0.1.0"
+swiftide-docker-executor = "0.1.1"
 swiftide = { version = "0.16.0", features = [
   "lancedb",
   "openai",
@@ -29,9 +29,9 @@ swiftide = { version = "0.16.0", features = [
 ] }
 swiftide-macros = { version = "0.16.0" }
 toml = "0.8.19"
-serde = { version = "1.0.210", features = ["derive"] }
-serde_json = "1.0.133"
-secrecy = { version = "0.10.2", features = ["serde"] }
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = "1.0.134"
+secrecy = { version = "0.10.3", features = ["serde"] }
 tracing = "0.1.41"
 async-openai = "0.26.0"
 dirs = "5.0.1"
@@ -46,22 +46,16 @@ opentelemetry-otlp = { version = "0.27.0", optional = true, features = [
   "tonic",
 ] }
 
-derive_more = { version = "1.0.0", features = ["full"] }
-# tui-markdown = { git = "https://github.com/timonv/tui-markdown.git", branch = "code-highlighting", features = [
-#   "highlight-code",
-# ] }
-tui-markdown = "0.3.0"
-uuid = { version = "1.10.0", features = ["v4"] }
+tui-markdown = "0.3.1"
+uuid = { version = "1.11.0", features = ["v4"] }
 derive_builder = "0.20.2"
-tui-logger = { features = ["tracing-support"], version = "0.14" }
+tui-logger = { features = ["tracing-support"], version = "0.14.1" }
 # Only needed for tui-logger filtering
-log = "0.4"
+log = "0.4.22"
 throbber-widgets-tui = "0.8.0"
-bollard = "0.18.1"
-tokio-tar = "0.3.1"
 ignore = "0.4.23"
 async-trait = "0.1.84"
-url = "2.5.3"
+url = "2.5.4"
 octocrab = "0.42.0"
 indoc = "2.0.5"
 tavily = "2.0.3"
@@ -71,7 +65,7 @@ tera = "1.20.0"
 lazy_static = "1.5.0"
 rust-embed = { version = "8.5.0", features = ["debug-embed"] }
 ratatui-splash-screen = "0.1.4"
-reqwest = { version = "0.12", features = [
+reqwest = { version = "0.12.12", features = [
   "rustls-tls",
   "charset",
   "http2",
