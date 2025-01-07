@@ -165,7 +165,7 @@ struct RunningAgent {
     agent: Arc<Mutex<Agent>>,
 
     #[allow(dead_code)]
-    reponse_handle: Arc<tokio::task::JoinHandle<()>>,
+    response_handle: Arc<tokio::task::JoinHandle<()>>,
 
     cancel_token: CancellationToken,
 }
@@ -313,7 +313,7 @@ impl CommandHandler {
 
         let running_agent = RunningAgent {
             agent: Arc::new(Mutex::new(agent)),
-            reponse_handle: Arc::new(handle),
+            response_handle: Arc::new(handle),
             cancel_token: CancellationToken::new(),
         };
 
