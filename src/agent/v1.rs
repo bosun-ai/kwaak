@@ -148,7 +148,7 @@ pub async fn build_agent(
                     .await;
 
                 let top_level_project_overview = context.exec_cmd(&Command::shell("fd -d2")).await?.output;
-                context.add_message(chat_completion::ChatMessage::new_user(format!("The following is a max depth 2, high level overview of the directory structure of the project: \n ```{top_level_project_overview}```"))).await;
+                context.add_message(chat_completion::ChatMessage::new_user(format!("The following is a max depth 2, high level overview of the directory structure of the project: \n ```{top_level_project_overview}```")).await;
 
                 Ok(())
             })
@@ -276,13 +276,15 @@ async fn rename_chat(
 ) -> Result<()> {
     let chat_name = fast_query_provider
         .prompt(
-            format!("Give a good, short, max 20 chars title for the following query:\n{query}")
+            format!("Give a good, short, max 100 chars title for the following query:\n{query}")
                 .into(),
         )
         .await
         .context("Could not get chat name")?
         .trim_matches('"')
-        .to_string();
+        .chars()
+        .take(100) // Take only the first 100 characters
+        .collect::<String>();
 
     command_responder.send_rename(chat_name);
 
