@@ -153,7 +153,7 @@ Keybindings:
 
 - **_ctrl-s_**: Send the current message to the agent
 - **_ctrl-x_**: Exit the agent
-- **_ctrl-c_**: Exit kwaak
+- **_ctrl-q_**: Exit kwaak
 - **_ctrl-n_**: Create a new agent
 - **_Page Up_**: Scroll chat up
 - **_Page Down_**: Scroll chat down
