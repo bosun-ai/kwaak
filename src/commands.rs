@@ -39,6 +39,7 @@ pub enum Command {
     DeleteChat { uuid: Uuid },
 }
 
+#[derive(Debug, Clone)]
 pub enum CommandResponse {
     Chat(ChatMessage),
     ActivityUpdate(Uuid, String),

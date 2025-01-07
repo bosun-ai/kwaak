@@ -276,17 +276,62 @@ async fn rename_chat(
 ) -> Result<()> {
     let chat_name = fast_query_provider
         .prompt(
-            format!("Give a good, short, max 100 chars title for the following query:\n{query}")
+            format!("Give a good, short, max 60 chars title for the following query. Only respond with the title.:\n{query}")
                 .into(),
         )
         .await
         .context("Could not get chat name")?
         .trim_matches('"')
         .chars()
-        .take(100) // Take only the first 100 characters
+        .take(30) 
         .collect::<String>();
 
     command_responder.send_rename(chat_name);
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use swiftide_core::MockSimplePrompt;
+
+    use crate::commands::CommandResponse;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_rename_chat() {
+        let query = "This is a query";
+        let mut llm_mock = MockSimplePrompt::new();
+        llm_mock.expect_prompt().returning(|_| Ok("Excellent title".to_string()));
+
+        let mut command_responder = CommandResponder::default();
+
+        rename_chat(&query, &llm_mock as &dyn SimplePrompt, &command_responder).await.unwrap();
+
+        let message = command_responder.recv().await.unwrap();
+
+        match message {
+            CommandResponse::RenameChat(_, msg) => assert_eq!(msg,"Excellent title"),
+            _ => panic!("Expected RenameChat"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_rename_chat_limits_60() {
+        let query = "This is a query";
+        let mut llm_mock = MockSimplePrompt::new();
+        llm_mock.expect_prompt().returning(|_| Ok("Excellent title".repeat(100).to_string()));
+
+        let mut command_responder = CommandResponder::default();
+
+        rename_chat(&query, &llm_mock as &dyn SimplePrompt, &command_responder).await.unwrap();
+
+        let message = command_responder.recv().await.unwrap();
+
+        match message {
+            CommandResponse::RenameChat(_, msg) => assert_eq!(msg.len(), 30),
+            _ => panic!("Expected RenameChat"),
+        }
+    }
 }
