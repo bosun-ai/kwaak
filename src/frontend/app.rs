@@ -175,11 +175,11 @@ impl App<'_> {
     }
 
     fn on_key(&mut self, key: KeyEvent) {
-        // Always quit on ctrl c
+        // Change quit to Ctrl-Q
         if key.modifiers == crossterm::event::KeyModifiers::CONTROL
-            && key.code == KeyCode::Char('c')
+            && key.code == KeyCode::Char('q')
         {
-            tracing::warn!("Ctrl-C pressed, quitting");
+            tracing::warn!("Ctrl-Q pressed, quitting");
             return self.send_ui_event(UIEvent::Quit);
         }
 
