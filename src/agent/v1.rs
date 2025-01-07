@@ -148,7 +148,7 @@ pub async fn build_agent(
                     .await;
 
                 let top_level_project_overview = context.exec_cmd(&Command::shell("fd -d2")).await?.output;
-                context.add_message(chat_completion::ChatMessage::new_user(format!("The following is a max depth 2, high level overview of the directory structure of the project: \n ```{top_level_project_overview}```")).await;
+                context.add_message(chat_completion::ChatMessage::new_user(format!("The following is a max depth 2, high level overview of the directory structure of the project: \n ```{top_level_project_overview}```"))).await;
 
                 Ok(())
             })
