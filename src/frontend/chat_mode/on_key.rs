@@ -64,8 +64,7 @@ pub fn on_key(app: &mut App, key: KeyEvent) {
             .modifiers
             .contains(crossterm::event::KeyModifiers::CONTROL)
     {
-        // Assuming you have some quit functionality here
-        app.quit();
+        app.send_ui_event(UIEvent::Quit);
         return;
     }
 
