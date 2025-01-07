@@ -303,16 +303,20 @@ mod tests {
     async fn test_rename_chat() {
         let query = "This is a query";
         let mut llm_mock = MockSimplePrompt::new();
-        llm_mock.expect_prompt().returning(|_| Ok("Excellent title".to_string()));
+        llm_mock
+            .expect_prompt()
+            .returning(|_| Ok("Excellent title".to_string()));
 
         let mut command_responder = CommandResponder::default();
 
-        rename_chat(&query, &llm_mock as &dyn SimplePrompt, &command_responder).await.unwrap();
+        rename_chat(&query, &llm_mock as &dyn SimplePrompt, &command_responder)
+            .await
+            .unwrap();
 
         let message = command_responder.recv().await.unwrap();
 
         match message {
-            CommandResponse::RenameChat(_, msg) => assert_eq!(msg,"Excellent title"),
+            CommandResponse::RenameChat(_, msg) => assert_eq!(msg, "Excellent title"),
             _ => panic!("Expected RenameChat"),
         }
     }
@@ -321,11 +325,15 @@ mod tests {
     async fn test_rename_chat_limits_60() {
         let query = "This is a query";
         let mut llm_mock = MockSimplePrompt::new();
-        llm_mock.expect_prompt().returning(|_| Ok("Excellent title".repeat(100).to_string()));
+        llm_mock
+            .expect_prompt()
+            .returning(|_| Ok("Excellent title".repeat(100).to_string()));
 
         let mut command_responder = CommandResponder::default();
 
-        rename_chat(&query, &llm_mock as &dyn SimplePrompt, &command_responder).await.unwrap();
+        rename_chat(&query, &llm_mock as &dyn SimplePrompt, &command_responder)
+            .await
+            .unwrap();
 
         let message = command_responder.recv().await.unwrap();
 
