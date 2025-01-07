@@ -176,6 +176,11 @@ fn pretty_format_tool(tool_call: &swiftide::chat_completion::ToolCall) -> Option
             "searching the web for `{}`",
             get_value(parsed_args, "query")?
         ),
+        "github_search_code" => format!(
+            "searching github for code matching `{}`",
+            get_value(parsed_args, "query")?
+        ),
+        "fetch_url" => format!("fetching url `{}`", get_value(parsed_args, "url")?),
         _ => return None,
     })
 }
