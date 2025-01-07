@@ -58,16 +58,6 @@ pub fn on_key(app: &mut App, key: KeyEvent) {
         return;
     }
 
-    // `Ctrl-q` to quit the application
-    if key.code == KeyCode::Char('q')
-        && key
-            .modifiers
-            .contains(crossterm::event::KeyModifiers::CONTROL)
-    {
-        app.send_ui_event(UIEvent::Quit);
-        return;
-    }
-
     match key.code {
         KeyCode::Tab => app.send_ui_event(UIEvent::NextChat),
         KeyCode::End => {
