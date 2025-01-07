@@ -3448,6 +3448,7 @@ dependencies = [
  "test-log",
  "throbber-widgets-tui",
  "tokio",
+ "tokio-util",
  "toml",
  "tracing",
  "tracing-appender",
