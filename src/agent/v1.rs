@@ -283,7 +283,7 @@ async fn rename_chat(
         .context("Could not get chat name")?
         .trim_matches('"')
         .chars()
-        .take(30) 
+        .take(30)
         .collect::<String>();
 
     command_responder.send_rename(chat_name);
