@@ -1,4 +1,5 @@
 use anyhow::Result;
+use copypasta::{ClipboardContext, ClipboardProvider};
 use std::time::Duration;
 use strum::IntoEnumIterator as _;
 use tui_logger::TuiWidgetState;
@@ -319,6 +320,33 @@ impl App<'_> {
                         } else {
                             self.next_chat();
                         }
+                    }
+                    UIEvent::CopyLastMessage => {
+                        let Some(last_message) = self
+                            .current_chat()
+                            .and_then(|c| {
+                                c.messages
+                                    .iter()
+                                    .filter(|m| m.role().is_assistant() || m.role().is_user())
+                                    .last()
+                            })
+                            .map(ChatMessage::content)
+                        else {
+                            self.add_chat_message(
+                                ChatMessage::new_system("No message to copy").build(),
+                            );
+                            continue;
+                        }; // Replace with actual retrieval of the last message
+                           //
+                        if let Err(e) = ClipboardContext::new()
+                            .and_then(|mut ctx| ctx.set_contents(last_message.to_string()))
+                        {
+                            tracing::error!("Error copying last message to clipboard {e:#}");
+                            continue;
+                        }
+                        self.add_chat_message(
+                            ChatMessage::new_system("Copied last message to clipboard").build(),
+                        );
                     }
                 }
             }

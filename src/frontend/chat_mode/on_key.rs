@@ -5,7 +5,6 @@ use crate::{
     commands::Command,
     frontend::{App, UIEvent, UserInputCommand},
 };
-use copypasta::{ClipboardContext, ClipboardProvider};
 
 pub fn on_key(app: &mut App, key: KeyEvent) {
     let current_input = app.text_input.lines().join("\n");
@@ -104,18 +103,6 @@ pub fn handle_input_command(app: &mut App) -> ChatMessageBuilder {
             .uuid(app.current_chat)
             .to_owned();
     };
-
-    // Handle the /copy command specifically
-    if cmd == UserInputCommand::Copy {
-        let last_message = "This should be the last message"; // Replace with actual retrieval of the last message
-        let mut clipboard_context = ClipboardContext::new().unwrap();
-        clipboard_context
-            .set_contents(last_message.to_owned())
-            .unwrap();
-        return ChatMessage::new_system("Copied last message to clipboard")
-            .uuid(app.current_chat)
-            .to_owned();
-    }
 
     if let Some(cmd) = cmd.to_command(app.current_chat) {
         // If the backend supports it, forward the command

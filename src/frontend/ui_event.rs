@@ -31,6 +31,8 @@ pub enum UIEvent {
     Quit,
     /// Chat deleted
     ChatDeleted(Uuid),
+    /// Copy last message from current chat to clipboard
+    CopyLastMessage,
 }
 
 impl From<ChatMessage> for UIEvent {
@@ -69,6 +71,7 @@ impl TryFrom<UserInputCommand> for UIEvent {
         match value {
             UserInputCommand::NextChat => Ok(Self::NextChat),
             UserInputCommand::NewChat => Ok(Self::NewChat),
+            UserInputCommand::Copy => Ok(Self::CopyLastMessage),
             _ => anyhow::bail!("Cannot convert {value} to UIEvent"),
         }
     }
