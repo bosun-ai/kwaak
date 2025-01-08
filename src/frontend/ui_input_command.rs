@@ -1,6 +1,5 @@
 use crate::commands::Command;
 use anyhow::Result;
-use copypasta::{ClipboardContext, ClipboardProvider};
 use uuid::Uuid;
 
 #[derive(
