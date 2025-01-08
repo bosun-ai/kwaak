@@ -7,7 +7,7 @@
 //! effectively complete. This summarizer helps to keep the context window small and steers the
 //! agent towards a more focused solution.
 //!
-//! Because it also acts as a nice oppertunity to steer, we will also include a steering prompt
+//! Because it also acts as a nice opportunity to steer, we will also include a steering prompt
 //! and the current diff
 //!
 //! The agent completes messages since the last summary.
