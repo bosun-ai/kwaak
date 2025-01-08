@@ -56,7 +56,7 @@ pub fn ui(f: &mut ratatui::Frame, area: Rect, app: &mut App) {
 
     Paragraph::new(Line::from(vec![Span::raw(format!(
         "kwaak/{}",
-        app.current_chat
+        app.current_chat_uuid
     ))]))
     .style(Style::default().fg(Color::DarkGray).italic())
     .block(Block::default().padding(Padding::right(1)))

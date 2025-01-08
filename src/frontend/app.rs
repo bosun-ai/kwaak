@@ -37,7 +37,7 @@ pub struct App<'a> {
     pub chats: Vec<Chat>,
 
     /// UUID of the current chat
-    pub current_chat: uuid::Uuid,
+    pub current_chat_uuid: uuid::Uuid,
 
     /// Holds the sender of UI events for later cloning if needed
     pub ui_tx: mpsc::UnboundedSender<UIEvent>,
@@ -124,7 +124,7 @@ impl Default for App<'_> {
         Self {
             skip_indexing: false,
             text_input: new_text_area(),
-            current_chat: chat.uuid,
+            current_chat_uuid: chat.uuid,
             chats: vec![chat],
             ui_tx,
             ui_rx,
@@ -209,7 +209,7 @@ impl App<'_> {
         if message.uuid() == Some(self.boot_uuid) {
             return;
         }
-        if let Some(chat) = self.find_chat_mut(message.uuid().unwrap_or(self.current_chat)) {
+        if let Some(chat) = self.find_chat_mut(message.uuid().unwrap_or(self.current_chat_uuid)) {
             chat.add_message(message);
         }
     }
@@ -297,11 +297,12 @@ impl App<'_> {
                         tracing::warn!("UI received quit event, quitting");
 
                         self.dispatch_command(&Command::Quit {
-                            uuid: self.current_chat,
+                            uuid: self.current_chat_uuid,
                         });
                         self.change_mode(AppMode::Quit);
                     }
-                    UIEvent::ChatDeleted(uuid) => {
+                    UIEvent::DeleteChat => {
+                        let uuid = self.current_chat_uuid;
                         self.dispatch_command(&Command::StopAgent { uuid });
                         // Remove the chat with the given UUID
                         self.chats.retain(|chat| chat.uuid != uuid);
@@ -339,17 +340,17 @@ impl App<'_> {
     }
 
     pub(crate) fn current_chat(&self) -> Option<&Chat> {
-        self.find_chat(self.current_chat)
+        self.find_chat(self.current_chat_uuid)
     }
 
     pub(crate) fn current_chat_mut(&mut self) -> Option<&mut Chat> {
-        self.find_chat_mut(self.current_chat)
+        self.find_chat_mut(self.current_chat_uuid)
     }
 
     fn add_chat(&mut self, mut new_chat: Chat) {
         new_chat.name = format!("Chat #{}", self.chats.len() + 1);
 
-        self.current_chat = new_chat.uuid;
+        self.current_chat_uuid = new_chat.uuid;
         self.chats.push(new_chat);
         self.chats_state.select_last();
     }
@@ -359,7 +360,7 @@ impl App<'_> {
         let Some(next_idx) = self
             .chats
             .iter()
-            .position(|chat| chat.uuid == self.current_chat)
+            .position(|chat| chat.uuid == self.current_chat_uuid)
             .map(|idx| idx + 1)
         else {
             assert!(
@@ -372,10 +373,10 @@ impl App<'_> {
 
         if let Some(chat) = self.chats.get(next_idx) {
             self.chats_state.select(Some(next_idx));
-            self.current_chat = chat.uuid;
+            self.current_chat_uuid = chat.uuid;
         } else {
             self.chats_state.select(Some(0));
-            self.current_chat = self.chats[0].uuid;
+            self.current_chat_uuid = self.chats[0].uuid;
         }
     }
 
@@ -438,21 +439,21 @@ mod tests {
     fn test_last_or_first_chat() {
         let mut app = App::default();
         let chat = Chat::default();
-        let first_uuid = app.current_chat;
+        let first_uuid = app.current_chat_uuid;
         let second_uuid = chat.uuid;
 
         // Starts with first
-        assert_eq!(app.current_chat, first_uuid);
+        assert_eq!(app.current_chat_uuid, first_uuid);
 
         app.add_chat(chat);
-        assert_eq!(app.current_chat, second_uuid);
+        assert_eq!(app.current_chat_uuid, second_uuid);
 
         app.next_chat();
 
-        assert_eq!(app.current_chat, first_uuid);
+        assert_eq!(app.current_chat_uuid, first_uuid);
 
         app.next_chat();
-        assert_eq!(app.current_chat, second_uuid);
+        assert_eq!(app.current_chat_uuid, second_uuid);
     }
 
     #[test]

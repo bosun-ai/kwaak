@@ -37,7 +37,6 @@ pub enum Command {
     IndexRepository { uuid: Uuid },
     StopAgent { uuid: Uuid },
     Chat { uuid: Uuid, message: String },
-    DeleteChat { uuid: Uuid },
 }
 
 #[derive(Debug, Clone)]
@@ -128,8 +127,7 @@ impl Command {
             | Command::StopAgent { uuid }
             | Command::ShowConfig { uuid }
             | Command::IndexRepository { uuid }
-            | Command::Chat { uuid, .. }
-            | Command::DeleteChat { uuid } => *uuid,
+            | Command::Chat { uuid, .. } => *uuid,
         }
     }
 
@@ -140,7 +138,6 @@ impl Command {
             Command::ShowConfig { .. } => Command::ShowConfig { uuid },
             Command::IndexRepository { .. } => Command::IndexRepository { uuid },
             Command::Chat { message, .. } => Command::Chat { uuid, message },
-            Command::DeleteChat { .. } => Command::DeleteChat { uuid },
         }
     }
 }
@@ -152,6 +149,10 @@ pub struct CommandHandler {
     /// Sends commands
     tx: mpsc::UnboundedSender<Command>,
 
+    /// TODO: Remove this and use the command responder everywhere
+    /// Then there can also be a single command responder, and removes coupling with frontend
+    /// fully
+    ///
     /// Sends `UIEvents` to the connected frontend
     ui_tx: Option<mpsc::UnboundedSender<UIEvent>>,
     /// Repository to interact with
@@ -259,10 +260,6 @@ impl CommandHandler {
         #[allow(clippy::match_wildcard_for_single_variants)]
         match cmd {
             Command::StopAgent { uuid } => self.stop_agent(*uuid).await?,
-            Command::DeleteChat { uuid } => {
-                self.stop_agent(*uuid).await?;
-                self.send_ui_event(UIEvent::ChatDeleted(*uuid));
-            }
             Command::IndexRepository { .. } => {
                 let (command_responder, _guard) = self.spawn_command_responder(&cmd.uuid());
                 indexing::index_repository(repository, Some(command_responder)).await?;

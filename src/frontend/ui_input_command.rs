@@ -1,5 +1,3 @@
-// TODO: Rename to slash commands for clarity?
-//
 use uuid::Uuid;
 
 use crate::commands::Command;
@@ -31,13 +29,12 @@ impl UserInputCommand {
             UserInputCommand::Quit => Some(Command::Quit { uuid }),
             UserInputCommand::ShowConfig => Some(Command::ShowConfig { uuid }),
             UserInputCommand::IndexRepository => Some(Command::IndexRepository { uuid }),
-            UserInputCommand::DeleteChat => Some(Command::DeleteChat { uuid }),
             _ => None,
         }
     }
 
     pub fn parse_from_input(input: &str) -> Result<UserInputCommand> {
-        assert!(input.starts_with('/'));
+        debug_assert!(input.starts_with('/'));
 
         let cmd_parts = input.split_whitespace().collect::<Vec<_>>();
 
