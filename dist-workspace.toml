@@ -5,7 +5,7 @@ members = ["cargo:."]
 [dist]
 github-build-setup = "build-setup.yml"
 # The preferred dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.26.1"
+cargo-dist-version = "0.27.0"
 # CI backends to support
 ci = "github"
 # The installers to generate for each app
@@ -32,3 +32,4 @@ global = "ubuntu-latest"
 protobuf-compiler = "*"
 libprotobuf-dev = "*"
 libssl-dev = "*"
+libxcb-xfixes-0-dev = "*"
