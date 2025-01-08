@@ -24,6 +24,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: llvm-tools-preview
+      # Required for copypasta builds on linux
+      - name: Install libxcb
+        run: sudo apt install libxcb-xfixes-0-dev
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:

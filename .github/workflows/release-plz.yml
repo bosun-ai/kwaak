@@ -25,7 +25,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       # Required for copypasta builds on linux
       - name: Install libxcb
-        run: apt install libxcb-xfixes-0-dev
+        run: sudo apt install libxcb-xfixes-0-dev
       - uses: Swatinem/rust-cache@v2
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
