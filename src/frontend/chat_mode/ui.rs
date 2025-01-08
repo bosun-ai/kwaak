@@ -77,19 +77,6 @@ fn render_chat_messages(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
     // Since we are rendering the chat, we can reset the new message count
     current_chat.new_message_count = 0;
 
-    // We need to consider the available area height to calculate how much can be shown
-    current_chat.num_lines = chat_content.lines.len();
-
-    // Record the number of lines in the chat for multi line scrolling
-    current_chat.vertical_scroll_state = current_chat
-        .vertical_scroll_state
-        .content_length(current_chat.num_lines);
-
-    // Max scroll to halfway view-height of last content
-    if current_chat.vertical_scroll >= current_chat.num_lines.saturating_sub(1) {
-        current_chat.vertical_scroll = current_chat.num_lines.saturating_sub(1);
-    }
-
     // Unify borders
     let border_set = symbols::border::Set {
         top_right: symbols::line::NORMAL.horizontal_down,
@@ -101,11 +88,28 @@ fn render_chat_messages(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
         .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
         .padding(Padding::horizontal(1));
 
-    #[allow(clippy::cast_possible_truncation)]
     let chat_messages = Paragraph::new(chat_content)
         .block(message_block)
-        .wrap(Wrap { trim: false })
-        .scroll((current_chat.vertical_scroll as u16, 0));
+        .wrap(Wrap { trim: false });
+
+    // We need to consider the available area height to calculate how much can be shown
+    //
+    // Because the paragraph waps the text, we need to calculate the number of lines
+    // fromt he paragraph directly.
+    current_chat.num_lines = chat_messages.line_count(area.width);
+
+    // Record the number of lines in the chat for multi line scrolling
+    current_chat.vertical_scroll_state = current_chat
+        .vertical_scroll_state
+        .content_length(current_chat.num_lines);
+
+    // Max scroll to halfway view-height of last content
+    if current_chat.vertical_scroll >= current_chat.num_lines.saturating_sub(1) {
+        current_chat.vertical_scroll = current_chat.num_lines.saturating_sub(1);
+    }
+
+    #[allow(clippy::cast_possible_truncation)]
+    let chat_messages = chat_messages.scroll((current_chat.vertical_scroll as u16, 0));
 
     f.render_widget(chat_messages, area);
 
