@@ -27,7 +27,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       # Required for copypasta builds on linux
       - name: Install libxcb
-        run: sudo apt install libxcb-xfixes-0-dev
+        run: sudo apt install libxcb1-dev
       - name: Check typos
         uses: crate-ci/typos@master
       - name: "Rustfmt"

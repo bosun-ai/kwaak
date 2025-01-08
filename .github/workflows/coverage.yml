@@ -26,7 +26,7 @@ jobs:
           components: llvm-tools-preview
       # Required for copypasta builds on linux
       - name: Install libxcb
-        run: sudo apt install libxcb-xfixes-0-dev
+        run: sudo apt install libxcb1-dev
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
