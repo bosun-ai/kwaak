@@ -5,7 +5,7 @@ use uuid::Uuid;
 ///
 /// Messages are expected to be formatted strings and are displayed as-is. Markdown is rendered
 /// using `tui-markdown`.
-#[derive(Clone, Default, Builder)]
+#[derive(Clone, Default, Builder, PartialEq)]
 #[builder(setter(into, strip_option), build_fn(skip))]
 pub struct ChatMessage {
     role: ChatRole,
@@ -30,7 +30,15 @@ impl std::fmt::Debug for ChatMessage {
 }
 
 #[derive(
-    Debug, Clone, Copy, Default, strum::EnumString, strum::Display, strum::AsRefStr, strum::EnumIs,
+    Debug,
+    Clone,
+    Copy,
+    Default,
+    strum::EnumString,
+    strum::Display,
+    strum::AsRefStr,
+    strum::EnumIs,
+    PartialEq,
 )]
 pub enum ChatRole {
     User,
