@@ -153,7 +153,7 @@ Keybindings:
 
 - **_ctrl-s_**: Send the current message to the agent
 - **_ctrl-x_**: Exit the agent
-- **_ctrl-c_**: Exit kwaak
+- **_ctrl-q_**: Exit kwaak
 - **_ctrl-n_**: Create a new agent
 - **_Page Up_**: Scroll chat up
 - **_Page Down_**: Scroll chat down
@@ -198,7 +198,11 @@ After each chat completion, kwaak will lint, commit, and push the code to the re
 
 **Q:** I get a redb/lancedb error when starting, what is up?
 
-**A**: Possibly your index got corrupted. Try clearing the index with `kwaak clear-index` and restart kwaak. Note that this will require a reindexing of your codebase.
+**A**: Possibly your index got corrupted, or you have another kwaak instance running on the same project. Try clearing the index with `kwaak clear-index` and restart kwaak. Note that this will require a reindexing of your codebase.
+
+**Q:** I get a `error from Bollard: Socket not found /var/run/docker.sock`
+
+**A**: Enable the default Docker socket in docker desktop in General -> Advanced settings.
 
 ## Community
 

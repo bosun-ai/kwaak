@@ -56,7 +56,7 @@ pub fn ui(f: &mut ratatui::Frame, area: Rect, app: &mut App) {
 
     Paragraph::new(Line::from(vec![Span::raw(format!(
         "kwaak/{}",
-        app.current_chat
+        app.current_chat_uuid
     ))]))
     .style(Style::default().fg(Color::DarkGray).italic())
     .block(Block::default().padding(Padding::right(1)))
@@ -112,7 +112,7 @@ fn render_chat_messages(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
     // Render scrollbar
     f.render_stateful_widget(
         Scrollbar::new(ScrollbarOrientation::VerticalRight)
-            .begin_symbol(Some("↑"))
+            .begin_symbol(Some("↑")) // Fixed the unterminated string
             .end_symbol(Some("↓")),
         area,
         &mut current_chat.vertical_scroll_state,
@@ -139,7 +139,7 @@ fn render_chat_list(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
 }
 
 fn format_chat_in_list(chat: &Chat) -> ListItem {
-    const ELLIPSIS: &str = "…";
+    const LOADING: &str = "";
     const CAN_MESSAGE: &str = "󰍩";
     const NEW_MESSAGE: &str = "󱥁";
     const MESSAGE_LOCK: &str = "󱅳";
@@ -147,7 +147,7 @@ fn format_chat_in_list(chat: &Chat) -> ListItem {
     let prefix = if chat.is_loading() && chat.new_message_count > 0 {
         MESSAGE_LOCK
     } else if chat.is_loading() {
-        ELLIPSIS
+        LOADING
     } else if chat.new_message_count > 0 {
         NEW_MESSAGE
     } else {
@@ -230,10 +230,9 @@ fn render_help(f: &mut ratatui::Frame, app: &App, area: Rect) {
             "Page Up/Down - Scroll",
             "End - Scroll to end",
             "^s - Send message",
-            "^s - Send message",
             "^x - Stop agent",
             "^n - New chat",
-            "^c - Quit",
+            "^q - Quit", // Updated the keybinding here
         ]
         .iter()
         .map(|h| Line::from(h.bold()))

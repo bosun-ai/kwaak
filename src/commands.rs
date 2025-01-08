@@ -6,6 +6,7 @@ use tokio::{
     sync::{mpsc, Mutex, RwLock},
     task::{self, JoinHandle},
 };
+use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use crate::{
@@ -36,9 +37,9 @@ pub enum Command {
     IndexRepository { uuid: Uuid },
     StopAgent { uuid: Uuid },
     Chat { uuid: Uuid, message: String },
-    DeleteChat { uuid: Uuid },
 }
 
+#[derive(Debug, Clone)]
 pub enum CommandResponse {
     Chat(ChatMessage),
     ActivityUpdate(Uuid, String),
@@ -126,8 +127,7 @@ impl Command {
             | Command::StopAgent { uuid }
             | Command::ShowConfig { uuid }
             | Command::IndexRepository { uuid }
-            | Command::Chat { uuid, .. }
-            | Command::DeleteChat { uuid } => *uuid,
+            | Command::Chat { uuid, .. } => *uuid,
         }
     }
 
@@ -138,7 +138,6 @@ impl Command {
             Command::ShowConfig { .. } => Command::ShowConfig { uuid },
             Command::IndexRepository { .. } => Command::IndexRepository { uuid },
             Command::Chat { message, .. } => Command::Chat { uuid, message },
-            Command::DeleteChat { .. } => Command::DeleteChat { uuid },
         }
     }
 }
@@ -150,6 +149,10 @@ pub struct CommandHandler {
     /// Sends commands
     tx: mpsc::UnboundedSender<Command>,
 
+    /// TODO: Remove this and use the command responder everywhere
+    /// Then there can also be a single command responder, and removes coupling with frontend
+    /// fully
+    ///
     /// Sends `UIEvents` to the connected frontend
     ui_tx: Option<mpsc::UnboundedSender<UIEvent>>,
     /// Repository to interact with
@@ -164,7 +167,9 @@ struct RunningAgent {
     agent: Arc<Mutex<Agent>>,
 
     #[allow(dead_code)]
-    handle: Arc<tokio::task::JoinHandle<()>>,
+    response_handle: Arc<tokio::task::JoinHandle<()>>,
+
+    cancel_token: CancellationToken,
 }
 
 impl RunningAgent {
@@ -173,7 +178,7 @@ impl RunningAgent {
     }
 
     pub async fn stop(&self) {
-        self.handle.abort();
+        self.cancel_token.cancel();
         self.agent.lock().await.stop();
     }
 }
@@ -255,10 +260,6 @@ impl CommandHandler {
         #[allow(clippy::match_wildcard_for_single_variants)]
         match cmd {
             Command::StopAgent { uuid } => self.stop_agent(*uuid).await?,
-            Command::DeleteChat { uuid } => {
-                self.stop_agent(*uuid).await?;
-                self.send_ui_event(UIEvent::ChatDeleted(*uuid));
-            }
             Command::IndexRepository { .. } => {
                 let (command_responder, _guard) = self.spawn_command_responder(&cmd.uuid());
                 indexing::index_repository(repository, Some(command_responder)).await?;
@@ -271,9 +272,15 @@ impl CommandHandler {
                 );
             }
             Command::Chat { uuid, ref message } => {
-                let agent = self.find_or_start_agent_by_uuid(*uuid, message).await?;
+                let message = message.clone();
+                let agent = self.find_or_start_agent_by_uuid(*uuid, &message).await?;
+                let token = agent.cancel_token.clone();
 
-                agent.query(message).await?;
+                tokio::select! {
+                    () = token.cancelled() => Ok(()),
+                    result = agent.query(&message) => result,
+
+                }?;
             }
             Command::Quit { .. } => unreachable!("Quit should be handled earlier"),
         }
@@ -292,7 +299,9 @@ impl CommandHandler {
     }
 
     async fn find_or_start_agent_by_uuid(&self, uuid: Uuid, query: &str) -> Result<RunningAgent> {
-        if let Some(agent) = self.agents.read().await.get(&uuid) {
+        if let Some(agent) = self.agents.write().await.get_mut(&uuid) {
+            // Ensure we always send a fresh cancellation token
+            agent.cancel_token = CancellationToken::new();
             return Ok(agent.clone());
         }
 
@@ -302,7 +311,8 @@ impl CommandHandler {
 
         let running_agent = RunningAgent {
             agent: Arc::new(Mutex::new(agent)),
-            handle: Arc::new(handle),
+            response_handle: Arc::new(handle),
+            cancel_token: CancellationToken::new(),
         };
 
         let cloned = running_agent.clone();
@@ -319,6 +329,11 @@ impl CommandHandler {
             );
             return Ok(());
         };
+
+        if agent.cancel_token.is_cancelled() {
+            self.send_ui_event(ChatMessage::new_system("Agent already stopped").uuid(uuid));
+            return Ok(());
+        }
 
         // TODO: If this fails inbetween tool calls and responses, the agent will be stuck
         // Perhaps something to re-align it?

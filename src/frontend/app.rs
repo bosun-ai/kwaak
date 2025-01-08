@@ -38,7 +38,7 @@ pub struct App<'a> {
     pub chats: Vec<Chat>,
 
     /// UUID of the current chat
-    pub current_chat: uuid::Uuid,
+    pub current_chat_uuid: uuid::Uuid,
 
     /// Holds the sender of UI events for later cloning if needed
     pub ui_tx: mpsc::UnboundedSender<UIEvent>,
@@ -125,7 +125,7 @@ impl Default for App<'_> {
         Self {
             skip_indexing: false,
             text_input: new_text_area(),
-            current_chat: chat.uuid,
+            current_chat_uuid: chat.uuid,
             chats: vec![chat],
             ui_tx,
             ui_rx,
@@ -176,11 +176,10 @@ impl App<'_> {
     }
 
     fn on_key(&mut self, key: KeyEvent) {
-        // Always quit on ctrl c
         if key.modifiers == crossterm::event::KeyModifiers::CONTROL
-            && key.code == KeyCode::Char('c')
+            && key.code == KeyCode::Char('q')
         {
-            tracing::warn!("Ctrl-C pressed, quitting");
+            tracing::warn!("Ctrl-Q pressed, quitting");
             return self.send_ui_event(UIEvent::Quit);
         }
 
@@ -211,7 +210,7 @@ impl App<'_> {
         if message.uuid() == Some(self.boot_uuid) {
             return;
         }
-        if let Some(chat) = self.find_chat_mut(message.uuid().unwrap_or(self.current_chat)) {
+        if let Some(chat) = self.find_chat_mut(message.uuid().unwrap_or(self.current_chat_uuid)) {
             chat.add_message(message);
         }
     }
@@ -299,11 +298,12 @@ impl App<'_> {
                         tracing::warn!("UI received quit event, quitting");
 
                         self.dispatch_command(&Command::Quit {
-                            uuid: self.current_chat,
+                            uuid: self.current_chat_uuid,
                         });
                         self.change_mode(AppMode::Quit);
                     }
-                    UIEvent::ChatDeleted(uuid) => {
+                    UIEvent::DeleteChat => {
+                        let uuid = self.current_chat_uuid;
                         self.dispatch_command(&Command::StopAgent { uuid });
                         // Remove the chat with the given UUID
                         self.chats.retain(|chat| chat.uuid != uuid);
@@ -368,17 +368,17 @@ impl App<'_> {
     }
 
     pub(crate) fn current_chat(&self) -> Option<&Chat> {
-        self.find_chat(self.current_chat)
+        self.find_chat(self.current_chat_uuid)
     }
 
     pub(crate) fn current_chat_mut(&mut self) -> Option<&mut Chat> {
-        self.find_chat_mut(self.current_chat)
+        self.find_chat_mut(self.current_chat_uuid)
     }
 
     fn add_chat(&mut self, mut new_chat: Chat) {
         new_chat.name = format!("Chat #{}", self.chats.len() + 1);
 
-        self.current_chat = new_chat.uuid;
+        self.current_chat_uuid = new_chat.uuid;
         self.chats.push(new_chat);
         self.chats_state.select_last();
     }
@@ -388,23 +388,25 @@ impl App<'_> {
         let Some(next_idx) = self
             .chats
             .iter()
-            .position(|chat| chat.uuid == self.current_chat)
+            .position(|chat| chat.uuid == self.current_chat_uuid)
             .map(|idx| idx + 1)
         else {
-            assert!(
-                !cfg!(debug_assertions),
-                "Could not find current chat in chats"
-            );
+            let Some(chat) = self.chats.first() else {
+                panic!("No chats in app found when selecting next app, this should never happen")
+            };
 
+            let uuid = chat.uuid;
+            self.current_chat_uuid = uuid;
+            self.chats_state.select(Some(0));
             return;
         };
 
         if let Some(chat) = self.chats.get(next_idx) {
             self.chats_state.select(Some(next_idx));
-            self.current_chat = chat.uuid;
+            self.current_chat_uuid = chat.uuid;
         } else {
             self.chats_state.select(Some(0));
-            self.current_chat = self.chats[0].uuid;
+            self.current_chat_uuid = self.chats[0].uuid;
         }
     }
 
@@ -467,21 +469,21 @@ mod tests {
     fn test_last_or_first_chat() {
         let mut app = App::default();
         let chat = Chat::default();
-        let first_uuid = app.current_chat;
+        let first_uuid = app.current_chat_uuid;
         let second_uuid = chat.uuid;
 
         // Starts with first
-        assert_eq!(app.current_chat, first_uuid);
+        assert_eq!(app.current_chat_uuid, first_uuid);
 
         app.add_chat(chat);
-        assert_eq!(app.current_chat, second_uuid);
+        assert_eq!(app.current_chat_uuid, second_uuid);
 
         app.next_chat();
 
-        assert_eq!(app.current_chat, first_uuid);
+        assert_eq!(app.current_chat_uuid, first_uuid);
 
         app.next_chat();
-        assert_eq!(app.current_chat, second_uuid);
+        assert_eq!(app.current_chat_uuid, second_uuid);
     }
 
     #[test]
@@ -511,5 +513,81 @@ mod tests {
         app.change_mode(AppMode::Quit);
         assert_eq!(app.mode, AppMode::Quit);
         assert_eq!(app.selected_tab, 1);
+    }
+
+    #[test]
+    fn test_add_chat() {
+        let mut app = App::default();
+        let initial_chat_count = app.chats.len();
+
+        app.add_chat(Chat::default());
+
+        assert_eq!(app.chats.len(), initial_chat_count + 1);
+        assert_eq!(
+            app.chats.last().unwrap().name,
+            format!("Chat #{}", initial_chat_count + 1)
+        );
+    }
+
+    #[test]
+    fn test_next_chat() {
+        let mut app = App::default();
+        let first_uuid = app.current_chat_uuid;
+
+        app.add_chat(Chat::default());
+        let second_uuid = app.current_chat_uuid;
+
+        app.next_chat();
+        assert_eq!(app.current_chat_uuid, first_uuid);
+
+        app.next_chat();
+        assert_eq!(app.current_chat_uuid, second_uuid);
+    }
+
+    #[test]
+    fn test_find_chat() {
+        let mut app = App::default();
+        let chat = Chat::default();
+        let uuid = chat.uuid;
+
+        app.add_chat(chat);
+
+        assert!(app.find_chat(uuid).is_some());
+        assert!(app.find_chat(Uuid::new_v4()).is_none());
+    }
+
+    #[test]
+    fn test_find_chat_mut() {
+        let mut app = App::default();
+        let chat = Chat::default();
+        let uuid = chat.uuid;
+
+        app.add_chat(chat);
+
+        assert!(app.find_chat_mut(uuid).is_some());
+        assert!(app.find_chat_mut(Uuid::new_v4()).is_none());
+    }
+
+    #[test]
+    fn test_current_chat() {
+        let app = App::default();
+        assert!(app.current_chat().is_some());
+    }
+
+    #[test]
+    fn test_current_chat_mut() {
+        let mut app = App::default();
+        assert!(app.current_chat_mut().is_some());
+    }
+
+    #[test]
+    fn test_add_chat_message() {
+        let mut app = App::default();
+        let message = ChatMessage::new_system("Test message").build();
+
+        app.add_chat_message(message.clone());
+
+        let chat = app.current_chat().unwrap();
+        assert!(chat.messages.contains(&message));
     }
 }

@@ -1,8 +1,6 @@
 ---
 source: tests/cli_init.rs
-assertion_line: 48
 expression: contents
-snapshot_kind: text
 ---
 # This is a a prefilled template for `kwaak`
 #

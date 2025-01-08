@@ -128,7 +128,7 @@ async fn test_tool(
     tool_args: Option<&str>,
 ) -> Result<()> {
     let github_session = Arc::new(GithubSession::from_repository(&repository)?);
-    let tool = available_tools(repository, Some(&github_session))?
+    let tool = available_tools(repository, Some(&github_session), None)?
         .into_iter()
         .find(|tool| tool.name() == tool_name)
         .context("Tool not found")?;

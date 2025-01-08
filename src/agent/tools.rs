@@ -12,7 +12,10 @@ use tavily::Tavily;
 use tokio::sync::Mutex;
 
 use crate::{
-    config::ApiKey, git::github::GithubSession, templates::Templates, util::accept_non_zero_exit,
+    config::ApiKey,
+    git::github::GithubSession,
+    templates::Templates,
+    util::{self, accept_non_zero_exit},
 };
 
 static MAIN_BRANCH_CMD: &str = "git remote show origin | sed -n '/HEAD branch/s/.*: //p'";
@@ -26,6 +29,12 @@ static MAIN_BRANCH_CMD: &str = "git remote show origin | sed -n '/HEAD branch/s/
     )
 )]
 pub async fn shell_command(context: &dyn AgentContext, cmd: &str) -> Result<ToolOutput, ToolError> {
+    if util::is_git_branch_change(cmd) {
+        return Ok(
+            "You cannot change branches, you are already on a branch created specifically for you."
+                .into(),
+        );
+    }
     let output = accept_non_zero_exit(context.exec_cmd(&Command::Shell(cmd.into())).await)?;
     Ok(output.into())
 }
@@ -84,10 +93,48 @@ pub async fn search_file(
     param(name = "command", description = "Git sub-command to run")
 )]
 pub async fn git(context: &dyn AgentContext, command: &str) -> Result<ToolOutput, ToolError> {
-    let cmd = Command::Shell(format!("git {command}"));
+    let cmd = format!("git {command}");
+    if util::is_git_branch_change(&cmd) {
+        return Ok(
+            "You cannot change branches, you are already on a branch created specifically for you."
+                .into(),
+        );
+    }
+    let cmd = Command::Shell(cmd);
     let output = accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
 
     Ok(output.into())
+}
+
+#[derive(Tool, Clone)]
+#[tool(
+    description = "Reset changes you have made to a file. If you have made changes to a file and need to reset them, use this tool.",
+    param(name = "file_name", description = "Full path of the file")
+)]
+pub struct ResetFile {
+    start_ref: String,
+}
+
+impl ResetFile {
+    pub fn new(start_ref: impl AsRef<str>) -> Self {
+        Self {
+            start_ref: start_ref.as_ref().to_string(),
+        }
+    }
+    pub async fn reset_file(
+        &self,
+        context: &dyn AgentContext,
+        file_name: &str,
+    ) -> Result<ToolOutput, ToolError> {
+        let cmd = Command::Shell(format!(
+            "git checkout {start_ref} -- {file_name}",
+            start_ref = self.start_ref
+        ));
+
+        let output = accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
+
+        Ok(output.into())
+    }
 }
 
 #[tool(

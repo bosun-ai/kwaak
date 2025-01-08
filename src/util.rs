@@ -18,6 +18,10 @@ pub fn accept_non_zero_exit(
     }
 }
 
+pub fn is_git_branch_change(cmd: &str) -> bool {
+    cmd.starts_with("git checkout") || cmd.starts_with("git switch")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -55,5 +59,15 @@ mod tests {
         ```";
         let expected = "This is a test.";
         assert_eq!(strip_markdown_tags(input), expected);
+    }
+
+    #[test]
+    fn test_is_git_branch_change() {
+        assert!(is_git_branch_change("git checkout main"));
+        assert!(is_git_branch_change("git switch feature-branch"));
+        assert!(!is_git_branch_change("git commit -m 'initial commit'"));
+        assert!(!is_git_branch_change("git push origin main"));
+        assert!(!is_git_branch_change("checkout main"));
+        assert!(!is_git_branch_change("switch feature-branch"));
     }
 }

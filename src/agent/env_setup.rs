@@ -12,11 +12,20 @@ use crate::config::SupportedToolExecutors;
 use crate::git::github::GithubSession;
 use crate::repository::Repository;
 
+/// Configures and sets up a git (and github if enabled) environment for the agent to run in
 pub struct EnvSetup<'a> {
     uuid: Uuid,
     repository: &'a Repository,
     github_session: Option<&'a GithubSession>,
     executor: &'a dyn ToolExecutor,
+}
+
+/// Returned after setting up the environment
+#[derive(Default, Debug)]
+pub struct Env {
+    #[allow(dead_code)]
+    pub branch_name: String,
+    pub start_ref: String,
 }
 
 impl EnvSetup<'_> {
@@ -35,17 +44,23 @@ impl EnvSetup<'_> {
     }
 
     #[tracing::instrument(skip_all)]
-    pub async fn exec_setup_commands(&self) -> Result<()> {
+    pub async fn exec_setup_commands(&self) -> Result<Env> {
         // Only run these commands if we are running inside a docker container
         if self.repository.config().tool_executor != SupportedToolExecutors::Docker {
-            return Ok(());
+            return Ok(Env {
+                branch_name: self.get_current_branch().await?,
+                start_ref: self.get_current_ref().await?,
+            });
         }
 
         self.setup_github_auth().await?;
         self.configure_git_user().await?;
         self.switch_to_work_branch().await?;
 
-        Ok(())
+        Ok(Env {
+            branch_name: self.get_current_branch().await?,
+            start_ref: self.get_current_ref().await?,
+        })
     }
 
     async fn setup_github_auth(&self) -> Result<()> {
@@ -91,5 +106,17 @@ impl EnvSetup<'_> {
         self.executor.exec_cmd(&cmd).await?;
 
         Ok(())
+    }
+
+    async fn get_current_ref(&self) -> Result<String> {
+        let cmd = Command::shell("git rev-parse HEAD");
+        let output = self.executor.exec_cmd(&cmd).await?;
+        Ok(output.output.trim().to_string())
+    }
+
+    async fn get_current_branch(&self) -> Result<String> {
+        let cmd = Command::shell("git rev-parse --abbrev-ref HEAD");
+        let output = self.executor.exec_cmd(&cmd).await?;
+        Ok(output.output.trim().to_string())
     }
 }

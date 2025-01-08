@@ -1,5 +1,3 @@
-// TODO: Rename to slash commands for clarity?
-//
 use crate::commands::Command;
 use anyhow::Result;
 use copypasta::{ClipboardContext, ClipboardProvider};
@@ -32,23 +30,12 @@ impl UserInputCommand {
             UserInputCommand::Quit => Some(Command::Quit { uuid }),
             UserInputCommand::ShowConfig => Some(Command::ShowConfig { uuid }),
             UserInputCommand::IndexRepository => Some(Command::IndexRepository { uuid }),
-            UserInputCommand::DeleteChat => Some(Command::DeleteChat { uuid }),
-            // Handle Copy command
-            UserInputCommand::Copy => {
-                // Placeholder logic for retrieving the last message
-                let last_message = "This should be the last message";
-                let mut clipboard_context = ClipboardContext::new().unwrap();
-                clipboard_context
-                    .set_contents(last_message.to_owned())
-                    .unwrap();
-                None // Return None or handle as needed
-            }
             _ => None,
         }
     }
 
     pub fn parse_from_input(input: &str) -> Result<UserInputCommand> {
-        assert!(input.starts_with('/'));
+        debug_assert!(input.starts_with('/'));
 
         let cmd_parts = input.split_whitespace().collect::<Vec<_>>();
 

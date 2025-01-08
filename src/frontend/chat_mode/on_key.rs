@@ -21,11 +21,11 @@ pub fn on_key(app: &mut App, key: KeyEvent) {
         } else {
             app.dispatch_command(&Command::Chat {
                 message: current_input.clone(),
-                uuid: app.current_chat,
+                uuid: app.current_chat_uuid,
             });
 
             ChatMessage::new_user(&current_input)
-                .uuid(app.current_chat)
+                .uuid(app.current_chat_uuid)
                 .to_owned()
         };
 
@@ -43,7 +43,7 @@ pub fn on_key(app: &mut App, key: KeyEvent) {
             .contains(crossterm::event::KeyModifiers::CONTROL)
     {
         app.dispatch_command(&Command::StopAgent {
-            uuid: app.current_chat,
+            uuid: app.current_chat_uuid,
         });
         return;
     }
@@ -100,11 +100,11 @@ pub fn handle_input_command(app: &mut App) -> ChatMessageBuilder {
 
     let Ok(cmd) = UserInputCommand::parse_from_input(&current_input) else {
         return ChatMessage::new_system("Unknown command")
-            .uuid(app.current_chat)
+            .uuid(app.current_chat_uuid)
             .to_owned();
     };
 
-    if let Some(cmd) = cmd.to_command(app.current_chat) {
+    if let Some(cmd) = cmd.to_command(app.current_chat_uuid) {
         // If the backend supports it, forward the command
         app.dispatch_command(&cmd);
     } else if let Ok(cmd) = UIEvent::try_from(cmd.clone()) {
@@ -112,12 +112,12 @@ pub fn handle_input_command(app: &mut App) -> ChatMessageBuilder {
     } else {
         tracing::error!("Could not convert ui command to backend command nor ui event {cmd}");
         return ChatMessage::new_system("Unknown command")
-            .uuid(app.current_chat)
+            .uuid(app.current_chat_uuid)
             .to_owned();
     }
 
     ChatMessage::new_command(cmd.as_ref())
-        .uuid(app.current_chat)
+        .uuid(app.current_chat_uuid)
         .to_owned()
     // Display the command as a message
 }

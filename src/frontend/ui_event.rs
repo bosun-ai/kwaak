@@ -29,10 +29,10 @@ pub enum UIEvent {
     ActivityUpdate(Uuid, String),
     /// Quit from the frontend
     Quit,
-    /// Chat deleted
-    ChatDeleted(Uuid),
     /// Copy last message from current chat to clipboard
     CopyLastMessage,
+    /// Deletes the current chat
+    DeleteChat,
 }
 
 impl From<ChatMessage> for UIEvent {
@@ -52,11 +52,6 @@ impl From<&mut ChatMessageBuilder> for UIEvent {
         Self::ChatMessage(builder.build().clone())
     }
 }
-// impl From<Command> for UIEvent {
-//     fn from(cmd: Command) -> Self {
-//         Self::Command(cmd)
-//     }
-// }
 
 impl From<KeyEvent> for UIEvent {
     fn from(key: KeyEvent) -> Self {
@@ -72,6 +67,7 @@ impl TryFrom<UserInputCommand> for UIEvent {
             UserInputCommand::NextChat => Ok(Self::NextChat),
             UserInputCommand::NewChat => Ok(Self::NewChat),
             UserInputCommand::Copy => Ok(Self::CopyLastMessage),
+            UserInputCommand::DeleteChat => Ok(Self::DeleteChat),
             _ => anyhow::bail!("Cannot convert {value} to UIEvent"),
         }
     }
