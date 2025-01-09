@@ -4,8 +4,8 @@ tool_executor = "docker"
 otel_enabled = true
 
 [commands]
-test = "RUST_LOG=kwaak=debug,swiftide=debug RUST_BACKTRACE=1 cargo test --no-fail-fast --color=never"
-coverage = "cargo tarpaulin --skip-clean --target-dir target/debug --engine llvm"
+test = "RUST_LOG=kwaak=debug,swiftide=debug RUST_BACKTRACE=1 cargo nextest run --no-fail-fast --color=never"
+coverage = "cargo llvm-cov nextest --no-clean --summary-only"
 lint_and_fix = "cargo clippy --fix --allow-dirty --allow-staged; cargo fmt"
 
 [github]
