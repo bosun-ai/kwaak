@@ -114,7 +114,7 @@ impl ConversationSummarizer {
             .join("\n");
 
         indoc::formatdoc!(
-            r#"
+            "
         # Goal
         Summarize and review the conversation up to this point
             
@@ -166,7 +166,7 @@ impl ConversationSummarizer {
         ## Suggested next steps
         1. <Suggested step>
         ```
-        "#,
+        ",
             available_tools = available_tools
         )
         .into()
