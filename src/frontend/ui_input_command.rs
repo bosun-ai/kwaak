@@ -24,6 +24,7 @@ pub enum UserInputCommand {
 }
 
 impl UserInputCommand {
+    #[must_use]
     pub fn to_command(&self, uuid: Uuid) -> Option<Command> {
         match self {
             UserInputCommand::Quit => Some(Command::Quit { uuid }),
@@ -33,6 +34,11 @@ impl UserInputCommand {
         }
     }
 
+    /// Parses a `UserInputCommand` from a user input string
+    ///
+    /// # Panics
+    ///
+    /// Panics if the input string does not start with a '/' or the string is empty
     pub fn parse_from_input(input: &str) -> Result<UserInputCommand> {
         debug_assert!(input.starts_with('/'));
 

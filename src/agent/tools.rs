@@ -171,6 +171,7 @@ pub struct ExplainCode<'a> {
 }
 
 impl<'a> ExplainCode<'a> {
+    #[must_use]
     pub fn new(
         query_pipeline: swiftide::query::Pipeline<
             'a,
@@ -321,6 +322,7 @@ pub struct SearchWeb {
 }
 
 impl SearchWeb {
+    #[must_use]
     pub fn new(tavily_client: Tavily, api_key: ApiKey) -> Self {
         Self {
             tavily_client: Arc::new(tavily_client),

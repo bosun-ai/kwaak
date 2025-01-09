@@ -45,10 +45,12 @@ impl std::fmt::Debug for ApiKey {
 }
 
 impl ApiKey {
+    #[must_use]
     pub fn new(secret: SecretString) -> Self {
         ApiKey(secret)
     }
 
+    #[must_use]
     pub fn expose_secret(&self) -> &str {
         self.0.expose_secret()
     }

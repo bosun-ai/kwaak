@@ -3,7 +3,6 @@ use serde_json::json;
 use swiftide::agents::DefaultContext;
 use swiftide_core::AgentContext;
 use swiftide_docker_executor::DockerExecutor;
-use tempfile::env::temp_dir;
 
 macro_rules! invoke {
     // Takes the context and the json value
