@@ -82,7 +82,7 @@ pub async fn search_file(
     context: &dyn AgentContext,
     file_name: &str,
 ) -> Result<ToolOutput, ToolError> {
-    let cmd = Command::Shell(format!("fd --full-path '{file_name}'"));
+    let cmd = Command::Shell(format!("fd -iH --full-path '{file_name}'"));
     let output = accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
 
     Ok(output.into())
@@ -145,7 +145,7 @@ impl ResetFile {
     )
 )]
 pub async fn search_code(context: &dyn AgentContext, query: &str) -> Result<ToolOutput, ToolError> {
-    let cmd = Command::Shell(format!("rg '{query}'"));
+    let cmd = Command::Shell(format!("rg -i. '{query}'"));
     let output = accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
     Ok(output.into())
 }
