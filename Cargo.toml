@@ -83,7 +83,7 @@ htmd = "0.1.6"
 #fml
 # TODO: Suspect it's lancedb
 openssl-sys = { version = "0.9.104", features = ["vendored"] }
-copypasta = "0.7.1"
+copypasta = "0.10.1"
 
 [dev-dependencies]
 test-log = { version = "0.2.16", features = ["trace"] }
