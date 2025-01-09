@@ -22,8 +22,6 @@ jobs:
 
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: llvm-tools-preview
       # Required for copypasta builds on linux
       - name: Install libxcb
         run: sudo apt install libxcb1-dev libxcb-shape0-dev libxcb-xfixes0-dev
