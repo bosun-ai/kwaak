@@ -21,7 +21,7 @@ install-updater = true
 # A GitHub repo to push Homebrew formulas to
 tap = "bosun-ai/homebrew-tap"
 # Which actions to run on pull requests
-pr-run-mode = "upload"
+# pr-run-mode = "upload"
 # Skip checking whether the specified configuration files are up to date
 # allow-dirty = ["ci"]
 
