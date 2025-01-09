@@ -18,7 +18,11 @@ impl Drop for Guard {
         }
     }
 }
-// For now just log to stdout and file
+/// Configures tracing for the app
+///
+/// # Panics
+///
+/// Panics if setting up tracing fails
 pub fn init(repository: &Repository) -> Result<Guard> {
     let log_dir = repository.config().log_dir();
 

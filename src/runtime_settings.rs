@@ -19,16 +19,19 @@ pub struct RuntimeSettings {
 }
 
 impl RuntimeSettings {
+    #[must_use]
     pub fn from_repository(repository: &Repository) -> Self {
         let db = storage::get_redb(repository);
 
         Self { db }
     }
 
+    #[must_use]
     pub fn from_db(db: Arc<Redb>) -> Self {
         Self { db }
     }
 
+    #[must_use]
     pub fn get<VALUE: for<'a> Deserialize<'a>>(&self, key: &str) -> Option<VALUE> {
         let read = self
             .db

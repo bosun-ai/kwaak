@@ -111,7 +111,7 @@ impl FromStr for Config {
 
 impl Config {
     /// Loads the configuration file from the current path
-    pub(crate) async fn load(path: impl AsRef<Path>) -> Result<Config> {
+    pub async fn load(path: impl AsRef<Path>) -> Result<Config> {
         let file = tokio::fs::read(path)
             .await
             .context("Could not find `kwaak.toml` in current directory")?;

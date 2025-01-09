@@ -12,6 +12,12 @@ pub struct Repository {
 }
 
 impl Repository {
+    /// Creates a new repository from a configuration
+    ///
+    /// # Panics
+    ///
+    /// Panics if the current directory cannot be converted to a path
+    #[must_use]
     pub fn from_config(config: impl Into<Config>) -> Repository {
         Self {
             config: config.into(),
@@ -19,6 +25,7 @@ impl Repository {
         }
     }
 
+    #[must_use]
     pub fn path(&self) -> &PathBuf {
         &self.path
     }
@@ -27,6 +34,7 @@ impl Repository {
         &mut self.path
     }
 
+    #[must_use]
     pub fn config(&self) -> &Config {
         &self.config
     }
@@ -40,6 +48,7 @@ impl Repository {
         Ok(())
     }
 
+    #[must_use]
     pub fn runtime_settings(&self) -> RuntimeSettings {
         RuntimeSettings::from_repository(self)
     }

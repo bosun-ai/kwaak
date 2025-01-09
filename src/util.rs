@@ -1,5 +1,6 @@
 use swiftide::traits::{CommandError, CommandOutput};
 
+#[must_use]
 pub fn strip_markdown_tags(text: &str) -> String {
     if text.starts_with("```markdown") && text.ends_with("```") {
         text[12..text.len() - 3].trim().to_string()
@@ -18,6 +19,7 @@ pub fn accept_non_zero_exit(
     }
 }
 
+#[must_use]
 pub fn is_git_branch_change(cmd: &str) -> bool {
     cmd.starts_with("git checkout") || cmd.starts_with("git switch")
 }

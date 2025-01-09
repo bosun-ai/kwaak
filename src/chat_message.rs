@@ -85,17 +85,20 @@ impl ChatMessage {
             .to_owned()
     }
 
+    #[must_use]
     pub fn uuid(&self) -> Option<Uuid> {
         self.uuid
     }
+    #[must_use]
     pub fn content(&self) -> &str {
         &self.content
     }
-
+    #[must_use]
     pub fn role(&self) -> &ChatRole {
         &self.role
     }
 
+    #[must_use]
     pub fn with_uuid(self, uuid: Uuid) -> Self {
         Self {
             uuid: Some(uuid),
@@ -103,10 +106,12 @@ impl ChatMessage {
         }
     }
 
+    #[must_use]
     pub fn original(&self) -> Option<&swiftide::chat_completion::ChatMessage> {
         self.original.as_ref()
     }
 
+    #[must_use]
     pub fn maybe_completed_tool_call(&self) -> Option<&swiftide::chat_completion::ToolCall> {
         match self.original() {
             Some(swiftide::chat_completion::ChatMessage::ToolOutput(tool_call, ..)) => {
