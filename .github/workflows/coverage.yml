@@ -34,7 +34,10 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-tarpaulin
+          tool: cargo-llvm-cov cargo-nextest
       - name: Generate code coverage
         run: |
-          cargo tarpaulin --engine llvm --coveralls ${{ secrets.COVERALLS_REPO_TOKEN }}
+          cargo llvm-cov nextest --all-features --lcov --output-path lcov.info
+
+      - name: Coveralls
+        uses: coverallsapp/github-action@v2
