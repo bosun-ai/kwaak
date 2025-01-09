@@ -47,6 +47,7 @@ impl Chat {
         self.state = state;
     }
 
+    #[must_use]
     pub fn is_loading(&self) -> bool {
         matches!(
             self.state,
@@ -54,6 +55,7 @@ impl Chat {
         )
     }
 
+    #[must_use]
     pub fn is_tool_call_completed(&self, tool_call_id: &str) -> bool {
         self.completed_tool_call_ids.contains(tool_call_id)
     }

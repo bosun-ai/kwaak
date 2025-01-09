@@ -22,6 +22,11 @@ pub async fn query(repository: &Repository, query: impl AsRef<str>) -> Result<St
     Ok(strip_markdown_tags(&answer))
 }
 
+/// Builds a query pipeline
+///
+/// # Panics
+///
+/// Should be infallible
 pub fn build_query_pipeline<'b>(
     repository: &Repository,
 ) -> Result<query::Pipeline<'b, SimilaritySingleEmbedding, states::Answered>> {

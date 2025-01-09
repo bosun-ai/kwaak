@@ -14,6 +14,11 @@ use crate::repository::Repository;
 static LANCE_DB: OnceLock<Arc<LanceDB>> = OnceLock::new();
 static REDB: OnceLock<Arc<Redb>> = OnceLock::new();
 
+/// Retrieves a static lancedb
+///
+/// # Panics
+///
+/// Panics if it cannot setup lancedb
 pub fn get_lancedb(repository: &Repository) -> Arc<LanceDB> {
     Arc::clone(LANCE_DB.get_or_init(|| {
         Arc::new(
@@ -25,6 +30,11 @@ pub fn get_lancedb(repository: &Repository) -> Arc<LanceDB> {
     }))
 }
 
+/// Retrieves a static redb
+///
+/// # Panics
+///
+/// Panic if it cannot setup redb, i.e. its already open
 pub fn get_redb(repository: &Repository) -> Arc<Redb> {
     Arc::clone(REDB.get_or_init(|| {
         Arc::new(

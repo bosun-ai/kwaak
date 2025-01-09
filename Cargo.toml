@@ -111,6 +111,8 @@ multiple_crate_versions = "allow"
 # Prefer to keep this explicit as it avoids accidental moves
 needless_borrow = "allow"
 
+missing_errors_doc = "allow"
+
 [features]
 default = ["otel"]
 "test-layout" = []

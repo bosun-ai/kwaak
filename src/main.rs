@@ -12,7 +12,11 @@ use commands::{CommandResponder, CommandResponse};
 use config::Config;
 use frontend::App;
 use git::github::GithubSession;
-use indexing::index_repository;
+use kwaak::{
+    agent, chat_message, cli, commands, config, frontend, git,
+    indexing::{self, index_repository},
+    onboarding, repository, storage,
+};
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     Terminal,
@@ -26,23 +30,6 @@ use crossterm::{
 use swiftide::{agents::DefaultContext, chat_completion::Tool, traits::AgentContext};
 use tokio::fs;
 use uuid::Uuid;
-
-mod agent;
-mod chat;
-mod chat_message;
-mod cli;
-mod commands;
-mod config;
-mod frontend;
-mod git;
-mod indexing;
-mod kwaak_tracing;
-mod onboarding;
-mod repository;
-mod runtime_settings;
-mod storage;
-mod templates;
-mod util;
 
 #[cfg(test)]
 mod test_utils;
@@ -79,7 +66,7 @@ async fn main() -> Result<()> {
     fs::create_dir_all(repository.config().log_dir()).await?;
 
     {
-        let _guard = crate::kwaak_tracing::init(&repository)?;
+        let _guard = kwaak::kwaak_tracing::init(&repository)?;
 
         let _root_span = tracing::info_span!("main", "otel.name" = "main").entered();
 

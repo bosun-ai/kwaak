@@ -2,6 +2,12 @@ use std::{path::PathBuf, process::Command};
 
 use regex::Regex;
 
+/// The default project name based on the current directory
+///
+/// # Panics
+///
+/// Panics if the current directory is not available
+#[must_use]
 pub fn default_project_name() -> String {
     // Infer from the current directory
     std::env::current_dir()
@@ -30,15 +36,23 @@ pub(super) fn default_indexing_concurrency() -> usize {
     // Assume majority is IO bound, so beef it up
     num_cpus::get() * 4
 }
+#[must_use]
 pub fn default_dockerfile() -> PathBuf {
     "./Dockerfile".into()
 }
 
+#[must_use]
 pub fn default_docker_context() -> PathBuf {
     ".".into()
 }
 
 static MAIN_BRANCH_CMD: &str = "git remote show origin | sed -n '/HEAD branch/s/.*: //p'";
+/// Determines the default branch
+///
+/// # Panics
+///
+/// Panics if no git repository, no remote or no main/master branch
+#[must_use]
 pub fn default_main_branch() -> String {
     // "main".to_string()
     std::string::String::from_utf8(
@@ -57,6 +71,11 @@ pub fn default_main_branch() -> String {
 }
 
 /// Extracts the owner and repo from the git remote url
+///
+/// # Panics
+///
+/// Panics if the git remote url is not available
+#[must_use]
 pub fn default_owner_and_repo() -> (String, String) {
     let url = std::string::String::from_utf8(
         Command::new("git")

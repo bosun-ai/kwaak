@@ -111,7 +111,7 @@ impl FromStr for Config {
 
 impl Config {
     /// Loads the configuration file from the current path
-    pub(crate) async fn load(path: impl AsRef<Path>) -> Result<Config> {
+    pub async fn load(path: impl AsRef<Path>) -> Result<Config> {
         let file = tokio::fs::read(path)
             .await
             .context("Could not find `kwaak.toml` in current directory")?;
@@ -119,6 +119,7 @@ impl Config {
         toml::from_str(std::str::from_utf8(&file)?).context("Failed to parse configuration")
     }
 
+    #[must_use]
     pub fn indexing_provider(&self) -> &LLMConfiguration {
         match &*self.llm {
             LLMConfigurations::Single(config) => config,
@@ -126,6 +127,7 @@ impl Config {
         }
     }
 
+    #[must_use]
     pub fn embedding_provider(&self) -> &LLMConfiguration {
         match &*self.llm {
             LLMConfigurations::Single(config) => config,
@@ -133,6 +135,7 @@ impl Config {
         }
     }
 
+    #[must_use]
     pub fn query_provider(&self) -> &LLMConfiguration {
         match &*self.llm {
             LLMConfigurations::Single(config) => config,
@@ -140,10 +143,12 @@ impl Config {
         }
     }
 
+    #[must_use]
     pub fn cache_dir(&self) -> &Path {
         self.cache_dir.as_path()
     }
 
+    #[must_use]
     pub fn log_dir(&self) -> &Path {
         self.log_dir.as_path()
     }
