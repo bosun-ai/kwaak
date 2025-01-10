@@ -200,7 +200,7 @@ After each chat completion, kwaak will lint, commit, and push the code to the re
 
 **A**: Possibly your index got corrupted, or you have another kwaak instance running on the same project. Try clearing the index with `kwaak clear-index` and restart kwaak. Note that this will require a reindexing of your codebase.
 
-**Q:** I get a `error from Bollard: Socket not found /var/run/docker.sock`
+**Q:** I get an `error from Bollard: Socket not found /var/run/docker.sock`
 
 **A**: Enable the default Docker socket in docker desktop in General -> Advanced settings.
 
