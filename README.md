@@ -9,6 +9,7 @@
   - [Requirements](#requirements)
   - [Installation and setup](#installation-and-setup)
   - [Running Kwaak](#running-kwaak)
+  - [Configuration](#configuration)
 - [Example prompts](#example-prompts)
 - [Roadmap](#roadmap)
 - [Community](#community)
@@ -49,24 +50,13 @@
   <p align="center">
     Run a team of autonomous AI agents on your code, right from your terminal!
     <br />
-    <a href="https://swiftide.rs"><strong>Powered by swiftide »</strong></a>
-    <br />
-    <br />
-    <!-- <a href="https://github.com/bosun-ai/swiftide">View Demo</a> -->
-    <a href="https://github.com/bosun-ai/kwaak/issues/new?labels=bug&template=bug_report.md">Report Bug</a>
-    ·
-    <a href="https://github.com/bosun-ai/kwaak/issues/new?labels=enhancement&template=feature_request.md">Request Feature</a>
-    ·
-    <a href="https://discord.gg/3jjXYen9UY">Discord</a>
+    <a href="https://swiftide.rs"><strong>Powered by swiftide ">>
   </p>
 </div>
 
-<!-- ABOUT THE PROJECT -->
-
-## What is Kwaak?
-
-<!-- [![Product Name Screen Shot][product-screenshot]](https://example.com) -->
-
+ <!-- ABOUT THE PROJECT -->
+ ## What is Kwaak?
+ <!-- [![Product Name Screen Shot][product-screenshot]](https://example.com) -->
 Always wanted to run a team of AI agents locally from your own machine? Write code, improve test coverage, update documentation, or improve code quality, while you focus on building the cool stuff? Kwaak enables you to run a team of autonomous AI agents right from your terminal, **in parallel**.
 
 <p align="center">
@@ -78,7 +68,7 @@ Always wanted to run a team of AI agents locally from your own machine? Write co
 Powered by [Swiftide](https://github.com/bosun-ai/swiftide), Kwaak is aware of your codebase and can answer questions about your code, find examples, write and execute code, create pull requests, and more. Unlike other tools, Kwaak is focussed on autonomous agents, and can run multiple agents at the same time.
 
 > [!CAUTION]
-> Kwaak can be considered alpha software. The project is under active development, expect breaking changes. Contributions, feedback, and bug reports are very welcome.
+> Kwaak can be considered alpha software. The project is under active development; expect breaking changes. Contributions, feedback, and bug reports are very welcome.
 
 Kwaak is part of the [bosun.ai](https://bosun.ai) project. An upcoming platform for autonomous code improvement.
 
@@ -100,7 +90,6 @@ Kwaak is part of the [bosun.ai](https://bosun.ai) project. An upcoming platform 
 - [Releasing kwaak with kwaak](https://bosun.ai/posts/releasing-kwaak-with-kwaak/)
 
 ## Getting started
-
 ### Requirements
 
 Before you can run Kwaak, make sure you have Docker installed on your machine.
@@ -113,9 +102,9 @@ Kwaak expects a Dockerfile in the root of your project. This Dockerfile should c
 
 If you already have a Dockerfile for other purposes, you can either extend it or provide a new one and override the dockerfile path in the configuration.
 
-_For an example Dockerfile in Rust, see [this projects Dockerfile](/Dockerfile)_
+_For an example Dockerfile in Rust, see [this project's Dockerfile](/Dockerfile)_
 
-Additionally, you will need an OpenAI API key and a [github token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
+Additionally, you will need an OpenAI API key and a [github token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens) if leveraging OpenAI.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -124,7 +113,6 @@ Additionally, you will need an OpenAI API key and a [github token](https://docs.
 Pre-built binaries are available from the [releases page](https://github.com/bosun-ai/kwaak/releases).
 
 #### Homebrew
-
 ```shell
 brew install bosun-ai/tap/kwaak
 ```
@@ -165,13 +153,41 @@ Keybindings:
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## How does it work?
+### Configuration
+Kwaak supports configuring both OpenAI and Ollama for diverse needs:
+
+#### OpenAI Configuration:
+Edit the `kwaak.toml` file to add your OpenAI settings:
+
+```toml
+[llm]
+provider = "OpenAI"
+api_key = "env:YOUR_OPENAI_API_KEY"
+prompt_model = "gpt-4o"
+embedding_model = "text-embedding-3-large"
+base_url = "https://api.openai.com" # Optional
+```
+
+#### Ollama Configuration:
+To configure Kwaak with Ollama, adjust the `kwaak.toml` like so:
+
+```toml
+[llm]
+provider = "Ollama"
+prompt_model = "ollama-prompt-model" # Example
+embedding_model = { name = "ollama-embedding-model", vector_size = 1024 }
+base_url = "https://api.ollama.com" # Optional
+```
+
+You can specify different sections for indexing, querying, and embedding under `[llm]` to tailor each to your specific needs.
+
+### How does it work?
 
 On initial boot up, Kwaak will index your codebase. This can take a while, depending on the size. Once indexing has been completed once, subsequent startups will be faster. Indexes are stored with [lancedb](https://github.com/lancedb/lancedb), and indexing is cached with [redb](https://github.com/cberner/redb).
 
 Kwaak provides a chat interface similar to other LLM chat applications. You can type messages to the agent, and the agent will try to accomplish the task and respond.
 
-When starting a chat, the code of the current branch is copied into a on-the-fly created docker container. This container is then used to run the code and execute the commands.
+When starting a chat, the code of the current branch is copied into an on-the-fly created docker container. This container is then used to run the code and execute the commands.
 
 After each chat completion, kwaak will lint, commit, and push the code to the remote repository if any code changes have been made. Kwaak can also create a pull request. Pull requests include an issue link to #48. This helps us identify the success rate of the agents, and also enforces transparency for code reviewers.
 
