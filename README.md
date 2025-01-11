@@ -179,7 +179,16 @@ embedding_model = { name = "ollama-embedding-model", vector_size = 1024 }
 base_url = "https://api.ollama.com" # Optional
 ```
 
-You can specify different sections for indexing, querying, and embedding under `[llm]` to tailor each to your specific needs.
+You can specify different models for various tasks. Here's an example of how you can configure different models for indexing, querying, and embedding:
+
+```toml
+[llm]
+indexing = { provider = "OpenAI", prompt_model = "gpt-4o-indexing" }
+querying = { provider = "Ollama", prompt_model = "ollama-querying-model" }
+embedding = { provider = "OpenAI", embedding_model = { name = "gpt-embedder", vector_size = 768 } }
+```
+
+Use these configurations to leverage different models and providers as per your needs.
 
 ### How does it work?
 
