@@ -154,7 +154,7 @@ Keybindings:
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Configuration
-Kwaak supports configuring different Large Language Models (LLMs) for distinct tasks like indexing, querying, and embedding to optimize performance and accuracy:
+Kwaak supports configuring different Large Language Models (LLMs) for distinct tasks like indexing, querying, and embedding to optimize performance and accuracy. Be sure to tailor the configurations to fit the scope and blend of the tasks you're tackling.
 
 #### OpenAI Configuration:
 Edit the `kwaak.toml` file to add your OpenAI settings for different tasks:
@@ -177,7 +177,7 @@ embedding_model = "text-embedding-3-large"
 ```
 
 #### Ollama Configuration:
-Similar configurations can be setup for Ollama:
+You can set up similar configurations for Ollama. Make sure the model names and options align with your requirements:
 
 ```toml
 [llm.indexing]
@@ -193,7 +193,7 @@ provider = "Ollama"
 embedding_model = { name = "ollama-embed", vector_size = 1024 }
 ```
 
-Customize these settings to leverage the unique strengths of each model for different tasks.
+These configurations allow you to leverage the strengths of each model effectively for indexing, querying, and embedding processes.
 
 ### How does it work?
 
