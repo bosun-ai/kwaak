@@ -6684,38 +6684,20 @@ dependencies = [
 
 [[package]]
 name = "swiftide"
-version = "0.16.3"
+version = "0.16.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60d8be845f487d65de3731ae8a4be5fb50ce3e746e5b11970c714838a7dc3983"
 dependencies = [
  "anyhow",
  "async-trait",
  "document-features",
  "serde",
  "serde_json",
- "swiftide-agents 0.16.3",
+ "swiftide-agents",
  "swiftide-core",
  "swiftide-indexing",
  "swiftide-integrations",
  "swiftide-query",
-]
-
-[[package]]
-name = "swiftide-agents"
-version = "0.16.3"
-dependencies = [
- "anyhow",
- "async-trait",
- "derive_builder",
- "dyn-clone",
- "indoc",
- "pretty_assertions",
- "serde",
- "serde_json",
- "strum",
- "strum_macros",
- "swiftide-core",
- "swiftide-macros",
- "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -6742,7 +6724,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-core"
-version = "0.16.3"
+version = "0.16.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "253d33982d8bdb5c9951fe42da93c449e43894c98fe61dbf49a33ba37be7bca9"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6778,7 +6762,7 @@ dependencies = [
  "dirs",
  "ignore",
  "indoc",
- "swiftide-agents 0.16.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "swiftide-agents",
  "swiftide-core",
  "thiserror 2.0.11",
  "tokio",
@@ -6789,7 +6773,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-indexing"
-version = "0.16.3"
+version = "0.16.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "acd21b1399ae9332941976724963b69db0641b3902ca6d83403c018ab8d97707"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6813,7 +6799,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-integrations"
-version = "0.16.3"
+version = "0.16.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3049784ee76a887e111afea992da1b5e33745663f78d3411287019a8b29b6d1"
 dependencies = [
  "anyhow",
  "arrow",
@@ -6849,7 +6837,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-macros"
-version = "0.16.3"
+version = "0.16.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "82d29225442105e6cd7df0cd0dbf0d19eee37eb90919c9ce660440a79c0fe6ea"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6864,7 +6854,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-query"
-version = "0.16.3"
+version = "0.16.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "066f009426b420446900f6e30a8e986f9bb10e3ee7847841c14f7183746abc9c"
 dependencies = [
  "anyhow",
  "async-trait",
