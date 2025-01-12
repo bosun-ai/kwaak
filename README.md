@@ -50,7 +50,7 @@
   <p align="center">
     Run a team of autonomous AI agents on your code, right from your terminal!
     <br />
-    <a href="https://swiftide.rs"><strong>Powered by swiftide \\>"></strong></a>
+    <a href="https://swiftide.rs"><strong>Powered by swiftide »</strong></a>
     <br />
     <br />
     <!-- <a href="https://github.com/bosun-ai/swiftide">View Demo</a> -->
