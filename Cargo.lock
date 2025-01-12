@@ -467,6 +467,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-openai"
+version = "0.27.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e95d3595cae8662fb918bedf97b0cc87f23df66a7b9ab7f50f280c68fc2eb2b6"
+dependencies = [
+ "async-convert",
+ "backoff",
+ "base64 0.22.1",
+ "bytes",
+ "derive_builder",
+ "eventsource-stream",
+ "futures",
+ "rand",
+ "reqwest",
+ "reqwest-eventsource",
+ "secrecy 0.10.3",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.11",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
 name = "async-priority-channel"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3516,7 +3542,7 @@ version = "0.1.12"
 dependencies = [
  "anyhow",
  "assert_cmd",
- "async-openai",
+ "async-openai 0.27.0",
  "async-trait",
  "chrono",
  "clap",
@@ -6752,9 +6778,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-docker-executor"
-version = "0.2.0"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fb3d3a8741643d74393958e680ea57e609e96e64c2d302eee90826d4aac7b76"
+checksum = "ecaefec148fc71ba60bb240948f31f38b6346b863e5272e5161199c3498f5e94"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6806,7 +6832,7 @@ dependencies = [
  "anyhow",
  "arrow",
  "arrow-array",
- "async-openai",
+ "async-openai 0.26.0",
  "async-trait",
  "chrono",
  "deadpool",
