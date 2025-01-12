@@ -55,17 +55,7 @@ async fn main() -> Result<()> {
 
     fs::create_dir_all(repository.config().cache_dir()).await?;
     fs::create_dir_all(repository.config().log_dir()).await?;
-    // if panic::catch_unwind(|| {
-    //     storage::get_redb(&repository);
-    // })
-    // .is_err()
-    // {
-    //     eprintln!("Failed to load database; are you running more than one kwaak on a project?");
-    //     std::process::exit(1);
-    // }
 
-    fs::create_dir_all(repository.config().cache_dir()).await?;
-    fs::create_dir_all(repository.config().log_dir()).await?;
 
     {
         let _guard = kwaak::kwaak_tracing::init(&repository)?;
@@ -169,6 +159,17 @@ async fn start_agent(mut repository: repository::Repository, initial_message: &s
 #[instrument]
 async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Result<()> {
     ::tracing::info!("Loaded configuration: {:?}", repository.config());
+
+    // Before starting the TUI, check if there is already a kwaak running on the project
+    // TODO: This is not very reliable. Potentially redb needs to be reconsidered
+    if panic::catch_unwind(|| {
+        storage::get_redb(&repository);
+    })
+    .is_err()
+    {
+        eprintln!("Failed to load database; are you running more than one kwaak on a project?");
+        std::process::exit(1);
+    }
 
     // Setup terminal
     let mut terminal = init_tui()?;
