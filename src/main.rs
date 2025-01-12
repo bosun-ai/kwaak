@@ -1,7 +1,7 @@
 #![recursion_limit = "256"] // Temporary fix so tracing plays nice with lancedb
 use std::{
     io::{self, stdout},
-    panic::{self, set_hook, take_hook},
+    panic::{set_hook, take_hook},
     sync::Arc,
 };
 
@@ -15,7 +15,7 @@ use git::github::GithubSession;
 use kwaak::{
     agent, chat_message, cli, commands, config, frontend, git,
     indexing::{self, index_repository},
-    onboarding, repository, storage,
+    onboarding, repository,
 };
 use ratatui::{
     backend::{Backend, CrosstermBackend},
