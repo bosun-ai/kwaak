@@ -12,6 +12,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  TAVILY_API_KEY: noop
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
