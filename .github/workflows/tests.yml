@@ -12,8 +12,10 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  TAVILY_API_KEY: noop
   RUSTFLAGS: "-Dwarnings"
+  TAVILY_API_KEY: noop
+  KWAAK_OPENAI_API_KEY: noop
+  GITHUB_TOKEN: noop
 
 jobs:
   test:
