@@ -1,7 +1,7 @@
 #![recursion_limit = "256"] // Temporary fix so tracing plays nice with lancedb
 use std::{
     io::{self, stdout},
-    panic::{set_hook, take_hook},
+    panic::{self, set_hook, take_hook},
     sync::Arc,
 };
 
@@ -15,7 +15,7 @@ use git::github::GithubSession;
 use kwaak::{
     agent, chat_message, cli, commands, config, frontend, git,
     indexing::{self, index_repository},
-    onboarding, repository,
+    onboarding, repository, storage,
 };
 use ratatui::{
     backend::{Backend, CrosstermBackend},
@@ -55,7 +55,6 @@ async fn main() -> Result<()> {
 
     fs::create_dir_all(repository.config().cache_dir()).await?;
     fs::create_dir_all(repository.config().log_dir()).await?;
-
 
     {
         let _guard = kwaak::kwaak_tracing::init(&repository)?;
