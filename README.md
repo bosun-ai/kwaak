@@ -170,36 +170,38 @@ Keybindings:
 
 Kwaak supports configuring different Large Language Models (LLMs) for distinct tasks like indexing, querying, and embedding to optimize performance and accuracy. Be sure to tailor the configurations to fit the scope and blend of the tasks you're tackling.
 
-#### General Configuration:
+#### General Configuration
 
 - **`project_name`**: Defaults to the current directory name. Represents the name of your project.
 - **`language`**: The programming language of the project, for instance, Rust, Python, JavaScript, etc.
 - **`cache_dir`, `log_dir`**: Directories for cache and logs. Defaults are within your system's cache directory.
 - **`indexing_concurrency`**: Adjust concurrency for indexing, defaults based on CPU count.
-- **`indexing_batch_size`**: Batch size setting for indexing.
-- **`endless_mode`**: If enabled, agents run continuously until manually stopped or completion is reached.
-- **`otel_enabled`**: Enables OpenTelemetry tracing if set.
+- **`indexing_batch_size`**: Batch size setting for indexing. Defaults to a higher value for Ollama and a lower value for OpenAI.
+- **`endless_mode`**: **DANGER** If enabled, agents run continuously until manually stopped or completion is reached. This is meant for debugging and evaluation purposes.
+- **`otel_enabled`**: Enables OpenTelemetry tracing if set and respects all the standard OpenTelemetry environment variables.
+- **`tool_executor`**: Defaults to `docker`. Can also be `local`. We **HIGHLY** recommend using `docker` for security reasons unless you are running in a secure environment.
 
-#### Command Configuration:
+#### Command Configuration
 
 - **`test`**: Command to run tests, e.g., `cargo test`.
-- **`coverage`**: Command for running coverage checks, e.g., `cargo tarpaulin`.
-- **`lint_and_fix`**: Optional command to lint and fix project issues, e.g., `cargo clippy` in Rust.
+- **`coverage`**: Command for running coverage checks, e.g., `cargo llvm-cov --summary-only`. Expects coverage results as output. Currently handled unparsed via an LLM call. A friendly output is preferred
+- **`lint_and_fix`**: Optional command to lint and fix project issues, e.g., `cargo clippy --fix --allow-dirty; cargo fmt` in Rust.
 
-#### API Key Management:
+#### API Key Management
 
-- API keys can be configured through environment variables (`env:KEY`), directly in the configuration (`text:KEY`), or through files (`file:/path/to/key`).
+- API keys and tokens can be configured through environment variables (`env:KEY`), directly in the configuration (`text:KEY`), or through files (`file:/path/to/key`).
 
-#### Docker and GitHub Configuration:
+#### Docker and GitHub Configuration
 
 - **`docker.dockerfile`, `docker.context`**: Paths to Dockerfile and context, default to project root and `Dockerfile`.
-- **`github.repository`, `github.owner`, `github.token`**: GitHub repository details and token configuration.
+- **`github.repository`, `github.main_branch`, `github.owner`, `github.token`**: GitHub repository details and token configuration.
 
-#### LLM Configuration:
+#### LLM Configuration
 
 Configure LLMs such as OpenAI and Ollama by specifying models for different tasks:
 
 - **OpenAI Configuration**:
+
 ```toml
 [llm.indexing]
 api_key = "env:KWAAK_OPENAI_API_KEY"
@@ -218,6 +220,7 @@ embedding_model = "text-embedding-3-large"
 ```
 
 - **Ollama Configuration**:
+
 ```toml
 [llm.indexing]
 provider = "Ollama"
@@ -232,7 +235,13 @@ provider = "Ollama"
 embedding_model = { name = "bge-m3", vector_size = 1024 }
 ```
 
+For both you can provide a `base_url` to use a custom API endpoint.
+
 These configurations allow you to leverage the strengths of each model effectively for indexing, querying, and embedding processes.
+
+#### Other integrations
+
+- **`tavily_api_key`**: Enables the agent to use [tavily](https://tavily.com) for web search. Their entry-level plan is free. (we are not affiliated)
 
 ### How does it work?
 
