@@ -7,8 +7,8 @@ use swiftide::integrations::treesitter::SupportedLanguages;
 
 use super::api_key::ApiKey;
 use super::defaults::{
-    default_cache_dir, default_docker_context, default_dockerfile, default_indexing_concurrency,
-    default_log_dir, default_main_branch, default_project_name,
+    default_cache_dir, default_docker_context, default_dockerfile, default_log_dir,
+    default_main_branch, default_project_name,
 };
 use super::{CommandConfiguration, LLMConfiguration, LLMConfigurations};
 
@@ -25,8 +25,16 @@ pub struct Config {
     #[serde(default = "default_log_dir")]
     pub log_dir: PathBuf,
 
-    #[serde(default = "default_indexing_concurrency")]
-    pub indexing_concurrency: usize,
+    #[serde(default)]
+    /// Concurrency for indexing
+    /// By default for IO-bound LLMs, we assume 4x the number of CPUs
+    /// For Ollama, it's the number of CPUs
+    indexing_concurrency: Option<usize>,
+    #[serde(default)]
+    /// Batch size for indexing
+    /// By default for IO-bound LLMs, we use a smaller batch size, as we can run it in parallel
+    /// For local embeddings it's 256
+    indexing_batch_size: Option<usize>,
 
     #[serde(default)]
     pub docker: DockerConfiguration,
@@ -151,6 +159,30 @@ impl Config {
     #[must_use]
     pub fn log_dir(&self) -> &Path {
         self.log_dir.as_path()
+    }
+
+    #[must_use]
+    pub fn indexing_concurrency(&self) -> usize {
+        if let Some(concurrency) = self.indexing_concurrency {
+            return concurrency;
+        };
+
+        match self.indexing_provider() {
+            LLMConfiguration::OpenAI { .. } => num_cpus::get() * 4,
+            LLMConfiguration::Ollama { .. } => num_cpus::get(),
+        }
+    }
+
+    #[must_use]
+    pub fn indexing_batch_size(&self) -> usize {
+        if let Some(batch_size) = self.indexing_batch_size {
+            return batch_size;
+        };
+
+        match self.indexing_provider() {
+            LLMConfiguration::OpenAI { .. } => 12,
+            LLMConfiguration::Ollama { .. } => 256,
+        }
     }
 }
 

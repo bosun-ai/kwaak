@@ -49,7 +49,7 @@ pub async fn index_repository(
     let processed_chunks = Arc::new(AtomicU64::new(0));
 
     let (mut markdown, mut code) = swiftide::indexing::Pipeline::from_loader(loader)
-        .with_concurrency(repository.config().indexing_concurrency)
+        .with_concurrency(repository.config().indexing_concurrency())
         .with_default_llm_client(indexing_provider)
         .filter_cached(redb)
         .split_by(|node| {
@@ -109,9 +109,9 @@ pub async fn index_repository(
         })
         .then(transformers::MetadataQAText::default());
 
-    // Since OpenAI is IO bound, making many small embedding requests in parallel is faster
+    let batch_size = repository.config().indexing_batch_size();
     code.merge(markdown)
-        .then_in_batch(transformers::Embed::new(embedding_provider).with_batch_size(12))
+        .then_in_batch(transformers::Embed::new(embedding_provider).with_batch_size(batch_size))
         .then(|mut chunk: Node| {
             chunk
                 .metadata

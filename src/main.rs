@@ -56,12 +56,13 @@ async fn main() -> Result<()> {
     fs::create_dir_all(repository.config().cache_dir()).await?;
     fs::create_dir_all(repository.config().log_dir()).await?;
 
-    {
+    let app_result = {
         let _guard = kwaak::kwaak_tracing::init(&repository)?;
 
         let _root_span = tracing::info_span!("main", "otel.name" = "main").entered();
 
         let command = args.command.as_ref().unwrap_or(&cli::Commands::Tui);
+
         match command {
             cli::Commands::RunAgent { initial_message } => {
                 start_agent(repository, initial_message).await
@@ -73,28 +74,35 @@ async fn main() -> Result<()> {
                 tool_args,
             } => test_tool(&repository, tool_name, tool_args.as_deref()).await,
             cli::Commands::Query { query: query_param } => {
-                let result = indexing::query(&repository, query_param.clone()).await?;
+                let result = indexing::query(&repository, query_param.clone()).await;
 
-                println!("{result}");
+                if let Ok(result) = result.as_deref() {
+                    println!("{result}");
+                };
 
-                Ok(())
+                result.map(|_| ())
             }
             cli::Commands::ClearCache => {
-                repository.clear_cache().await?;
+                let result = repository.clear_cache().await;
                 println!("Cache cleared");
 
-                Ok(())
+                result
             }
             cli::Commands::PrintConfig => {
                 println!("{}", toml::to_string_pretty(repository.config())?);
                 Ok(())
             }
             cli::Commands::Init => unreachable!(),
-        }?;
-    }
+        }
+    };
 
     if cfg!(feature = "otel") {
         opentelemetry::global::shutdown_tracer_provider();
+    }
+
+    if let Err(error) = app_result {
+        ::tracing::error!("Kwaak encountered an error\n {error:#}");
+        std::process::exit(1);
     }
 
     Ok(())

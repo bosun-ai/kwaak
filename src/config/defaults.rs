@@ -32,10 +32,6 @@ pub(super) fn default_log_dir() -> PathBuf {
     path
 }
 
-pub(super) fn default_indexing_concurrency() -> usize {
-    // Assume majority is IO bound, so beef it up
-    num_cpus::get() * 4
-}
 #[must_use]
 pub fn default_dockerfile() -> PathBuf {
     "./Dockerfile".into()
