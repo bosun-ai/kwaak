@@ -10,6 +10,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-coverage
   cancel-in-progress: true
 
+env:
+  TAVILY_API_KEY: noop
+  KWAAK_OPENAI_API_KEY: noop
+  GITHUB_TOKEN: noop
+
 jobs:
   test:
     name: coverage
@@ -24,7 +29,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: llvm-tools-preview
-  
+
       # Required for copypasta builds on linux
       - name: Install libxcb
         run: sudo apt install libxcb1-dev libxcb-shape0-dev libxcb-xfixes0-dev

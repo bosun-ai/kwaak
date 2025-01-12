@@ -20,7 +20,7 @@ tokio-util = "0.7.13"
 strum = "0.26.3"
 strum_macros = "0.26.4"
 swiftide-docker-executor = "0.2.0"
-swiftide = { version = "0.16.1", features = [
+swiftide = { version = "0.16.4", features = [
   "lancedb",
   "openai",
   "tree-sitter",
@@ -29,7 +29,7 @@ swiftide = { version = "0.16.1", features = [
   "swiftide-agents",
 
 ] }
-swiftide-macros = { version = "0.16.1" }
+swiftide-macros = { version = "0.16.4" }
 toml = "0.8.19"
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.134"
@@ -125,16 +125,10 @@ default = ["otel"]
 ]
 
 [patch.crates-io]
-swiftide = { path = "../swiftide/swiftide" }
-swiftide-macros = { path = "../swiftide/swiftide-macros" }
-swiftide-core = { path = "../swiftide/swiftide-core" }
+# swiftide = { path = "../swiftide/swiftide" }
+# swiftide-macros = { path = "../swiftide/swiftide-macros" }
+# swiftide-core = { path = "../swiftide/swiftide-core" }
 
-# [replace]
-# "swiftide:0.16.1" = { path = "../swiftide/swiftide" }
-# "swiftide-macros:0.16.1" = { path = "../swiftide/swiftide-macros" }
-# "swiftide-core:0.16.1" = { path = "../swiftide/swiftide-core" }
-# swiftide = { git = "https://github.com/bosun-ai/swiftide", branch = "feat/document-templates" }
-# swiftide-macros = { git = "https://github.com/bosun-ai/swiftide", branch = "feat/document-templates" }
 
 # The profile that 'dist' will build with
 [profile.dist]
