@@ -50,13 +50,24 @@
   <p align="center">
     Run a team of autonomous AI agents on your code, right from your terminal!
     <br />
-    <a href="https://swiftide.rs"><strong>Powered by swiftide ">>
+    <a href="https://swiftide.rs"><strong>Powered by swiftide »</strong></a>
+    <br />
+    <br />
+    <!-- <a href="https://github.com/bosun-ai/swiftide">View Demo</a> -->
+    <a href="https://github.com/bosun-ai/kwaak/issues/new?labels=bug&template=bug_report.md">Report Bug</a>
+    ·
+    <a href="https://github.com/bosun-ai/kwaak/issues/new?labels=enhancement&template=feature_request.md">Request Feature</a>
+    ·
+    <a href="https://discord.gg/3jjXYen9UY">Discord</a>
   </p>
 </div>
 
  <!-- ABOUT THE PROJECT -->
- ## What is Kwaak?
+
+## What is Kwaak?
+
  <!-- [![Product Name Screen Shot][product-screenshot]](https://example.com) -->
+
 Always wanted to run a team of AI agents locally from your own machine? Write code, improve test coverage, update documentation, or improve code quality, while you focus on building the cool stuff? Kwaak enables you to run a team of autonomous AI agents right from your terminal, **in parallel**.
 
 <p align="center">
@@ -90,6 +101,7 @@ Kwaak is part of the [bosun.ai](https://bosun.ai) project. An upcoming platform 
 - [Releasing kwaak with kwaak](https://bosun.ai/posts/releasing-kwaak-with-kwaak/)
 
 ## Getting started
+
 ### Requirements
 
 Before you can run Kwaak, make sure you have Docker installed on your machine.
@@ -97,14 +109,14 @@ Before you can run Kwaak, make sure you have Docker installed on your machine.
 Kwaak expects a Dockerfile in the root of your project. This Dockerfile should contain all the dependencies required to test and run your code. Additionally, it expects the following to be present:
 
 - **git**: Required for git operations
-- **fd** (https://github.com/sharkdp/fd): Required for searching files. Note that it should be available as `fd`, some systems have it as `fdfind`.
-- **ripgrep** (https://github.com/BurntSushi/ripgrep): Required for searching _in_ files. Note that it should be available as `rg`.
+- **fd** [github](https://github.com/sharkdp/fd): Required for searching files. Note that it should be available as `fd`, some systems have it as `fdfind`.
+- **ripgrep** [github](https://github.com/BurntSushi/ripgrep): Required for searching _in_ files. Note that it should be available as `rg`.
 
 If you already have a Dockerfile for other purposes, you can either extend it or provide a new one and override the dockerfile path in the configuration.
 
 _For an example Dockerfile in Rust, see [this project's Dockerfile](/Dockerfile)_
 
-Additionally, you will need an OpenAI API key and a [github token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens) if leveraging OpenAI.
+Additionally, you will need an OpenAI API key (if OpenAI is your LLM provider) and a [github token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -113,6 +125,7 @@ Additionally, you will need an OpenAI API key and a [github token](https://docs.
 Pre-built binaries are available from the [releases page](https://github.com/bosun-ai/kwaak/releases).
 
 #### Homebrew
+
 ```shell
 brew install bosun-ai/tap/kwaak
 ```
@@ -154,9 +167,11 @@ Keybindings:
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Configuration
+
 Kwaak supports configuring different Large Language Models (LLMs) for distinct tasks like indexing, querying, and embedding to optimize performance and accuracy. Be sure to tailor the configurations to fit the scope and blend of the tasks you're tackling.
 
 #### OpenAI Configuration:
+
 Edit the `kwaak.toml` file to add your OpenAI settings for different tasks:
 
 ```toml
@@ -177,20 +192,21 @@ embedding_model = "text-embedding-3-large"
 ```
 
 #### Ollama Configuration:
+
 You can set up similar configurations for Ollama. Make sure the model names and options align with your requirements:
 
 ```toml
 [llm.indexing]
 provider = "Ollama"
-prompt_model = "ollama-mini"
+prompt_model = "llama3.2"
 
 [llm.query]
 provider = "Ollama"
-prompt_model = "ollama-query"
+prompt_model = "llama3.3"
 
 [llm.embedding]
 provider = "Ollama"
-embedding_model = { name = "ollama-embed", vector_size = 1024 }
+embedding_model = { name = "bge-m3", vector_size = 1024 }
 ```
 
 These configurations allow you to leverage the strengths of each model effectively for indexing, querying, and embedding processes.
