@@ -50,7 +50,7 @@
   <p align="center">
     Run a team of autonomous AI agents on your code, right from your terminal!
     <br />
-    <a href="https://swiftide.rs"><strong>Powered by swiftide »</strong></a>
+    <a href="https://swiftide.rs"><strong>Powered by swiftide \\>"></strong></a>
     <br />
     <br />
     <!-- <a href="https://github.com/bosun-ai/swiftide">View Demo</a> -->
@@ -170,10 +170,36 @@ Keybindings:
 
 Kwaak supports configuring different Large Language Models (LLMs) for distinct tasks like indexing, querying, and embedding to optimize performance and accuracy. Be sure to tailor the configurations to fit the scope and blend of the tasks you're tackling.
 
-#### OpenAI Configuration:
+#### General Configuration:
 
-Edit the `kwaak.toml` file to add your OpenAI settings for different tasks:
+- **`project_name`**: Defaults to the current directory name. Represents the name of your project.
+- **`language`**: The programming language of the project, for instance, Rust, Python, JavaScript, etc.
+- **`cache_dir`, `log_dir`**: Directories for cache and logs. Defaults are within your system's cache directory.
+- **`indexing_concurrency`**: Adjust concurrency for indexing, defaults based on CPU count.
+- **`indexing_batch_size`**: Batch size setting for indexing.
+- **`endless_mode`**: If enabled, agents run continuously until manually stopped or completion is reached.
+- **`otel_enabled`**: Enables OpenTelemetry tracing if set.
 
+#### Command Configuration:
+
+- **`test`**: Command to run tests, e.g., `cargo test`.
+- **`coverage`**: Command for running coverage checks, e.g., `cargo tarpaulin`.
+- **`lint_and_fix`**: Optional command to lint and fix project issues, e.g., `cargo clippy` in Rust.
+
+#### API Key Management:
+
+- API keys can be configured through environment variables (`env:KEY`), directly in the configuration (`text:KEY`), or through files (`file:/path/to/key`).
+
+#### Docker and GitHub Configuration:
+
+- **`docker.dockerfile`, `docker.context`**: Paths to Dockerfile and context, default to project root and `Dockerfile`.
+- **`github.repository`, `github.owner`, `github.token`**: GitHub repository details and token configuration.
+
+#### LLM Configuration:
+
+Configure LLMs such as OpenAI and Ollama by specifying models for different tasks:
+
+- **OpenAI Configuration**:
 ```toml
 [llm.indexing]
 api_key = "env:KWAAK_OPENAI_API_KEY"
@@ -191,10 +217,7 @@ provider = "OpenAI"
 embedding_model = "text-embedding-3-large"
 ```
 
-#### Ollama Configuration:
-
-You can set up similar configurations for Ollama. Make sure the model names and options align with your requirements:
-
+- **Ollama Configuration**:
 ```toml
 [llm.indexing]
 provider = "Ollama"
