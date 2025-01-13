@@ -4,18 +4,30 @@
 <!--toc:start-->
 
 - [What is Kwaak?](#what-is-kwaak)
-- [Features](#features)
+- [High level features](#high-level-features)
+- [Latest updates on our blog :fire:](#latest-updates-on-our-blog-fire)
 - [Getting started](#getting-started)
   - [Requirements](#requirements)
   - [Installation and setup](#installation-and-setup)
+    - [Homebrew](#homebrew)
+    - [Linux and MacOS (using curl)](#linux-and-macos-using-curl)
+    - [Cargo](#cargo)
+    - [Setup](#setup)
   - [Running Kwaak](#running-kwaak)
+  - [How does it work?](#how-does-it-work)
   - [Configuration](#configuration)
-- [Example prompts](#example-prompts)
-- [Roadmap](#roadmap)
+    - [General Configuration](#general-configuration)
+    - [Command Configuration](#command-configuration)
+    - [API Key Management](#api-key-management)
+    - [Docker and GitHub Configuration](#docker-and-github-configuration)
+    - [LLM Configuration](#llm-configuration)
+    - [Other integrations](#other-integrations)
+- [Upcoming](#upcoming)
+- [Troubleshooting & FAQ](#troubleshooting-faq)
 - [Community](#community)
 - [Contributing](#contributing)
 - [License](#license)
-  <!--toc:end-->
+<!--toc:end-->
 
 </details>
 
