@@ -307,7 +307,7 @@ async fn rename_chat(
         .context("Could not get chat name")?
         .trim_matches('"')
         .chars()
-        .take(30)
+        .take(60)
         .collect::<String>();
 
     command_responder.rename(&chat_name);
@@ -320,7 +320,7 @@ mod tests {
     use swiftide_core::MockSimplePrompt;
 
     use crate::commands::MockResponder;
-    use mockall::predicate::*;
+    use mockall::{predicate, PredicateBooleanExt};
 
     use super::*;
 
@@ -336,8 +336,9 @@ mod tests {
 
         mock_responder
             .expect_rename()
-            .with(eq("Excellent title"))
-            .once();
+            .with(predicate::eq("Excellent title"))
+            .once()
+            .returning(|_| ());
 
         rename_chat(&query, &llm_mock as &dyn SimplePrompt, &mock_responder)
             .await
@@ -356,8 +357,12 @@ mod tests {
 
         mock_responder
             .expect_rename()
-            .with(eq("Excellent title"))
-            .once();
+            .with(
+                predicate::str::starts_with("Excellent title")
+                    .and(predicate::function(|s: &str| s.len() == 60)),
+            )
+            .once()
+            .returning(|_| ());
 
         rename_chat(&query, &llm_mock as &dyn SimplePrompt, &mock_responder)
             .await

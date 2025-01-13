@@ -21,6 +21,7 @@ pub enum UserInputCommand {
     NewChat,
     DeleteChat,
     Copy,
+    #[strum(disabled)] // <-- Different PR
     Diff(DiffVariant),
 }
 
@@ -111,6 +112,7 @@ mod tests {
         }
     }
 
+    #[ignore = "future pull request"]
     #[test]
     fn test_parse_diff_input() {
         let test_cases = vec![
