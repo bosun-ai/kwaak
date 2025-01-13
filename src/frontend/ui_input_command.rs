@@ -1,5 +1,5 @@
 use crate::commands::Command;
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use uuid::Uuid;
 
 #[derive(
@@ -20,7 +20,27 @@ pub enum UserInputCommand {
     NextChat,
     NewChat,
     DeleteChat,
-    Copy, // New `Copy` variant added here
+    Copy,
+    Diff(DiffVariant),
+}
+
+#[derive(
+    Default,
+    Debug,
+    Clone,
+    strum_macros::Display,
+    strum_macros::EnumIs,
+    strum_macros::AsRefStr,
+    strum_macros::EnumString,
+    strum_macros::EnumIter,
+    PartialEq,
+)]
+#[strum(serialize_all = "snake_case")]
+pub enum DiffVariant {
+    #[default]
+    Show,
+    Apply,
+    Download,
 }
 
 impl UserInputCommand {
@@ -44,11 +64,25 @@ impl UserInputCommand {
 
         let cmd_parts = input.split_whitespace().collect::<Vec<_>>();
 
-        let raw_cmd = cmd_parts.first().unwrap();
-        let _args = cmd_parts[1..].join(" ");
+        let input = cmd_parts.first().unwrap();
+        let subcommand = cmd_parts.get(1);
 
-        let cmd = raw_cmd[1..].parse::<UserInputCommand>()?;
-        Ok(cmd)
+        let input_cmd = input[1..]
+            .parse::<UserInputCommand>()
+            .with_context(|| format!("failed to parse input command {input}"))?;
+
+        match input_cmd {
+            UserInputCommand::Diff(_) => {
+                let Some(subcommand) = subcommand else {
+                    return Ok(UserInputCommand::Diff(DiffVariant::default()));
+                };
+                let diff_variant = subcommand
+                    .parse()
+                    .with_context(|| format!("failed to parse diff subcommand {subcommand}"))?;
+                Ok(UserInputCommand::Diff(diff_variant))
+            }
+            _ => Ok(input_cmd),
+        }
     }
 }
 
@@ -71,6 +105,27 @@ mod tests {
         for (input, expected_command) in test_cases {
             let parsed_command = UserInputCommand::parse_from_input(input).unwrap();
             assert_eq!(parsed_command, expected_command);
+        }
+    }
+
+    #[test]
+    fn test_parse_diff_input() {
+        let test_cases = vec![
+            ("/diff", UserInputCommand::Diff(DiffVariant::Show)),
+            ("/diff show", UserInputCommand::Diff(DiffVariant::Show)),
+            ("/diff apply", UserInputCommand::Diff(DiffVariant::Apply)),
+            (
+                "/diff download",
+                UserInputCommand::Diff(DiffVariant::Download),
+            ),
+        ];
+
+        for (input, expected_command) in test_cases {
+            let parsed_command = UserInputCommand::parse_from_input(input).unwrap();
+            assert_eq!(
+                parsed_command, expected_command,
+                "expected: {expected_command:?} for: {input:?}",
+            );
         }
     }
 }
