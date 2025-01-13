@@ -1,7 +1,6 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use anyhow::Result;
-use swiftide::agents::Agent;
 use tokio::{
     sync::{mpsc, Mutex, RwLock},
     task::{self, JoinHandle},
@@ -17,139 +16,11 @@ use crate::{
     repository::Repository,
 };
 
-/// Commands represent concrete actions from a user or in the backend
-///
-/// By default all commands can be triggered from the ui like `/<command>`
-#[derive(
-    Debug,
-    PartialEq,
-    Eq,
-    strum_macros::EnumString,
-    strum_macros::Display,
-    strum_macros::IntoStaticStr,
-    strum_macros::EnumIs,
-    Clone,
-)]
-#[strum(serialize_all = "snake_case")]
-pub enum Command {
-    Quit { uuid: Uuid },
-    ShowConfig { uuid: Uuid },
-    IndexRepository { uuid: Uuid },
-    StopAgent { uuid: Uuid },
-    Chat { uuid: Uuid, message: String },
-}
-
-#[derive(Debug, Clone)]
-pub enum CommandResponse {
-    Chat(ChatMessage),
-    ActivityUpdate(Uuid, String),
-    RenameChat(Uuid, String),
-}
-
-#[derive(Debug)]
-pub struct CommandResponder {
-    tx: mpsc::UnboundedSender<CommandResponse>,
-    rx: Option<mpsc::UnboundedReceiver<CommandResponse>>,
-    uuid: Uuid,
-}
-
-impl CommandResponder {
-    #[allow(dead_code)]
-    pub fn send_system_message(&self, message: impl Into<String>) {
-        self.send_message(ChatMessage::new_system(message).build());
-    }
-
-    pub fn send_message(&self, msg: impl Into<ChatMessage>) {
-        let _ = self
-            .tx
-            .send(CommandResponse::Chat(msg.into().with_uuid(self.uuid)));
-    }
-
-    pub fn send_update(&self, state: impl Into<String>) {
-        let _ = self
-            .tx
-            .send(CommandResponse::ActivityUpdate(self.uuid, state.into()));
-    }
-
-    // TODO: this feels overly specific, but its a real thing
-    pub fn send_rename(&self, name: impl Into<String>) {
-        let _ = self
-            .tx
-            .send(CommandResponse::RenameChat(self.uuid, name.into()));
-    }
-
-    #[must_use]
-    /// Start receiving command responses
-    ///
-    /// # Panics
-    ///
-    /// Panics if the recev is already taken
-    pub async fn recv(&mut self) -> Option<CommandResponse> {
-        let rx = self.rx.as_mut().expect("Expected a receiver");
-        rx.recv().await
-    }
-
-    #[must_use]
-    pub fn with_uuid(self, uuid: Uuid) -> Self {
-        CommandResponder {
-            tx: self.tx,
-            rx: self.rx,
-            uuid,
-        }
-    }
-}
-
-impl Default for CommandResponder {
-    fn default() -> Self {
-        let (tx, rx) = mpsc::unbounded_channel();
-        CommandResponder {
-            tx,
-            rx: Some(rx),
-            uuid: Uuid::default(),
-        }
-    }
-}
-
-/// Cheap clone that uninitializes the receiver
-impl Clone for CommandResponder {
-    fn clone(&self) -> Self {
-        CommandResponder {
-            tx: self.tx.clone(),
-            rx: None,
-            uuid: self.uuid,
-        }
-    }
-}
-
-impl From<ChatMessage> for CommandResponse {
-    fn from(msg: ChatMessage) -> Self {
-        CommandResponse::Chat(msg)
-    }
-}
-
-impl Command {
-    #[must_use]
-    pub fn uuid(&self) -> Uuid {
-        match self {
-            Command::Quit { uuid }
-            | Command::StopAgent { uuid }
-            | Command::ShowConfig { uuid }
-            | Command::IndexRepository { uuid }
-            | Command::Chat { uuid, .. } => *uuid,
-        }
-    }
-
-    #[must_use]
-    pub fn with_uuid(self, uuid: Uuid) -> Self {
-        match self {
-            Command::StopAgent { .. } => Command::StopAgent { uuid },
-            Command::Quit { .. } => Command::Quit { uuid },
-            Command::ShowConfig { .. } => Command::ShowConfig { uuid },
-            Command::IndexRepository { .. } => Command::IndexRepository { uuid },
-            Command::Chat { message, .. } => Command::Chat { uuid, message },
-        }
-    }
-}
+use super::{
+    command::Command,
+    responder::{CommandResponder, CommandResponse},
+    running_agent::RunningAgent,
+};
 
 /// Commands always flow via the `CommandHandler`
 pub struct CommandHandler {
@@ -169,27 +40,6 @@ pub struct CommandHandler {
 
     /// TODO: Fix this, too tired to think straight
     agents: Arc<RwLock<HashMap<Uuid, RunningAgent>>>,
-}
-
-#[derive(Clone)]
-struct RunningAgent {
-    agent: Arc<Mutex<Agent>>,
-
-    #[allow(dead_code)]
-    response_handle: Arc<tokio::task::JoinHandle<()>>,
-
-    cancel_token: CancellationToken,
-}
-
-impl RunningAgent {
-    pub async fn query(&self, query: &str) -> Result<()> {
-        self.agent.lock().await.query(query).await
-    }
-
-    pub async fn stop(&self) {
-        self.cancel_token.cancel();
-        self.agent.lock().await.stop();
-    }
 }
 
 impl CommandHandler {
@@ -376,6 +226,8 @@ impl CommandHandler {
         // Design wise: Agents should not know about UI, command handler and UI should not know
         // about agent internals
         // As long as nobody is running thousands of agents, this is fine
+        // TODO: Spawn should be impl on the command responder > putting ui tx behind an interface
+        // such that mapping of response to ui, can then be in the frontend.
         let cloned_responder = command_responder.clone();
         let handle = task::spawn(async move {
             while let Some(response) = command_responder.recv().await {
