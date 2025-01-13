@@ -8,7 +8,7 @@ use std::{
 use agent::available_tools;
 use anyhow::{Context as _, Result};
 use clap::Parser;
-use commands::{CommandResponder, CommandResponse};
+use commands::CommandResponse;
 use config::Config;
 use frontend::App;
 use git::github::GithubSession;
@@ -28,7 +28,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use swiftide::{agents::DefaultContext, chat_completion::Tool, traits::AgentContext};
-use tokio::fs;
+use tokio::{fs, sync::mpsc};
 use uuid::Uuid;
 
 #[cfg(test)]
@@ -135,28 +135,26 @@ async fn start_agent(mut repository: repository::Repository, initial_message: &s
 
     indexing::index_repository(&repository, None).await?;
 
-    let mut command_responder = CommandResponder::default();
-    let responder_for_agent = command_responder.clone();
+    let (tx, mut rx) = mpsc::unbounded_channel();
 
     let handle = tokio::spawn(async move {
-        while let Some(response) = command_responder.recv().await {
+        while let Some(response) = rx.recv().await {
             match response {
-                CommandResponse::Chat(message) => {
-                    if let Some(original) = message.original() {
-                        println!("{original}");
-                    }
+                CommandResponse::Chat(.., message) => {
+                    println!("{message}");
                 }
                 CommandResponse::ActivityUpdate(.., message) => {
                     println!(">> {message}");
                 }
                 CommandResponse::RenameChat(..) => {}
+                CommandResponse::Completed(..) => {}
             }
         }
     });
 
     let query = initial_message.to_string();
     let (mut agent, _) =
-        agent::build_agent(Uuid::new_v4(), &repository, &query, responder_for_agent).await?;
+        agent::build_agent(Uuid::new_v4(), &repository, &query, Arc::new(tx)).await?;
 
     agent.query(&query).await?;
     handle.abort();
@@ -188,14 +186,14 @@ async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Res
         app.skip_indexing = true;
     }
 
-    if cfg!(feature = "test-layout") {
-        app.ui_tx
-            .send(chat_message::ChatMessage::new_user("Hello, show me some markdown!").into())?;
-        app.ui_tx
-            .send(chat_message::ChatMessage::new_system("showing markdown").into())?;
-        app.ui_tx
-            .send(chat_message::ChatMessage::new_assistant(MARKDOWN_TEST).into())?;
-    }
+    // if cfg!(feature = "test-layout") {
+    //     app.ui_tx
+    //         .send(chat_message::ChatMessage::new_user("Hello, show me some markdown!").into())?;
+    //     app.ui_tx
+    //         .send(chat_message::ChatMessage::new_system("showing markdown").into())?;
+    //     app.ui_tx
+    //         .send(chat_message::ChatMessage::new_assistant(MARKDOWN_TEST).into())?;
+    // }
 
     let app_result = {
         let mut handler = commands::CommandHandler::from_repository(repository);

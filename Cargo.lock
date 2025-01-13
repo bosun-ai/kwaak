@@ -3531,6 +3531,7 @@ dependencies = [
  "lancedb",
  "lazy_static",
  "log",
+ "mockall",
  "num_cpus",
  "octocrab",
  "openssl-sys",

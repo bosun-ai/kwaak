@@ -1,9 +1,9 @@
 use crossterm::event::{KeyCode, KeyEvent};
 
 use crate::{
-    chat_message::{ChatMessage, ChatMessageBuilder},
+    chat_message::ChatMessage,
     commands::Command,
-    frontend::{App, UIEvent, UserInputCommand},
+    frontend::{ui_event::UIEvent, ui_input_command::UserInputCommand, App},
 };
 
 pub fn on_key(app: &mut App, key: KeyEvent) {
@@ -19,17 +19,17 @@ pub fn on_key(app: &mut App, key: KeyEvent) {
         let message = if current_input.starts_with('/') {
             handle_input_command(app)
         } else {
-            app.dispatch_command(&Command::Chat {
-                message: current_input.clone(),
-                uuid: app.current_chat_uuid,
-            });
+            app.dispatch_command(
+                app.current_chat_uuid,
+                Command::Chat {
+                    message: current_input.clone(),
+                },
+            );
 
-            ChatMessage::new_user(&current_input)
-                .uuid(app.current_chat_uuid)
-                .to_owned()
+            ChatMessage::new_user(current_input)
         };
 
-        app.send_ui_event(message);
+        app.send_ui_event(UIEvent::ChatMessage(app.current_chat_uuid, message));
 
         app.reset_text_input();
 
@@ -42,9 +42,7 @@ pub fn on_key(app: &mut App, key: KeyEvent) {
             .modifiers
             .contains(crossterm::event::KeyModifiers::CONTROL)
     {
-        app.dispatch_command(&Command::StopAgent {
-            uuid: app.current_chat_uuid,
-        });
+        app.dispatch_command(app.current_chat_uuid, Command::StopAgent);
         return;
     }
 
@@ -95,29 +93,16 @@ pub fn on_key(app: &mut App, key: KeyEvent) {
     }
 }
 
-pub fn handle_input_command(app: &mut App) -> ChatMessageBuilder {
+pub fn handle_input_command(app: &mut App) -> ChatMessage {
     let current_input = app.text_input.lines().join("\n");
 
     let Ok(cmd) = UserInputCommand::parse_from_input(&current_input) else {
-        return ChatMessage::new_system("Unknown command")
-            .uuid(app.current_chat_uuid)
-            .to_owned();
+        return ChatMessage::new_system("Unknown command").to_owned();
     };
 
-    if let Some(cmd) = cmd.to_command(app.current_chat_uuid) {
-        // If the backend supports it, forward the command
-        app.dispatch_command(&cmd);
-    } else if let Ok(cmd) = UIEvent::try_from(cmd.clone()) {
-        app.send_ui_event(cmd);
-    } else {
-        tracing::error!("Could not convert ui command to backend command nor ui event {cmd}");
-        return ChatMessage::new_system("Unknown command")
-            .uuid(app.current_chat_uuid)
-            .to_owned();
-    }
+    let message = ChatMessage::new_command(cmd.as_ref()).to_owned();
 
-    ChatMessage::new_command(cmd.as_ref())
-        .uuid(app.current_chat_uuid)
-        .to_owned()
-    // Display the command as a message
+    app.send_ui_event(UIEvent::UserInputCommand(app.current_chat_uuid, cmd));
+
+    message
 }

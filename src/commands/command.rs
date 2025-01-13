@@ -1,4 +1,9 @@
+use std::sync::Arc;
+
+use derive_builder::Builder;
 use uuid::Uuid;
+
+use super::Responder;
 
 /// Commands are the main way to interact with the backend
 ///
@@ -16,48 +21,55 @@ use uuid::Uuid;
 #[strum(serialize_all = "snake_case")]
 pub enum Command {
     /// Cleanly stop the backend
-    Quit { uuid: Uuid },
+    Quit,
 
     /// Print the config the backend is using
-    ShowConfig { uuid: Uuid },
+    ShowConfig,
+
     /// Re-index a repository
-    IndexRepository { uuid: Uuid },
+    IndexRepository,
 
     /// Stop an agent
-    StopAgent { uuid: Uuid },
+    StopAgent,
 
     /// Chat with an agent
-    Chat { uuid: Uuid, message: String },
+    Chat { message: String },
 
     /// Execute a tool executor compatible command in a running tool executor
-    Exec {
-        uuid: Uuid,
-        command: swiftide::traits::Command,
-    },
+    Exec { command: swiftide::traits::Command },
 }
 
-impl Command {
-    #[must_use]
+#[derive(Debug, Clone, Builder)]
+pub struct CommandEvent {
+    command: Command,
+    uuid: Uuid,
+    responder: Arc<dyn Responder>,
+}
+
+impl CommandEvent {
+    pub fn builder() -> CommandEventBuilder {
+        CommandEventBuilder::default()
+    }
+
     pub fn uuid(&self) -> Uuid {
-        match self {
-            Command::Quit { uuid }
-            | Command::StopAgent { uuid }
-            | Command::ShowConfig { uuid }
-            | Command::IndexRepository { uuid }
-            | Command::Exec { uuid, .. }
-            | Command::Chat { uuid, .. } => *uuid,
-        }
+        self.uuid
+    }
+
+    pub fn command(&self) -> &Command {
+        &self.command
+    }
+
+    pub fn responder(&self) -> &dyn Responder {
+        &self.responder
+    }
+
+    pub fn clone_responder(&self) -> Arc<dyn Responder> {
+        Arc::clone(&self.responder)
     }
 
     #[must_use]
-    pub fn with_uuid(self, uuid: Uuid) -> Self {
-        match self {
-            Command::StopAgent { .. } => Command::StopAgent { uuid },
-            Command::Quit { .. } => Command::Quit { uuid },
-            Command::ShowConfig { .. } => Command::ShowConfig { uuid },
-            Command::IndexRepository { .. } => Command::IndexRepository { uuid },
-            Command::Exec { command, .. } => Command::Exec { uuid, command },
-            Command::Chat { message, .. } => Command::Chat { uuid, message },
-        }
+    pub fn with_uuid(mut self, uuid: Uuid) -> Self {
+        self.uuid = uuid;
+        self
     }
 }

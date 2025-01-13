@@ -1,17 +1,14 @@
-use derive_builder::Builder;
-use uuid::Uuid;
-
 /// Represents a chat message that can be stored in a [`Chat`]
 ///
 /// Messages are expected to be formatted strings and are displayed as-is. Markdown is rendered
 /// using `tui-markdown`.
-#[derive(Clone, Default, Builder, PartialEq)]
-#[builder(setter(into, strip_option), build_fn(skip))]
+///
+/// TODO: All should be Cows
+#[derive(Clone, Default, PartialEq)]
 pub struct ChatMessage {
     role: ChatRole,
-    content: String,
+    formatted_content: String,
     original: Option<swiftide::chat_completion::ChatMessage>,
-    uuid: Option<Uuid>,
 }
 
 // Debug with truncated content
@@ -21,9 +18,9 @@ impl std::fmt::Debug for ChatMessage {
             .field("role", &self.role)
             .field(
                 "content",
-                &self.content[..std::cmp::min(10, self.content.len())].to_string(),
+                &self.formatted_content[..std::cmp::min(10, self.formatted_content.len())]
+                    .to_string(),
             )
-            .field("uuid", &self.uuid)
             .field("original", &self.original)
             .finish()
     }
@@ -50,60 +47,63 @@ pub enum ChatRole {
 }
 
 impl ChatMessage {
-    pub fn new_user(msg: impl Into<String>) -> ChatMessageBuilder {
-        ChatMessageBuilder::default()
-            .role(ChatRole::User)
-            .content(msg.into())
+    pub fn new_user(msg: impl Into<String>) -> ChatMessage {
+        ChatMessage::default()
+            .with_role(ChatRole::User)
+            .with_formatted_content(msg.into())
             .to_owned()
     }
 
-    pub fn new_system(msg: impl Into<String>) -> ChatMessageBuilder {
-        ChatMessageBuilder::default()
-            .role(ChatRole::System)
-            .content(msg.into())
+    pub fn new_system(msg: impl Into<String>) -> ChatMessage {
+        ChatMessage::default()
+            .with_role(ChatRole::System)
+            .with_formatted_content(msg.into())
             .to_owned()
     }
 
-    pub fn new_command(cmd: impl Into<String>) -> ChatMessageBuilder {
-        ChatMessageBuilder::default()
-            .role(ChatRole::Command)
-            .content(cmd.into().to_string())
+    pub fn new_command(cmd: impl Into<String>) -> ChatMessage {
+        ChatMessage::default()
+            .with_role(ChatRole::Command)
+            .with_formatted_content(cmd.into().to_string())
             .to_owned()
     }
 
-    pub fn new_assistant(msg: impl Into<String>) -> ChatMessageBuilder {
-        ChatMessageBuilder::default()
-            .role(ChatRole::Assistant)
-            .content(msg.into())
+    pub fn new_assistant(msg: impl Into<String>) -> ChatMessage {
+        ChatMessage::default()
+            .with_role(ChatRole::Assistant)
+            .with_formatted_content(msg.into())
             .to_owned()
     }
 
-    pub fn new_tool(msg: impl Into<String>) -> ChatMessageBuilder {
-        ChatMessageBuilder::default()
-            .role(ChatRole::Tool)
-            .content(msg.into())
+    pub fn new_tool(msg: impl Into<String>) -> ChatMessage {
+        ChatMessage::default()
+            .with_role(ChatRole::Tool)
+            .with_formatted_content(msg.into())
             .to_owned()
     }
 
-    #[must_use]
-    pub fn uuid(&self) -> Option<Uuid> {
-        self.uuid
+    pub fn with_role(&mut self, role: ChatRole) -> &mut Self {
+        self.role = role;
+        self
     }
+
+    pub fn with_formatted_content(&mut self, content: impl Into<String>) -> &mut Self {
+        self.formatted_content = content.into();
+        self
+    }
+
+    pub fn with_original(&mut self, original: swiftide::chat_completion::ChatMessage) -> &mut Self {
+        self.original = Some(original);
+        self
+    }
+
     #[must_use]
     pub fn content(&self) -> &str {
-        &self.content
+        &self.formatted_content
     }
     #[must_use]
     pub fn role(&self) -> &ChatRole {
         &self.role
-    }
-
-    #[must_use]
-    pub fn with_uuid(self, uuid: Uuid) -> Self {
-        Self {
-            uuid: Some(uuid),
-            ..self
-        }
     }
 
     #[must_use]
@@ -136,18 +136,6 @@ impl From<swiftide::chat_completion::ChatMessage> for ChatMessage {
             swiftide::chat_completion::ChatMessage::Summary(_) => unimplemented!(),
         };
 
-        builder.original(msg).build()
-    }
-}
-
-impl ChatMessageBuilder {
-    // Building is infallible
-    pub fn build(&mut self) -> ChatMessage {
-        ChatMessage {
-            content: self.content.clone().unwrap_or_default(),
-            uuid: self.uuid.unwrap_or_default(),
-            role: self.role.unwrap_or_default(),
-            original: self.original.clone().unwrap_or_default(),
-        }
+        builder.with_original(msg).to_owned()
     }
 }

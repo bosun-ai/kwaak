@@ -1,7 +1,7 @@
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
-use crate::commands::CommandResponder;
+use crate::commands::Responder;
 use crate::repository::Repository;
 use crate::storage;
 use anyhow::Result;
@@ -23,7 +23,7 @@ const MARKDOWN_CHUNK_RANGE: std::ops::Range<usize> = 100..1024;
 #[tracing::instrument(skip_all)]
 pub async fn index_repository(
     repository: &Repository,
-    responder: Option<CommandResponder>,
+    responder: Option<Arc<dyn Responder>>,
 ) -> Result<()> {
     let updater = UiUpdater::from(responder);
 
@@ -159,17 +159,17 @@ pub async fn index_repository(
 
 // Just a simple wrapper so we can avoid having to Option check all the time
 #[derive(Debug, Clone)]
-struct UiUpdater(Option<CommandResponder>);
+struct UiUpdater(Option<Arc<dyn Responder>>);
 
 impl UiUpdater {
-    fn send_update(&self, state: impl Into<String>) {
+    async fn send_update(&self, state: impl AsRef<str>) {
         let Some(responder) = &self.0 else { return };
-        responder.send_update(state);
+        responder.update(state.as_ref());
     }
 }
 
-impl From<Option<CommandResponder>> for UiUpdater {
-    fn from(responder: Option<CommandResponder>) -> Self {
+impl From<Option<Arc<dyn Responder>>> for UiUpdater {
+    fn from(responder: Option<Arc<dyn Responder>>) -> Self {
         Self(responder)
     }
 }

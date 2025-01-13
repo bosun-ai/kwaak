@@ -44,12 +44,15 @@ pub enum DiffVariant {
 }
 
 impl UserInputCommand {
+    /// Convenience method to turn a `UserInputCommand` into a `Command`
+    ///
+    /// Not all user input commands can be turned into a `Command`
     #[must_use]
-    pub fn to_command(&self, uuid: Uuid) -> Option<Command> {
+    pub fn to_command(&self) -> Option<Command> {
         match self {
-            UserInputCommand::Quit => Some(Command::Quit { uuid }),
-            UserInputCommand::ShowConfig => Some(Command::ShowConfig { uuid }),
-            UserInputCommand::IndexRepository => Some(Command::IndexRepository { uuid }),
+            UserInputCommand::Quit => Some(Command::Quit),
+            UserInputCommand::ShowConfig => Some(Command::ShowConfig),
+            UserInputCommand::IndexRepository => Some(Command::IndexRepository),
             _ => None,
         }
     }

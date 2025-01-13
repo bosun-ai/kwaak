@@ -8,33 +8,23 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-use crate::{
-    agent,
-    chat_message::ChatMessage,
-    frontend::{App, UIEvent},
-    indexing,
-    repository::Repository,
-};
+use crate::{agent, chat_message::ChatMessage, frontend::App, indexing, repository::Repository};
 
 use super::{
-    command::Command,
-    responder::{CommandResponder, CommandResponse},
+    command::{Command, CommandEvent},
+    responder::{CommandResponse, Responder},
     running_agent::RunningAgent,
 };
 
 /// Commands always flow via the `CommandHandler`
+///
+/// It is the principle entry point for the backend, and handles all commands
 pub struct CommandHandler {
     /// Receives commands
-    rx: Option<mpsc::UnboundedReceiver<Command>>,
+    rx: Option<mpsc::UnboundedReceiver<CommandEvent>>,
     /// Sends commands
-    tx: mpsc::UnboundedSender<Command>,
+    tx: mpsc::UnboundedSender<CommandEvent>,
 
-    /// TODO: Remove this and use the command responder everywhere
-    /// Then there can also be a single command responder, and removes coupling with frontend
-    /// fully
-    ///
-    /// Sends `UIEvents` to the connected frontend
-    ui_tx: Option<mpsc::UnboundedSender<UIEvent>>,
     /// Repository to interact with
     repository: Arc<Repository>,
 
@@ -49,14 +39,12 @@ impl CommandHandler {
         CommandHandler {
             rx: Some(rx),
             tx,
-            ui_tx: None,
             repository: Arc::new(repository.into()),
             agents: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
     pub fn register_ui(&mut self, app: &mut App) {
-        self.ui_tx = Some(app.ui_tx.clone());
         app.command_tx = Some(self.tx.clone());
     }
 
@@ -69,7 +57,6 @@ impl CommandHandler {
     /// - Missing receiver for commands
     pub fn start(mut self) -> tokio::task::JoinHandle<()> {
         let repository = Arc::clone(&self.repository);
-        let ui_tx = self.ui_tx.clone().expect("Expected a registered ui");
         let mut rx = self.rx.take().expect("Expected a receiver");
         let this_handler = Arc::new(self);
 
@@ -78,9 +65,9 @@ impl CommandHandler {
             // JoinSet invokes abort on drop
             let mut joinset = tokio::task::JoinSet::new();
 
-            while let Some(cmd) = rx.recv().await {
+            while let Some(event) = rx.recv().await {
                 // On `Quit`, abort all running tasks, wait for them to finish then break.
-                if cmd.is_quit() {
+                if event.command().is_quit() {
                     tracing::warn!("Backend received quit command, shutting down");
                     joinset.shutdown().await;
                     tracing::warn!("Backend shutdown complete");
@@ -89,25 +76,18 @@ impl CommandHandler {
                 }
 
                 let repository = Arc::clone(&repository);
-                let ui_tx = ui_tx.clone();
                 let this_handler = Arc::clone(&this_handler);
 
                 joinset.spawn(async move {
-                    let result = this_handler.handle_command(&repository,  &cmd).await;
-                    ui_tx.send(UIEvent::CommandDone(cmd.uuid())).unwrap();
+                    let result = this_handler.handle_command_event(&repository, &event, &event.command()).await;
+                    // ui_tx.send(UIEvent::CommandDone(cmd.uuid())).unwrap();
+                    event.responder().handle(CommandResponse::Completed(event.uuid()));
 
                     if let Err(error) = result {
-                        tracing::error!(?error, %cmd, "Failed to handle command {cmd} with error {error:#}");
-                        ui_tx
-                            .send(
-                                ChatMessage::new_system(format!(
+                        tracing::error!(?error, cmd = %event.command(), "Failed to handle command {cmd} with error {error:#}", cmd= event.command());
+                            event.responder().system_message(&format!(
                                     "Failed to handle command: {error:#}"
-                                ))
-                                .uuid(cmd.uuid())
-                                .to_owned()
-                                .into(),
-                            )
-                            .unwrap();
+                                ));
                     };
                 });
             }
@@ -118,28 +98,33 @@ impl CommandHandler {
 
     /// TODO: Most commands should probably be handled in a tokio task
     /// Maybe generalize tasks to make ui updates easier?
-    #[tracing::instrument(skip_all, fields(otel.name = %cmd.to_string(), uuid = %cmd.uuid()), err)]
-    async fn handle_command(&self, repository: &Repository, cmd: &Command) -> Result<()> {
+    #[tracing::instrument(skip_all, fields(otel.name = %cmd.to_string(), uuid = %event.uuid()), err)]
+    async fn handle_command_event(
+        &self,
+        repository: &Repository,
+        event: &CommandEvent,
+        cmd: &Command,
+    ) -> Result<()> {
         let now = std::time::Instant::now();
         tracing::warn!("Handling command {cmd}");
 
         #[allow(clippy::match_wildcard_for_single_variants)]
         match cmd {
-            Command::StopAgent { uuid } => self.stop_agent(*uuid).await?,
+            Command::StopAgent => {
+                self.stop_agent(event.uuid(), event.clone_responder())
+                    .await?
+            }
             Command::IndexRepository { .. } => {
-                let (command_responder, _guard) = self.spawn_command_responder(&cmd.uuid());
-                indexing::index_repository(repository, Some(command_responder)).await?;
+                indexing::index_repository(repository, Some(event.clone_responder())).await?;
             }
-            Command::ShowConfig { uuid } => {
-                self.send_ui_event(
-                    ChatMessage::new_system(toml::to_string_pretty(repository.config())?)
-                        .uuid(*uuid)
-                        .to_owned(),
-                );
-            }
-            Command::Chat { uuid, ref message } => {
+            Command::ShowConfig => event
+                .responder()
+                .system_message(&toml::to_string_pretty(repository.config())?),
+            Command::Chat { ref message } => {
                 let message = message.clone();
-                let agent = self.find_or_start_agent_by_uuid(*uuid, &message).await?;
+                let agent = self
+                    .find_or_start_agent_by_uuid(event.uuid(), &message, event.clone_responder())
+                    .await?;
                 let token = agent.cancel_token.clone();
 
                 tokio::select! {
@@ -148,16 +133,16 @@ impl CommandHandler {
 
                 }?;
             }
-            Command::Exec { uuid, command } => {
-                let Some(agent) = self.find_agent_by_uuid(*uuid).await else {
-                    self.send_ui_event(
-                        ChatMessage::new_system("No agent found (yet), is it starting up?")
-                            .uuid(*uuid),
-                    );
+            Command::Exec { command } => {
+                let Some(agent) = self.find_agent_by_uuid(event.uuid()).await else {
+                    event
+                        .responder()
+                        .system_message("No agent found (yet), is it starting up?");
                     return Ok(());
                 };
 
                 let result = agent.executor.exec_cmd(&command).await;
+                todo!();
 
                 // And now it needs to go back to the frontend again
             }
@@ -166,32 +151,31 @@ impl CommandHandler {
         // Sleep for a tiny bit to avoid racing with agent responses
         tokio::time::sleep(Duration::from_millis(50)).await;
         let elapsed = now.elapsed();
-        self.send_ui_event(
-            ChatMessage::new_system(format!(
-                "Command {cmd} successful in {} seconds",
-                elapsed.as_secs_f64().round()
-            ))
-            .uuid(cmd.uuid()),
-        );
+        event.responder().system_message(&format!(
+            "Command {cmd} successful in {} seconds",
+            elapsed.as_secs_f64().round()
+        ));
 
         Ok(())
     }
 
-    async fn find_or_start_agent_by_uuid(&self, uuid: Uuid, query: &str) -> Result<RunningAgent> {
+    async fn find_or_start_agent_by_uuid(
+        &self,
+        uuid: Uuid,
+        query: &str,
+        responder: Arc<dyn Responder>,
+    ) -> Result<RunningAgent> {
         if let Some(agent) = self.agents.write().await.get_mut(&uuid) {
             // Ensure we always send a fresh cancellation token
             agent.cancel_token = CancellationToken::new();
             return Ok(agent.clone());
         }
 
-        let (responder, handle) = self.spawn_command_responder(&uuid);
-
         let (agent, executor) =
             agent::build_agent(uuid, &self.repository, query, responder).await?;
 
         let running_agent = RunningAgent {
             agent: Arc::new(Mutex::new(agent)),
-            response_handle: Arc::new(handle),
             cancel_token: CancellationToken::new(),
             executor,
         };
@@ -207,17 +191,15 @@ impl CommandHandler {
         agents.get(&uuid).cloned()
     }
 
-    async fn stop_agent(&self, uuid: Uuid) -> Result<()> {
+    async fn stop_agent(&self, uuid: Uuid, responder: Arc<dyn Responder>) -> Result<()> {
         let mut locked_agents = self.agents.write().await;
         let Some(agent) = locked_agents.get_mut(&uuid) else {
-            self.send_ui_event(
-                ChatMessage::new_system("No agent found (yet), is it starting up?").uuid(uuid),
-            );
+            responder.system_message("No agent found (yet), is it starting up?");
             return Ok(());
         };
 
         if agent.cancel_token.is_cancelled() {
-            self.send_ui_event(ChatMessage::new_system("Agent already stopped").uuid(uuid));
+            responder.system_message("Agent already stopped");
             return Ok(());
         }
 
@@ -225,46 +207,46 @@ impl CommandHandler {
         // Perhaps something to re-align it?
         agent.stop().await;
 
-        self.send_ui_event(ChatMessage::new_system("Agent stopped").uuid(uuid));
+        responder.system_message("Agent stopped");
         Ok(())
     }
 
     // Try to send a UI event, ignore if the UI is not connected
-    fn send_ui_event(&self, event: impl Into<UIEvent>) {
-        let Some(ui_tx) = &self.ui_tx else { return };
-        let _ = ui_tx.send(event.into());
-    }
+    // fn send_ui_event(&self, event: impl Into<UIEvent>) {
+    //     let Some(ui_tx) = &self.ui_tx else { return };
+    //     let _ = ui_tx.send(event.into());
+    // }
 
-    /// Forwards updates from the backend (i.e. agents) to the UI
-    fn spawn_command_responder(&self, uuid: &Uuid) -> (CommandResponder, JoinHandle<()>) {
-        let mut command_responder = CommandResponder::default().with_uuid(*uuid);
-
-        let ui_tx_clone = self.ui_tx.clone().expect("expected ui tx");
-
-        // TODO: Perhaps nicer to have a single loop for all agents
-        // Then the majority of this can be moved to i.e. agents/running_agent
-        // Design wise: Agents should not know about UI, command handler and UI should not know
-        // about agent internals
-        // As long as nobody is running thousands of agents, this is fine
-        // TODO: Spawn should be impl on the command responder > putting ui tx behind an interface
-        // such that mapping of response to ui, can then be in the frontend.
-        let cloned_responder = command_responder.clone();
-        let handle = task::spawn(async move {
-            while let Some(response) = command_responder.recv().await {
-                match response {
-                    CommandResponse::Chat(msg) => {
-                        let _ = ui_tx_clone.send(msg.into());
-                    }
-                    CommandResponse::ActivityUpdate(uuid, state) => {
-                        let _ = ui_tx_clone.send(UIEvent::ActivityUpdate(uuid, state));
-                    }
-                    CommandResponse::RenameChat(uuid, name) => {
-                        let _ = ui_tx_clone.send(UIEvent::RenameChat(uuid, name));
-                    }
-                }
-            }
-        });
-
-        (cloned_responder, handle)
-    }
+    // /// Forwards updates from the backend (i.e. agents) to the UI
+    // fn spawn_command_responder(&self, uuid: &Uuid) -> (CommandResponder, JoinHandle<()>) {
+    //     let mut command_responder = CommandResponder::default().with_uuid(*uuid);
+    //
+    //     let ui_tx_clone = self.ui_tx.clone().expect("expected ui tx");
+    //
+    //     // TODO: Perhaps nicer to have a single loop for all agents
+    //     // Then the majority of this can be moved to i.e. agents/running_agent
+    //     // Design wise: Agents should not know about UI, command handler and UI should not know
+    //     // about agent internals
+    //     // As long as nobody is running thousands of agents, this is fine
+    //     // TODO: Spawn should be impl on the command responder > putting ui tx behind an interface
+    //     // such that mapping of response to ui, can then be in the frontend.
+    //     let cloned_responder = command_responder.clone();
+    //     let handle = task::spawn(async move {
+    //         while let Some(response) = command_responder.recv().await {
+    //             match response {
+    //                 CommandResponse::Chat(msg) => {
+    //                     let _ = ui_tx_clone.send(msg.into());
+    //                 }
+    //                 CommandResponse::ActivityUpdate(uuid, state) => {
+    //                     let _ = ui_tx_clone.send(UIEvent::ActivityUpdate(uuid, state));
+    //                 }
+    //                 CommandResponse::RenameChat(uuid, name) => {
+    //                     let _ = ui_tx_clone.send(UIEvent::RenameChat(uuid, name));
+    //                 }
+    //             }
+    //         }
+    //     });
+    //
+    //     (cloned_responder, handle)
+    // }
 }

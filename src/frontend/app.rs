@@ -1,6 +1,6 @@
 use anyhow::Result;
 use copypasta::{ClipboardContext, ClipboardProvider};
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 use strum::IntoEnumIterator as _;
 use tui_logger::TuiWidgetState;
 use tui_textarea::TextArea;
@@ -19,11 +19,14 @@ use tokio::task;
 use crate::{
     chat::{Chat, ChatState},
     chat_message::ChatMessage,
-    commands::Command,
+    commands::{Command, CommandEvent, Responder},
     frontend,
 };
 
-use super::{chat_mode, logs_mode, UIEvent, UserInputCommand};
+use super::{
+    app_command_responder::AppCommandResponder, chat_mode, logs_mode, ui_event::UIEvent,
+    ui_input_command::UserInputCommand,
+};
 
 const TICK_RATE: u64 = 250;
 const HEADER: &str = include_str!("ascii_logo");
@@ -47,7 +50,7 @@ pub struct App<'a> {
     pub ui_rx: mpsc::UnboundedReceiver<UIEvent>,
 
     /// Sends commands to the backend
-    pub command_tx: Option<mpsc::UnboundedSender<Command>>,
+    pub command_tx: Option<mpsc::UnboundedSender<CommandEvent>>,
 
     /// Mode the app is in, manages the which layout is rendered and if it should quit
     pub mode: AppMode,
@@ -194,24 +197,34 @@ impl App<'_> {
     }
 
     #[tracing::instrument(skip(self))]
-    pub fn dispatch_command(&mut self, cmd: &Command) {
+    pub fn dispatch_command(&mut self, uuid: Uuid, cmd: Command) {
         if let Some(chat) = self.current_chat_mut() {
             chat.transition(ChatState::Loading);
         }
 
+        let event = CommandEvent::builder()
+            .command(cmd)
+            .uuid(uuid)
+            .responder(AppCommandResponder::for_chat_id(uuid))
+            .build()
+            .expect("Infallible; Failed to build command event");
+
         self.command_tx
             .as_ref()
             .expect("Command tx not set")
-            .send(cmd.clone())
+            .send(event)
             .expect("Failed to dispatch command");
     }
 
-    fn add_chat_message(&mut self, message: ChatMessage) {
-        if message.uuid() == Some(self.boot_uuid) {
+    fn add_chat_message(&mut self, chat_id: Uuid, message: impl Into<ChatMessage>) {
+        let message = message.into();
+        if chat_id == self.boot_uuid {
             return;
         }
-        if let Some(chat) = self.find_chat_mut(message.uuid().unwrap_or(self.current_chat_uuid)) {
+        if let Some(chat) = self.find_chat_mut(chat_id) {
             chat.add_message(message);
+        } else {
+            tracing::error!("Could not find chat with id {chat_id}");
         }
     }
 
@@ -220,6 +233,9 @@ impl App<'_> {
         &mut self,
         terminal: &mut Terminal<B>,
     ) -> Result<()> {
+        // WARN: Before this point, running commands will panic
+        AppCommandResponder::init(self.ui_tx.clone())?;
+
         let handle = task::spawn(poll_ui_events(self.ui_tx.clone()));
 
         let mut has_indexed_on_boot = false;
@@ -228,9 +244,7 @@ impl App<'_> {
         if self.skip_indexing {
             has_indexed_on_boot = true;
         } else {
-            self.dispatch_command(&Command::IndexRepository {
-                uuid: self.boot_uuid,
-            });
+            self.dispatch_command(self.boot_uuid, Command::IndexRepository);
         }
 
         loop {
@@ -281,8 +295,8 @@ impl App<'_> {
                             chat.transition(ChatState::LoadingWithMessage(activity));
                         }
                     }
-                    UIEvent::ChatMessage(message) => {
-                        self.add_chat_message(message);
+                    UIEvent::ChatMessage(uuid, message) => {
+                        self.add_chat_message(uuid, message);
                     }
                     UIEvent::NewChat => {
                         self.add_chat(Chat::default());
@@ -297,14 +311,12 @@ impl App<'_> {
                     UIEvent::Quit => {
                         tracing::warn!("UI received quit event, quitting");
 
-                        self.dispatch_command(&Command::Quit {
-                            uuid: self.current_chat_uuid,
-                        });
+                        self.dispatch_command(self.current_chat_uuid, Command::Quit);
                         self.change_mode(AppMode::Quit);
                     }
                     UIEvent::DeleteChat => {
                         let uuid = self.current_chat_uuid;
-                        self.dispatch_command(&Command::StopAgent { uuid });
+                        self.dispatch_command(uuid, Command::StopAgent);
                         // Remove the chat with the given UUID
                         self.chats.retain(|chat| chat.uuid != uuid);
 
@@ -312,10 +324,10 @@ impl App<'_> {
                             self.add_chat(Chat::default());
                             self.chats_state.select(Some(0));
                             self.add_chat_message(
+                                self.current_chat_uuid,
                                 ChatMessage::new_system(
                                     "Nice, you managed to delete the last chat!",
-                                )
-                                .build(),
+                                ),
                             );
                         } else {
                             self.next_chat();
@@ -333,7 +345,8 @@ impl App<'_> {
                             .map(ChatMessage::content)
                         else {
                             self.add_chat_message(
-                                ChatMessage::new_system("No message to copy").build(),
+                                self.current_chat_uuid,
+                                ChatMessage::new_system("No message to copy"),
                             );
                             continue;
                         }; // Replace with actual retrieval of the last message
@@ -345,8 +358,22 @@ impl App<'_> {
                             continue;
                         }
                         self.add_chat_message(
-                            ChatMessage::new_system("Copied last message to clipboard").build(),
+                            self.current_chat_uuid,
+                            ChatMessage::new_system("Copied last message to clipboard"),
                         );
+                    }
+                    UIEvent::UserInputCommand(uuid, cmd) => {
+                        if let Some(cmd) = cmd.to_command() {
+                            self.dispatch_command(uuid, cmd);
+                        } else if let Ok(cmd) = UIEvent::try_from(cmd.clone()) {
+                            self.send_ui_event(cmd);
+                        } else {
+                            tracing::error!("Could not convert ui command to backend command nor ui event {cmd}");
+                            self.add_chat_message(
+                                self.current_chat_uuid,
+                                ChatMessage::new_system("Unknown command"),
+                            );
+                        }
                     }
                 }
             }
@@ -583,9 +610,9 @@ mod tests {
     #[test]
     fn test_add_chat_message() {
         let mut app = App::default();
-        let message = ChatMessage::new_system("Test message").build();
+        let message = ChatMessage::new_system("Test message");
 
-        app.add_chat_message(message.clone());
+        app.add_chat_message(app.current_chat_uuid, message.clone());
 
         let chat = app.current_chat().unwrap();
         assert!(chat.messages.contains(&message));

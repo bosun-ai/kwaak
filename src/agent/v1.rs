@@ -19,8 +19,8 @@ use super::{
     tools,
 };
 use crate::{
-    commands::CommandResponder, config::SupportedToolExecutors, git::github::GithubSession,
-    indexing, repository::Repository, util::accept_non_zero_exit,
+    commands::Responder, config::SupportedToolExecutors, git::github::GithubSession, indexing,
+    repository::Repository, util::accept_non_zero_exit,
 };
 use swiftide_docker_executor::DockerExecutor;
 
@@ -100,9 +100,9 @@ pub async fn build_agent(
     uuid: Uuid,
     repository: &Repository,
     query: &str,
-    command_responder: CommandResponder,
+    command_responder: Arc<dyn Responder>,
 ) -> Result<(Agent, Arc<dyn ToolExecutor>)> {
-    command_responder.send_update("starting up agent for the first time, this might take a while");
+    command_responder.update("starting up agent for the first time, this might take a while");
 
     let query_provider: Box<dyn ChatCompletion> =
         repository.config().query_provider().try_into()?;
@@ -168,7 +168,7 @@ pub async fn build_agent(
             let message = message.clone();
 
             Box::pin(async move {
-                command_responder.send_message(message);
+                command_responder.agent_message(message);
 
                 Ok(())
             })
@@ -176,7 +176,7 @@ pub async fn build_agent(
         .before_completion(move |_, _| {
             let command_responder = tx_3.clone();
             Box::pin(async move {
-                command_responder.send_update("running completions");
+                command_responder.update("running completions");
                 Ok(())
             })
         })
@@ -184,7 +184,7 @@ pub async fn build_agent(
             let command_responder = tx_4.clone();
             let tool = tool.clone();
             Box::pin(async move {
-                command_responder.send_update(format!("running tool {}", tool.name()));
+                command_responder.update(&format!("running tool {}", tool.name()));
                 Ok(())
             })
         })
@@ -207,7 +207,7 @@ pub async fn build_agent(
                 }
 
                 if let Some(lint_fix_command) = &maybe_lint_fix_command {
-                    command_responder.send_update("running lint and fix");
+                    command_responder.update("running lint and fix");
                     accept_non_zero_exit(context.exec_cmd(&Command::shell(lint_fix_command)).await)
                         .context("Could not run lint and fix")?;
                 };
@@ -296,7 +296,7 @@ fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
 async fn rename_chat(
     query: &str,
     fast_query_provider: &dyn SimplePrompt,
-    command_responder: &CommandResponder,
+    command_responder: &dyn Responder,
 ) -> Result<()> {
     let chat_name = fast_query_provider
         .prompt(
@@ -310,7 +310,7 @@ async fn rename_chat(
         .take(30)
         .collect::<String>();
 
-    command_responder.send_rename(chat_name);
+    command_responder.rename(&chat_name);
 
     Ok(())
 }
@@ -319,7 +319,8 @@ async fn rename_chat(
 mod tests {
     use swiftide_core::MockSimplePrompt;
 
-    use crate::commands::CommandResponse;
+    use crate::commands::MockResponder;
+    use mockall::predicate::*;
 
     use super::*;
 
@@ -331,18 +332,16 @@ mod tests {
             .expect_prompt()
             .returning(|_| Ok("Excellent title".to_string()));
 
-        let mut command_responder = CommandResponder::default();
+        let mut mock_responder = MockResponder::default();
 
-        rename_chat(&query, &llm_mock as &dyn SimplePrompt, &command_responder)
+        mock_responder
+            .expect_rename()
+            .with(eq("Excellent title"))
+            .once();
+
+        rename_chat(&query, &llm_mock as &dyn SimplePrompt, &mock_responder)
             .await
             .unwrap();
-
-        let message = command_responder.recv().await.unwrap();
-
-        match message {
-            CommandResponse::RenameChat(_, msg) => assert_eq!(msg, "Excellent title"),
-            _ => panic!("Expected RenameChat"),
-        }
     }
 
     #[tokio::test]
@@ -353,17 +352,15 @@ mod tests {
             .expect_prompt()
             .returning(|_| Ok("Excellent title".repeat(100).to_string()));
 
-        let mut command_responder = CommandResponder::default();
+        let mut mock_responder = MockResponder::default();
 
-        rename_chat(&query, &llm_mock as &dyn SimplePrompt, &command_responder)
+        mock_responder
+            .expect_rename()
+            .with(eq("Excellent title"))
+            .once();
+
+        rename_chat(&query, &llm_mock as &dyn SimplePrompt, &mock_responder)
             .await
             .unwrap();
-
-        let message = command_responder.recv().await.unwrap();
-
-        match message {
-            CommandResponse::RenameChat(_, msg) => assert_eq!(msg.len(), 30),
-            _ => panic!("Expected RenameChat"),
-        }
     }
 }

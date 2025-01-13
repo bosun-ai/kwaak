@@ -1,9 +1,9 @@
 use crossterm::event::KeyEvent;
 use uuid::Uuid;
 
-use crate::chat_message::{ChatMessage, ChatMessageBuilder};
+use crate::chat_message::ChatMessage;
 
-use super::{app::AppMode, UserInputCommand};
+use super::{app::AppMode, ui_input_command::UserInputCommand};
 
 // Event handling
 #[derive(Debug, Clone, strum::Display)]
@@ -14,7 +14,7 @@ pub enum UIEvent {
     /// A frontend tick event to trigger updates, etc
     Tick,
     /// A chat message is received
-    ChatMessage(ChatMessage),
+    ChatMessage(Uuid, ChatMessage),
     /// Start a new chat
     NewChat,
     /// Switch to the next chat
@@ -33,24 +33,8 @@ pub enum UIEvent {
     CopyLastMessage,
     /// Deletes the current chat
     DeleteChat,
-}
-
-impl From<ChatMessage> for UIEvent {
-    fn from(msg: ChatMessage) -> Self {
-        Self::ChatMessage(msg)
-    }
-}
-
-impl From<ChatMessageBuilder> for UIEvent {
-    fn from(mut builder: ChatMessageBuilder) -> Self {
-        Self::ChatMessage(builder.build())
-    }
-}
-
-impl From<&mut ChatMessageBuilder> for UIEvent {
-    fn from(builder: &mut ChatMessageBuilder) -> Self {
-        Self::ChatMessage(builder.build().clone())
-    }
+    /// Received a user command (prefixed with '/') from the user
+    UserInputCommand(Uuid, UserInputCommand),
 }
 
 impl From<KeyEvent> for UIEvent {

@@ -4,6 +4,9 @@ mod handler;
 mod responder;
 mod running_agent;
 
-pub use command::Command;
+pub use command::{Command, CommandEvent};
 pub use handler::CommandHandler;
-pub use responder::{CommandResponder, CommandResponse};
+pub use responder::{CommandResponse, Responder};
+
+#[cfg(test)]
+pub use responder::MockResponder;

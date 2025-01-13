@@ -8,13 +8,11 @@ use tokio_util::sync::CancellationToken;
 
 #[derive(Clone)]
 pub struct RunningAgent {
+    /// The agent that is running
     pub agent: Arc<Mutex<Agent>>,
-
+    /// A copy of the running tool executor the agent is using
     pub executor: Arc<dyn ToolExecutor>,
-
-    #[allow(dead_code)]
-    pub response_handle: Arc<tokio::task::JoinHandle<()>>,
-
+    /// Used to kill the agent
     pub cancel_token: CancellationToken,
 }
 
