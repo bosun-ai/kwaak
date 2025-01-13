@@ -47,22 +47,27 @@ pub struct CommandEvent {
 }
 
 impl CommandEvent {
+    #[must_use]
     pub fn builder() -> CommandEventBuilder {
         CommandEventBuilder::default()
     }
 
+    #[must_use]
     pub fn uuid(&self) -> Uuid {
         self.uuid
     }
 
+    #[must_use]
     pub fn command(&self) -> &Command {
         &self.command
     }
 
+    #[must_use]
     pub fn responder(&self) -> &dyn Responder {
         &self.responder
     }
 
+    #[must_use]
     pub fn clone_responder(&self) -> Arc<dyn Responder> {
         Arc::clone(&self.responder)
     }

@@ -3,12 +3,12 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 use anyhow::Result;
 use tokio::{
     sync::{mpsc, Mutex, RwLock},
-    task::{self, JoinHandle},
+    task::{self},
 };
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-use crate::{agent, chat_message::ChatMessage, frontend::App, indexing, repository::Repository};
+use crate::{agent, frontend::App, indexing, repository::Repository};
 
 use super::{
     command::{Command, CommandEvent},
@@ -112,7 +112,7 @@ impl CommandHandler {
         match cmd {
             Command::StopAgent => {
                 self.stop_agent(event.uuid(), event.clone_responder())
-                    .await?
+                    .await?;
             }
             Command::IndexRepository { .. } => {
                 indexing::index_repository(repository, Some(event.clone_responder())).await?;

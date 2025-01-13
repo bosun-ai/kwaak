@@ -1,14 +1,11 @@
 use std::sync::Arc;
 
 #[cfg(test)]
-use mockall::{automock, mock};
+use mockall::automock;
 use swiftide::chat_completion;
-use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::chat_message::ChatMessage;
-
-/// Uuid here refers to the identifer of the command
+/// Uuid here refers to the identifier of the command
 ///
 /// TODO: Remove the UUID here, the responder is expected to know the uuid
 /// of the command, and it confuses with the uuid to identify chats (same value only for convience,
@@ -22,6 +19,7 @@ pub enum CommandResponse {
 }
 
 impl CommandResponse {
+    #[must_use]
     pub fn with_uuid(self, uuid: Uuid) -> Self {
         match self {
             CommandResponse::Chat(uuid, msg) => CommandResponse::Chat(uuid, msg),

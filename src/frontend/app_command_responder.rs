@@ -1,6 +1,6 @@
 use std::sync::{Arc, OnceLock};
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use swiftide::chat_completion;
 use tokio::sync::mpsc;
 use uuid::Uuid;
@@ -14,7 +14,7 @@ static INSTANCE: OnceLock<Arc<AppCommandResponder>> = OnceLock::new();
 /// Handles responses from commands application wide
 ///
 /// Basically converts command responses into UI events
-/// The responder is send with commands so that the backend has a way to comminicate with the
+/// The responder is send with commands so that the backend has a way to communicate with the
 /// frontend, without knowing about the frontend
 ///
 /// Only one is expected to be running at a time

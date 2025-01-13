@@ -13,7 +13,7 @@ use config::Config;
 use frontend::App;
 use git::github::GithubSession;
 use kwaak::{
-    agent, chat_message, cli, commands, config, frontend, git,
+    agent, cli, commands, config, frontend, git,
     indexing::{self, index_repository},
     onboarding, repository, storage,
 };

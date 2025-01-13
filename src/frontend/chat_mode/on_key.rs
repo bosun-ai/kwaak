@@ -97,10 +97,10 @@ pub fn handle_input_command(app: &mut App) -> ChatMessage {
     let current_input = app.text_input.lines().join("\n");
 
     let Ok(cmd) = UserInputCommand::parse_from_input(&current_input) else {
-        return ChatMessage::new_system("Unknown command").to_owned();
+        return ChatMessage::new_system("Unknown command").clone();
     };
 
-    let message = ChatMessage::new_command(cmd.as_ref()).to_owned();
+    let message = ChatMessage::new_command(cmd.as_ref()).clone();
 
     app.send_ui_event(UIEvent::UserInputCommand(app.current_chat_uuid, cmd));
 

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use copypasta::{ClipboardContext, ClipboardProvider};
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 use strum::IntoEnumIterator as _;
 use tui_logger::TuiWidgetState;
 use tui_textarea::TextArea;
@@ -19,7 +19,7 @@ use tokio::task;
 use crate::{
     chat::{Chat, ChatState},
     chat_message::ChatMessage,
-    commands::{Command, CommandEvent, Responder},
+    commands::{Command, CommandEvent},
     frontend,
 };
 

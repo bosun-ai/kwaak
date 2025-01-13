@@ -1,6 +1,5 @@
 use crate::commands::Command;
 use anyhow::{Context as _, Result};
-use uuid::Uuid;
 
 #[derive(
     Debug,
