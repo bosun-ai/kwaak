@@ -467,6 +467,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-openai"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31eccf20e8169ce394fea4ffc8fe3187045bb0789499df19ab91ca2dad4a6bed"
+dependencies = [
+ "backoff",
+ "base64 0.22.1",
+ "bytes",
+ "derive_builder",
+ "eventsource-stream",
+ "futures",
+ "rand",
+ "reqwest",
+ "reqwest-eventsource",
+ "secrecy 0.10.3",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.11",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
 name = "async-priority-channel"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3516,7 +3541,7 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
- "async-openai",
+ "async-openai 0.27.1",
  "async-trait",
  "chrono",
  "clap",
@@ -6806,7 +6831,7 @@ dependencies = [
  "anyhow",
  "arrow",
  "arrow-array",
- "async-openai",
+ "async-openai 0.26.0",
  "async-trait",
  "chrono",
  "deadpool",
