@@ -29,6 +29,7 @@ swiftide = { version = "0.16.4", features = [
   "swiftide-agents",
 
 ] }
+swiftide-core = { version = "0.16.4" }
 swiftide-macros = { version = "0.16.4" }
 toml = "0.8.19"
 serde = { version = "1.0.217", features = ["derive"] }

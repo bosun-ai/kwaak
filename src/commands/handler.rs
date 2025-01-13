@@ -148,6 +148,19 @@ impl CommandHandler {
 
                 }?;
             }
+            Command::Exec { uuid, command } => {
+                let Some(agent) = self.find_agent_by_uuid(*uuid).await else {
+                    self.send_ui_event(
+                        ChatMessage::new_system("No agent found (yet), is it starting up?")
+                            .uuid(*uuid),
+                    );
+                    return Ok(());
+                };
+
+                let result = agent.executor.exec_cmd(&command).await;
+
+                // And now it needs to go back to the frontend again
+            }
             Command::Quit { .. } => unreachable!("Quit should be handled earlier"),
         }
         // Sleep for a tiny bit to avoid racing with agent responses
@@ -173,18 +186,25 @@ impl CommandHandler {
 
         let (responder, handle) = self.spawn_command_responder(&uuid);
 
-        let agent = agent::build_agent(uuid, &self.repository, query, responder).await?;
+        let (agent, executor) =
+            agent::build_agent(uuid, &self.repository, query, responder).await?;
 
         let running_agent = RunningAgent {
             agent: Arc::new(Mutex::new(agent)),
             response_handle: Arc::new(handle),
             cancel_token: CancellationToken::new(),
+            executor,
         };
 
         let cloned = running_agent.clone();
         self.agents.write().await.insert(uuid, running_agent);
 
         Ok(cloned)
+    }
+
+    async fn find_agent_by_uuid(&self, uuid: Uuid) -> Option<RunningAgent> {
+        let agents = self.agents.read().await;
+        agents.get(&uuid).cloned()
     }
 
     async fn stop_agent(&self, uuid: Uuid) -> Result<()> {

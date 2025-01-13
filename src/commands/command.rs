@@ -5,9 +5,9 @@ use uuid::Uuid;
 /// By default all commands can be triggered from the ui like `/<command>`
 #[derive(
     Debug,
-    PartialEq,
-    Eq,
-    strum_macros::EnumString,
+    // PartialEq,
+    // Eq,
+    // strum_macros::EnumString,
     strum_macros::Display,
     strum_macros::IntoStaticStr,
     strum_macros::EnumIs,
@@ -15,11 +15,25 @@ use uuid::Uuid;
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum Command {
+    /// Cleanly stop the backend
     Quit { uuid: Uuid },
+
+    /// Print the config the backend is using
     ShowConfig { uuid: Uuid },
+    /// Re-index a repository
     IndexRepository { uuid: Uuid },
+
+    /// Stop an agent
     StopAgent { uuid: Uuid },
+
+    /// Chat with an agent
     Chat { uuid: Uuid, message: String },
+
+    /// Execute a tool executor compatible command in a running tool executor
+    Exec {
+        uuid: Uuid,
+        command: swiftide::traits::Command,
+    },
 }
 
 impl Command {
@@ -30,6 +44,7 @@ impl Command {
             | Command::StopAgent { uuid }
             | Command::ShowConfig { uuid }
             | Command::IndexRepository { uuid }
+            | Command::Exec { uuid, .. }
             | Command::Chat { uuid, .. } => *uuid,
         }
     }
@@ -41,6 +56,7 @@ impl Command {
             Command::Quit { .. } => Command::Quit { uuid },
             Command::ShowConfig { .. } => Command::ShowConfig { uuid },
             Command::IndexRepository { .. } => Command::IndexRepository { uuid },
+            Command::Exec { command, .. } => Command::Exec { uuid, command },
             Command::Chat { message, .. } => Command::Chat { uuid, message },
         }
     }

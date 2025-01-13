@@ -67,7 +67,7 @@ pub fn available_tools(
     Ok(tools)
 }
 
-async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Box<dyn ToolExecutor>> {
+async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Arc<dyn ToolExecutor>> {
     let boxed = match repository.config().tool_executor {
         SupportedToolExecutors::Docker => {
             let mut executor = DockerExecutor::default();
@@ -87,9 +87,9 @@ async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Box<
                 .start()
                 .await?;
 
-            Box::new(running_executor) as Box<dyn ToolExecutor>
+            Arc::new(running_executor) as Arc<dyn ToolExecutor>
         }
-        SupportedToolExecutors::Local => Box::new(LocalExecutor::new(".")) as Box<dyn ToolExecutor>,
+        SupportedToolExecutors::Local => Arc::new(LocalExecutor::new(".")) as Arc<dyn ToolExecutor>,
     };
 
     Ok(boxed)
@@ -101,7 +101,7 @@ pub async fn build_agent(
     repository: &Repository,
     query: &str,
     command_responder: CommandResponder,
-) -> Result<Agent> {
+) -> Result<(Agent, Arc<dyn ToolExecutor>)> {
     command_responder.send_update("starting up agent for the first time, this might take a while");
 
     let query_provider: Box<dyn ChatCompletion> =
@@ -128,7 +128,7 @@ pub async fn build_agent(
 
     let tools = available_tools(&repository, github_session.as_ref(), Some(&agent_env))?;
 
-    let mut context = DefaultContext::from_executor(executor);
+    let mut context = DefaultContext::from_executor(Arc::clone(&executor));
 
     if repository.config().endless_mode {
         context.with_stop_on_assistant(false);
@@ -234,7 +234,7 @@ pub async fn build_agent(
         .llm(&query_provider)
         .build()?;
 
-    Ok(agent)
+    Ok((agent, executor))
 }
 
 fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
