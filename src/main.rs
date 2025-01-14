@@ -13,7 +13,7 @@ use config::Config;
 use frontend::App;
 use git::github::GithubSession;
 use kwaak::{
-    agent, chat_message, cli, commands, config, frontend, git,
+    agent, cli, commands, config, frontend, git,
     indexing::{self, index_repository},
     onboarding, repository, storage,
 };
@@ -185,17 +185,6 @@ async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Res
         app.skip_indexing = true;
     }
 
-    if cfg!(feature = "test-layout") {
-        let Some(current_chat) = app.current_chat_mut() else {
-            panic!("Trying to the the layout without a chat; should not happen");
-        };
-        current_chat.add_message(chat_message::ChatMessage::new_user(
-            "Hello, show me some markdown!",
-        ));
-        current_chat.add_message(chat_message::ChatMessage::new_system("showing markdown"));
-        current_chat.add_message(chat_message::ChatMessage::new_assistant(MARKDOWN_TEST));
-    }
-
     let app_result = {
         let mut handler = commands::CommandHandler::from_repository(repository);
         handler.register_ui(&mut app);
@@ -252,50 +241,3 @@ pub fn restore_tui() -> io::Result<()> {
     execute!(stdout(), LeaveAlternateScreen)?;
     Ok(())
 }
-
-#[cfg(feature = "test-layout")]
-static MARKDOWN_TEST: &str = r#"
-# Main header
-## Examples
-
-Indexing a local code project, chunking into smaller pieces, enriching the nodes with metadata, and persisting into [Qdrant](https://qdrant.tech):
-
-```rust
-indexing::Pipeline::from_loader(FileLoader::new(".").with_extensions(&["rs"]))
-        .with_default_llm_client(openai_client.clone())
-        .filter_cached(Redis::try_from_url(
-            redis_url,
-            "swiftide-examples",
-        )?)
-        .then_chunk(ChunkCode::try_for_language_and_chunk_size(
-            "rust",
-            10..2048,
-        )?)
-        .then(MetadataQACode::default())
-        .then(move |node| my_own_thing(node))
-        .then_in_batch(Embed::new(openai_client.clone()))
-        .then_store_with(
-            Qdrant::builder()
-                .batch_size(50)
-                .vector_size(1536)
-                .build()?,
-        )
-        .run()
-        .await?;
-```
-
-Querying for an example on how to use the query pipeline:
-
-```rust
-query::Pipeline::default()
-    .then_transform_query(GenerateSubquestions::from_client(
-        openai_client.clone(),
-    ))
-    .then_transform_query(Embed::from_client(
-        openai_client.clone(),
-    ))
-    .then_retrieve(qdrant.clone())
-    .then_answer(Simple::from_client(openai_client.clone()))
-    .query("How can I use the query pipeline in Swiftide?")
-    .await?;
-"#;

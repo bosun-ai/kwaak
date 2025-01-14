@@ -118,7 +118,6 @@ missing_errors_doc = "allow"
 
 [features]
 default = ["otel"]
-"test-layout" = []
 "otel" = [
   "dep:tracing-opentelemetry",
   "dep:opentelemetry_sdk",
