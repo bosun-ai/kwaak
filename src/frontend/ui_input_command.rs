@@ -1,6 +1,8 @@
 use crate::commands::Command;
 use anyhow::{Context as _, Result};
 
+use super::ui_event::UIEvent;
+
 #[derive(
     Debug,
     Clone,
@@ -53,6 +55,20 @@ impl UserInputCommand {
             UserInputCommand::Quit => Some(Command::Quit),
             UserInputCommand::ShowConfig => Some(Command::ShowConfig),
             UserInputCommand::IndexRepository => Some(Command::IndexRepository),
+            _ => None,
+        }
+    }
+
+    /// Convenience method to turn a `UserInputCommand` into a `UIEvent`
+    ///
+    /// Not all user input commands can be turned into a `UIEvent`
+    #[must_use]
+    pub fn to_ui_event(&self) -> Option<UIEvent> {
+        match self {
+            UserInputCommand::NextChat => Some(UIEvent::NextChat),
+            UserInputCommand::NewChat => Some(UIEvent::NewChat),
+            UserInputCommand::Copy => Some(UIEvent::CopyLastMessage),
+            UserInputCommand::DeleteChat => Some(UIEvent::DeleteChat),
             _ => None,
         }
     }

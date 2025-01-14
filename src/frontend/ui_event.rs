@@ -42,17 +42,3 @@ impl From<KeyEvent> for UIEvent {
         Self::Input(key)
     }
 }
-
-impl TryFrom<UserInputCommand> for UIEvent {
-    type Error = anyhow::Error;
-
-    fn try_from(value: UserInputCommand) -> Result<Self, Self::Error> {
-        match value {
-            UserInputCommand::NextChat => Ok(Self::NextChat),
-            UserInputCommand::NewChat => Ok(Self::NewChat),
-            UserInputCommand::Copy => Ok(Self::CopyLastMessage),
-            UserInputCommand::DeleteChat => Ok(Self::DeleteChat),
-            _ => anyhow::bail!("Cannot convert {value} to UIEvent"),
-        }
-    }
-}

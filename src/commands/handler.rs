@@ -210,43 +210,4 @@ impl CommandHandler {
         responder.system_message("Agent stopped");
         Ok(())
     }
-
-    // Try to send a UI event, ignore if the UI is not connected
-    // fn send_ui_event(&self, event: impl Into<UIEvent>) {
-    //     let Some(ui_tx) = &self.ui_tx else { return };
-    //     let _ = ui_tx.send(event.into());
-    // }
-
-    // /// Forwards updates from the backend (i.e. agents) to the UI
-    // fn spawn_command_responder(&self, uuid: &Uuid) -> (CommandResponder, JoinHandle<()>) {
-    //     let mut command_responder = CommandResponder::default().with_uuid(*uuid);
-    //
-    //     let ui_tx_clone = self.ui_tx.clone().expect("expected ui tx");
-    //
-    //     // TODO: Perhaps nicer to have a single loop for all agents
-    //     // Then the majority of this can be moved to i.e. agents/running_agent
-    //     // Design wise: Agents should not know about UI, command handler and UI should not know
-    //     // about agent internals
-    //     // As long as nobody is running thousands of agents, this is fine
-    //     // TODO: Spawn should be impl on the command responder > putting ui tx behind an interface
-    //     // such that mapping of response to ui, can then be in the frontend.
-    //     let cloned_responder = command_responder.clone();
-    //     let handle = task::spawn(async move {
-    //         while let Some(response) = command_responder.recv().await {
-    //             match response {
-    //                 CommandResponse::Chat(msg) => {
-    //                     let _ = ui_tx_clone.send(msg.into());
-    //                 }
-    //                 CommandResponse::ActivityUpdate(uuid, state) => {
-    //                     let _ = ui_tx_clone.send(UIEvent::ActivityUpdate(uuid, state));
-    //                 }
-    //                 CommandResponse::RenameChat(uuid, name) => {
-    //                     let _ = ui_tx_clone.send(UIEvent::RenameChat(uuid, name));
-    //                 }
-    //             }
-    //         }
-    //     });
-    //
-    //     (cloned_responder, handle)
-    // }
 }

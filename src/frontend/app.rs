@@ -365,8 +365,8 @@ impl App<'_> {
                     UIEvent::UserInputCommand(uuid, cmd) => {
                         if let Some(cmd) = cmd.to_command() {
                             self.dispatch_command(uuid, cmd);
-                        } else if let Ok(cmd) = UIEvent::try_from(cmd.clone()) {
-                            self.send_ui_event(cmd);
+                        } else if let Some(event) = cmd.to_ui_event() {
+                            self.send_ui_event(event);
                         } else {
                             tracing::error!("Could not convert ui command to backend command nor ui event {cmd}");
                             self.add_chat_message(
