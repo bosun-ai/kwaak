@@ -98,7 +98,7 @@ impl ChatMessage {
     }
 
     #[must_use]
-    pub fn content(&self) -> &str {
+    pub fn formatted_content(&self) -> &str {
         &self.formatted_content
     }
     #[must_use]

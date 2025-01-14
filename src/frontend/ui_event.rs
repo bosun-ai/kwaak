@@ -6,7 +6,7 @@ use crate::chat_message::ChatMessage;
 use super::{app::AppMode, ui_input_command::UserInputCommand};
 
 // Event handling
-#[derive(Debug, Clone, strum::Display)]
+#[derive(Debug, Clone, strum::Display, PartialEq)]
 #[allow(dead_code)]
 pub enum UIEvent {
     /// A key is pressed

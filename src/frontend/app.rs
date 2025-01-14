@@ -342,7 +342,7 @@ impl App<'_> {
                                     .filter(|m| m.role().is_assistant() || m.role().is_user())
                                     .last()
                             })
-                            .map(ChatMessage::content)
+                            .map(ChatMessage::formatted_content)
                         else {
                             self.add_chat_message(
                                 self.current_chat_uuid,

@@ -40,7 +40,7 @@ pub fn format_chat_message<'a>(current_chat: &Chat, message: &'a ChatMessage) ->
     let (prefix, style) = get_style_and_prefix(message.role());
 
     // Render markdown first
-    let mut rendered_text = tui_markdown::from_str(message.content());
+    let mut rendered_text = tui_markdown::from_str(message.formatted_content());
 
     // Prepend the styled prefix to the first line
     if let Some(first_line) = rendered_text.lines.first_mut() {
@@ -61,7 +61,7 @@ pub fn format_chat_message<'a>(current_chat: &Chat, message: &'a ChatMessage) ->
     if let Some(swiftide::chat_completion::ChatMessage::Assistant(.., Some(tool_calls))) =
         message.original()
     {
-        if !message.content().is_empty() {
+        if !message.formatted_content().is_empty() {
             rendered_text.push_line(Line::from("\n\n"));
         }
         for tool_call in tool_calls {
@@ -190,4 +190,68 @@ fn get_value<'a>(
     key: &str,
 ) -> Option<&'a str> {
     args?.get(key).and_then(serde_json::Value::as_str)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::chat_message::ChatRole;
+    use ratatui::text::Span;
+
+    #[test]
+    fn test_get_style_and_prefix() {
+        assert_eq!(
+            get_style_and_prefix(&ChatRole::User),
+            ("▶ ", message_styles::USER)
+        );
+        assert_eq!(
+            get_style_and_prefix(&ChatRole::Assistant),
+            ("✦ ", message_styles::ASSISTANT)
+        );
+        assert_eq!(
+            get_style_and_prefix(&ChatRole::System),
+            ("ℹ ", message_styles::SYSTEM)
+        );
+        assert_eq!(
+            get_style_and_prefix(&ChatRole::Command),
+            ("» ", message_styles::COMMAND)
+        );
+    }
+
+    #[test]
+    fn test_format_chat_message() {
+        let chat = Chat::default();
+        let message = ChatMessage::new_user("Hello, world!");
+
+        let formatted_message = format_chat_message(&chat, &message);
+
+        assert_eq!(formatted_message.lines.len(), 1);
+        assert_eq!(
+            formatted_message.lines[0].spans,
+            vec![
+                Span::styled("▶ ", message_styles::USER),
+                Span::styled("Hello, world!", message_styles::USER)
+            ]
+        );
+    }
+
+    #[test]
+    fn test_format_tool_call() {
+        let tool_call = swiftide::chat_completion::ToolCall::builder()
+            .name("shell_command")
+            .args("{\"cmd\":\"ls\"}")
+            .build()
+            .unwrap();
+        let formatted_tool_call = format_tool_call(&tool_call);
+
+        assert_eq!(formatted_tool_call, "running shell command `ls`");
+    }
+
+    #[test]
+    fn test_get_value() {
+        let args = serde_json::json!({"key": "value"}).as_object().cloned();
+        let value = get_value(args.as_ref(), "key");
+
+        assert_eq!(value, Some("value"));
+    }
 }

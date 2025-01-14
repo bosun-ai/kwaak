@@ -104,3 +104,47 @@ impl Responder for AppCommandResponderForChatId {
         self.handle(CommandResponse::Chat(self.uuid, message));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::sync::mpsc;
+    use uuid::Uuid;
+
+    const TEST_UUID: Uuid = Uuid::from_u128(0x1234_5678_90ab_cdef_1234_5678_90ab_cdef);
+
+    #[tokio::test]
+    async fn test_app_responder() {
+        let (ui_tx, mut ui_rx) = mpsc::unbounded_channel();
+        let _ = AppCommandResponder::init(ui_tx);
+
+        let responder = AppCommandResponder::for_chat_id(TEST_UUID);
+
+        responder.system_message("Test message");
+
+        let Some(ui_event) = ui_rx.recv().await else {
+            panic!("No UI event received");
+        };
+
+        match ui_event {
+            UIEvent::ChatMessage(received_uuid, received_message) => {
+                assert_eq!(received_uuid, TEST_UUID);
+                assert_eq!(received_message.formatted_content(), "Test message");
+                assert!(received_message.role().is_system());
+            }
+            _ => panic!("Unexpected UI event received"),
+        }
+
+        responder.handle(CommandResponse::Completed(Uuid::new_v4()));
+
+        // Verify the UI event is received
+        if let Some(ui_event) = ui_rx.recv().await {
+            match ui_event {
+                UIEvent::CommandDone(received_uuid) => assert_eq!(received_uuid, TEST_UUID),
+                _ => panic!("Unexpected UI event received"),
+            }
+        } else {
+            panic!("No UI event received");
+        }
+    }
+}

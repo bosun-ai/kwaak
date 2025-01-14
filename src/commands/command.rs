@@ -9,14 +9,7 @@ use super::Responder;
 ///
 /// By default all commands can be triggered from the ui like `/<command>`
 #[derive(
-    Debug,
-    // PartialEq,
-    // Eq,
-    // strum_macros::EnumString,
-    strum_macros::Display,
-    strum_macros::IntoStaticStr,
-    strum_macros::EnumIs,
-    Clone,
+    Debug, strum_macros::Display, strum_macros::IntoStaticStr, strum_macros::EnumIs, Clone,
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum Command {
@@ -76,5 +69,51 @@ impl CommandEvent {
     pub fn with_uuid(mut self, uuid: Uuid) -> Self {
         self.uuid = uuid;
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::commands::MockResponder;
+
+    use super::*;
+    use std::sync::Arc;
+    use uuid::Uuid;
+
+    #[test]
+    fn test_command_event_builder() {
+        let command = Command::Quit;
+        let uuid = Uuid::new_v4();
+        let responder = Arc::new(MockResponder::new());
+
+        let event = CommandEvent::builder()
+            .command(command.clone())
+            .uuid(uuid)
+            .responder(responder.clone())
+            .build()
+            .unwrap();
+
+        let dyn_responder = responder as Arc<dyn Responder>;
+        assert!(event.command().is_quit());
+        assert_eq!(event.uuid(), uuid);
+        assert!(Arc::ptr_eq(&event.clone_responder(), &dyn_responder));
+    }
+
+    #[test]
+    fn test_with_uuid() {
+        let command = Command::ShowConfig;
+        let uuid = Uuid::new_v4();
+        let new_uuid = Uuid::new_v4();
+        let responder = Arc::new(MockResponder::new());
+
+        let event = CommandEvent::builder()
+            .command(command.clone())
+            .uuid(uuid)
+            .responder(responder.clone())
+            .build()
+            .unwrap()
+            .with_uuid(new_uuid);
+
+        assert_eq!(event.uuid(), new_uuid);
     }
 }
