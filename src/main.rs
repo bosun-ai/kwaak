@@ -13,7 +13,7 @@ use config::Config;
 use frontend::App;
 use git::github::GithubSession;
 use kwaak::{
-    agent, cli, commands, config, frontend, git,
+    agent, chat_message, cli, commands, config, frontend, git,
     indexing::{self, index_repository},
     onboarding, repository, storage,
 };
@@ -146,8 +146,7 @@ async fn start_agent(mut repository: repository::Repository, initial_message: &s
                 CommandResponse::ActivityUpdate(.., message) => {
                     println!(">> {message}");
                 }
-                CommandResponse::RenameChat(..) => {}
-                CommandResponse::Completed(..) => {}
+                CommandResponse::RenameChat(..) | CommandResponse::Completed(..) => {}
             }
         }
     });
@@ -186,14 +185,16 @@ async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Res
         app.skip_indexing = true;
     }
 
-    // if cfg!(feature = "test-layout") {
-    //     app.ui_tx
-    //         .send(chat_message::ChatMessage::new_user("Hello, show me some markdown!").into())?;
-    //     app.ui_tx
-    //         .send(chat_message::ChatMessage::new_system("showing markdown").into())?;
-    //     app.ui_tx
-    //         .send(chat_message::ChatMessage::new_assistant(MARKDOWN_TEST).into())?;
-    // }
+    if cfg!(feature = "test-layout") {
+        let Some(current_chat) = app.current_chat_mut() else {
+            panic!("Trying to the the layout without a chat; should not happen");
+        };
+        current_chat.add_message(chat_message::ChatMessage::new_user(
+            "Hello, show me some markdown!",
+        ));
+        current_chat.add_message(chat_message::ChatMessage::new_system("showing markdown"));
+        current_chat.add_message(chat_message::ChatMessage::new_assistant(MARKDOWN_TEST));
+    }
 
     let app_result = {
         let mut handler = commands::CommandHandler::from_repository(repository);
@@ -252,6 +253,7 @@ pub fn restore_tui() -> io::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "test-layout")]
 static MARKDOWN_TEST: &str = r#"
 # Main header
 ## Examples

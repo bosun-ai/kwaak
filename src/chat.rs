@@ -23,7 +23,7 @@ pub struct Chat {
 }
 
 impl Chat {
-    pub(crate) fn add_message(&mut self, message: ChatMessage) {
+    pub fn add_message(&mut self, message: ChatMessage) {
         if !message.role().is_user() {
             self.new_message_count += 1;
         }
@@ -31,12 +31,16 @@ impl Chat {
         // If it's a completed tool call, just register it is done and do not add the message
         // The state is updated when rendering on the initial tool call
         if message.role().is_tool() {
-            let tool_call_id = message
-                .maybe_completed_tool_call()
-                .expect("Expected tool call")
-                .id();
+            let Some(tool_call) = message.maybe_completed_tool_call() else {
+                tracing::error!(
+                    "Received a tool message without a tool call ID: {:?}",
+                    message
+                );
+                return;
+            };
+
             self.completed_tool_call_ids
-                .insert(tool_call_id.to_string());
+                .insert(tool_call.id().to_string());
 
             return;
         }

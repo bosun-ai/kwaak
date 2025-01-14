@@ -216,7 +216,7 @@ impl App<'_> {
             .expect("Failed to dispatch command");
     }
 
-    fn add_chat_message(&mut self, chat_id: Uuid, message: impl Into<ChatMessage>) {
+    pub fn add_chat_message(&mut self, chat_id: Uuid, message: impl Into<ChatMessage>) {
         let message = message.into();
         if chat_id == self.boot_uuid {
             return;
@@ -386,19 +386,19 @@ impl App<'_> {
         Ok(())
     }
 
-    fn find_chat_mut(&mut self, uuid: Uuid) -> Option<&mut Chat> {
+    pub fn find_chat_mut(&mut self, uuid: Uuid) -> Option<&mut Chat> {
         self.chats.iter_mut().find(|chat| chat.uuid == uuid)
     }
 
-    fn find_chat(&self, uuid: Uuid) -> Option<&Chat> {
+    pub fn find_chat(&self, uuid: Uuid) -> Option<&Chat> {
         self.chats.iter().find(|chat| chat.uuid == uuid)
     }
 
-    pub(crate) fn current_chat(&self) -> Option<&Chat> {
+    pub fn current_chat(&self) -> Option<&Chat> {
         self.find_chat(self.current_chat_uuid)
     }
 
-    pub(crate) fn current_chat_mut(&mut self) -> Option<&mut Chat> {
+    pub fn current_chat_mut(&mut self) -> Option<&mut Chat> {
         self.find_chat_mut(self.current_chat_uuid)
     }
 
@@ -410,7 +410,7 @@ impl App<'_> {
         self.chats_state.select_last();
     }
 
-    fn next_chat(&mut self) {
+    pub fn next_chat(&mut self) {
         #[allow(clippy::skip_while_next)]
         let Some(next_idx) = self
             .chats
