@@ -141,7 +141,7 @@ impl CommandHandler {
                     return Ok(());
                 };
 
-                let result = agent.executor.exec_cmd(&command).await;
+                let _result = agent.executor.exec_cmd(&command).await;
                 todo!();
 
                 // And now it needs to go back to the frontend again

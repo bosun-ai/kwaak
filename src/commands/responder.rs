@@ -8,7 +8,7 @@ use uuid::Uuid;
 /// Uuid here refers to the identifier of the command
 ///
 /// TODO: Remove the UUID here, the responder is expected to know the uuid
-/// of the command, and it confuses with the uuid to identify chats (same value only for convience,
+/// of the command, and it confuses with the uuid to identify chats (same value only for convenience,
 /// not the same 'thing')
 #[derive(Debug, Clone)]
 pub enum CommandResponse {

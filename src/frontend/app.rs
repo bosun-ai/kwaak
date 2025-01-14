@@ -418,8 +418,17 @@ impl App<'_> {
             .position(|chat| chat.uuid == self.current_chat_uuid)
             .map(|idx| idx + 1)
         else {
+            debug_assert!(
+                false,
+                "No chats in app found when selecting next app, this should never happen"
+            );
             let Some(chat) = self.chats.first() else {
-                panic!("No chats in app found when selecting next app, this should never happen")
+                tracing::error!(
+                    "No chats in app found when selecting next app, this should never happen"
+                );
+
+                self.add_chat(Chat::default());
+                return;
             };
 
             let uuid = chat.uuid;
