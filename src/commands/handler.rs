@@ -168,7 +168,7 @@ impl CommandHandler {
 
         // We cannot pause time in tokio because the larger tests
         // require multi thread and snapshot testing is still nice
-        if cfg!(feature = "testing") {
+        if cfg!(debug_assertions) {
             elapsed = Duration::from_secs(0);
         }
 

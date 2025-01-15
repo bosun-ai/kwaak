@@ -82,6 +82,7 @@ lancedb = { version = "0.14.1", default-features = false, features = [
 num_cpus = "1.16.0"
 htmd = "0.1.6"
 ansi-to-tui = "7.0.0"
+tempfile = { version = "3.15.0" }
 
 #fml
 # TODO: Suspect it's lancedb
@@ -89,7 +90,6 @@ openssl-sys = { version = "0.9.104", features = ["vendored"] }
 copypasta = "0.10.1"
 strip-ansi-escapes = "0.2.1"
 
-tempfile = { version = "3.15.0", optional = true }
 
 [dev-dependencies]
 test-log = { version = "0.2.16", features = ["trace"] }
@@ -99,8 +99,6 @@ predicates = "3.1.3"
 swiftide-core = { version = "0.16.1", features = ["test-utils"] }
 mockall = "0.13.1"
 
-# Feature gating with tests is fickly without a workspace
-# tempfile = { version = "3.15.0" }
 
 [lints.rust]
 unsafe_code = "forbid"
@@ -130,7 +128,6 @@ default = ["otel"]
   "dep:opentelemetry",
   "dep:opentelemetry-otlp",
 ]
-testing = ["dep:tempfile", "swiftide-core/test-utils", "swiftide/test-utils"]
 
 
 [patch.crates-io]

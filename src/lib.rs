@@ -16,5 +16,5 @@ pub mod storage;
 pub mod templates;
 pub mod util;
 
-#[cfg(any(feature = "testing", test))]
+#[cfg(debug_assertions)]
 pub mod test_utils;

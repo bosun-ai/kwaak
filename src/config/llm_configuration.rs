@@ -1,4 +1,4 @@
-#[cfg(feature = "testing")]
+#[cfg(debug_assertions)]
 use crate::test_utils::NoopLLM;
 
 use super::ApiKey;
@@ -46,7 +46,7 @@ pub enum LLMConfiguration {
         #[serde(default)]
         base_url: Option<Url>,
     },
-    #[cfg(feature = "testing")]
+    #[cfg(debug_assertions)]
     Testing, // Groq {
              //     api_key: SecretString,
              //     prompt_model: String,
@@ -83,7 +83,7 @@ impl LLMConfiguration {
                     .expect("Expected an embedding model for ollama")
                     .vector_size
             }
-            #[cfg(feature = "testing")]
+            #[cfg(debug_assertions)]
             LLMConfiguration::Testing => 1,
         }
     }
@@ -201,7 +201,7 @@ impl TryInto<Box<dyn EmbeddingModel>> for &LLMConfiguration {
             LLMConfiguration::Ollama { .. } => {
                 Box::new(build_ollama(self)?) as Box<dyn EmbeddingModel>
             }
-            #[cfg(feature = "testing")]
+            #[cfg(debug_assertions)]
             LLMConfiguration::Testing => Box::new(NoopLLM) as Box<dyn EmbeddingModel>,
         };
 
@@ -227,7 +227,7 @@ impl TryInto<Box<dyn SimplePrompt>> for &LLMConfiguration {
             LLMConfiguration::Ollama { .. } => {
                 Box::new(build_ollama(self)?) as Box<dyn SimplePrompt>
             }
-            #[cfg(feature = "testing")]
+            #[cfg(debug_assertions)]
             LLMConfiguration::Testing => Box::new(NoopLLM) as Box<dyn SimplePrompt>,
         };
 
@@ -253,7 +253,7 @@ impl TryInto<Box<dyn ChatCompletion>> for &LLMConfiguration {
             LLMConfiguration::Ollama { .. } => {
                 Box::new(build_ollama(self)?) as Box<dyn ChatCompletion>
             }
-            #[cfg(feature = "testing")]
+            #[cfg(debug_assertions)]
             LLMConfiguration::Testing => Box::new(NoopLLM) as Box<dyn ChatCompletion>,
         };
 
