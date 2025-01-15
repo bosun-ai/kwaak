@@ -24,13 +24,15 @@ coverage = "REQUIRED"
 # Example: lint_and_fix = "cargo clippy --fix --allow-dirty --allow-staged && cargo fmt"
 
 ## Git and GitHub configuration
-## Kwaak can create and update PRs on Github. When using the `docker` executor, a token is required, as otherwise the agent cannot interact with git
-## The token is expected to have read and write access for git, and the ability to create and update pull requests.
+#
+## Kwaak can create and update PRs on Github, search github code, and interact with the git repository. This requires a github token.
+## If you leave the token empty, kwaak will not create PRs.
 [github]
 owner = "{{ github.owner }}"
 repository = "{{ github.repository }}"
 main_branch = "{{ github.main_branch }}"
-token = "env:KWAAK_GITHUB_TOKEN"
+## The token is expected to have read and write access for git, and the ability to create and update pull requests.
+# token = "env:KWAAK_GITHUB_TOKEN"
 
 ## Kwaak uses different LLMs for different tasks. As a rule of thumb, tasks that happen often (like indexing, summarizing) require a small, fast model
 ## and tasks that happen less often (like completion) can use a larger, more accurate model.

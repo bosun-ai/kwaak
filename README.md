@@ -128,7 +128,9 @@ If you already have a Dockerfile for other purposes, you can either extend it or
 
 _For an example Dockerfile in Rust, see [this project's Dockerfile](/Dockerfile)_
 
-Additionally, you will need an OpenAI API key (if OpenAI is your LLM provider) and a [github token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
+Additionally, you will need an OpenAI API key (if OpenAI is your LLM provider).
+
+If you'd like kwaak to be able to make pull requests, search github code, and automatically push to a remote, a [github token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -195,6 +197,8 @@ After each chat completion, kwaak will lint, commit, and push the code to the re
 Kwaak supports configuring different Large Language Models (LLMs) for distinct tasks like indexing, querying, and embedding to optimize performance and accuracy. Be sure to tailor the configurations to fit the scope and blend of the tasks you're tackling.
 
 #### General Configuration
+
+All of these are inferred from the project directory and can be overridden in the `kwaak.toml` configuration file.
 
 - **`project_name`**: Defaults to the current directory name. Represents the name of your project.
 - **`language`**: The programming language of the project, for instance, Rust, Python, JavaScript, etc.
