@@ -59,33 +59,13 @@ pub fn on_key(app: &mut App, key: &KeyEvent) {
     match key.code {
         KeyCode::Tab => app.send_ui_event(UIEvent::NextChat),
         KeyCode::End => {
-            let Some(current_chat) = app.current_chat_mut() else {
-                return;
-            };
-            // Keep the last 10 lines in view
-            let scroll_position = current_chat.num_lines.saturating_sub(10);
-
-            current_chat.vertical_scroll = scroll_position;
-            current_chat.vertical_scroll_state =
-                current_chat.vertical_scroll_state.position(scroll_position);
+            app.send_ui_event(UIEvent::ScrollEnd);
         }
         KeyCode::PageDown => {
-            let Some(current_chat) = app.current_chat_mut() else {
-                return;
-            };
-            current_chat.vertical_scroll = current_chat.vertical_scroll.saturating_add(2);
-            current_chat.vertical_scroll_state = current_chat
-                .vertical_scroll_state
-                .position(current_chat.vertical_scroll);
+            app.send_ui_event(UIEvent::ScrollDown);
         }
         KeyCode::PageUp => {
-            let Some(current_chat) = app.current_chat_mut() else {
-                return;
-            };
-            current_chat.vertical_scroll = current_chat.vertical_scroll.saturating_sub(2);
-            current_chat.vertical_scroll_state = current_chat
-                .vertical_scroll_state
-                .position(current_chat.vertical_scroll);
+            app.send_ui_event(UIEvent::ScrollUp);
         }
         _ => {
             app.text_input.input(*key);

@@ -20,10 +20,7 @@ impl std::fmt::Debug for ChatMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ChatMessage")
             .field("role", &self.role)
-            .field(
-                "content",
-                &self.content[..std::cmp::min(10, self.content.len())].to_string(),
-            )
+            .field("content", &self.content)
             .field("original", &self.original)
             .field("rendered", &self.rendered.is_some())
             .finish()

@@ -17,10 +17,13 @@ macro_rules! assert_command_done {
         assert_eq!(event, UIEvent::CommandDone($uuid));
     };
 }
+
+/// Tests showing the diff of an agent workspace, and then pulling the diff into a local branch
 #[test_log::test(tokio::test(flavor = "multi_thread"))]
 async fn test_diff() {
-    let mut app = App::default();
     let (repository, _guard) = test_utils::test_repository();
+    let workdir = repository.path().clone();
+    let mut app = App::default().with_workdir(repository.path());
     let lancedb = storage::get_lancedb(&repository);
     lancedb.setup().await.unwrap();
     let mut terminal = Terminal::new(TestBackend::new(160, 40)).unwrap();
@@ -76,4 +79,61 @@ async fn test_diff() {
 
     terminal.draw(|f| ui(f, f.area(), &mut app)).unwrap();
     insta::assert_snapshot!(terminal.backend());
+
+    // let's pull the diff
+    app.send_ui_event(UIEvent::UserInputCommand(
+        fixed_uuid,
+        UserInputCommand::Diff(DiffVariant::Pull),
+    ));
+
+    assert_command_done!(app, fixed_uuid);
+
+    // First check that the current branch is still main
+    let current_branch = tokio::process::Command::new("git")
+        .arg("rev-parse")
+        .arg("--abbrev-ref")
+        .arg("HEAD")
+        .current_dir(&workdir)
+        .output()
+        .await
+        .unwrap();
+
+    let current_branch = std::str::from_utf8(&current_branch.stdout).unwrap().trim();
+    assert_eq!(current_branch, "main");
+    // Now let's check out the branch and verify we have the hello.txt
+    let output = tokio::process::Command::new("git")
+        .arg("checkout")
+        .arg(format!("kwaak/{fixed_uuid}"))
+        .current_dir(&workdir)
+        .output()
+        .await
+        .unwrap();
+    dbg!(&output);
+
+    let output = tokio::process::Command::new("git")
+        .arg("status")
+        .current_dir(&workdir)
+        .output()
+        .await
+        .unwrap();
+
+    dbg!(&output);
+
+    let output = tokio::process::Command::new("git")
+        .arg("branch")
+        .current_dir(&workdir)
+        .output()
+        .await
+        .unwrap();
+    dbg!(&output);
+
+    // And read the file
+    let content = std::fs::read_to_string(workdir.join("hello.txt")).unwrap();
+
+    assert_eq!(content, "world\n");
+
+    app.handle_single_event(&UIEvent::ScrollDown).await;
+
+    terminal.draw(|f| ui(f, f.area(), &mut app)).unwrap();
+    insta::assert_snapshot!("diff pulled", terminal.backend());
 }

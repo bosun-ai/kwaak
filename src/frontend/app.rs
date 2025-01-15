@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
 use strum::IntoEnumIterator as _;
 use tui_logger::TuiWidgetState;
 use tui_textarea::TextArea;
@@ -77,6 +77,9 @@ pub struct App<'a> {
 
     /// Skip indexing on boot
     pub skip_indexing: bool,
+
+    /// Overide the working directory if it is not "."
+    pub workdir: PathBuf,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -133,6 +136,7 @@ impl Default for App<'_> {
         let command_responder = AppCommandResponder::spawn_for(ui_tx.clone());
 
         Self {
+            workdir: ".".into(),
             splash: splash::Splash::default(),
             has_indexed_on_boot: false,
             skip_indexing: false,
@@ -245,6 +249,15 @@ impl App<'_> {
         } else {
             tracing::error!("Could not find chat with id {chat_id}");
         }
+    }
+
+    #[must_use]
+    /// Overides the working directory
+    ///
+    /// Any actions that use ie system commands use this directory
+    pub fn with_workdir(mut self, workdir: impl Into<PathBuf>) -> Self {
+        self.workdir = workdir.into();
+        self
     }
 
     #[tracing::instrument(skip_all)]
@@ -367,6 +380,35 @@ impl App<'_> {
                         ChatMessage::new_system("Unknown command"),
                     );
                 }
+            }
+            UIEvent::ScrollUp => {
+                let Some(current_chat) = self.current_chat_mut() else {
+                    return;
+                };
+                current_chat.vertical_scroll = current_chat.vertical_scroll.saturating_sub(2);
+                current_chat.vertical_scroll_state = current_chat
+                    .vertical_scroll_state
+                    .position(current_chat.vertical_scroll);
+            }
+            UIEvent::ScrollDown => {
+                let Some(current_chat) = self.current_chat_mut() else {
+                    return;
+                };
+                current_chat.vertical_scroll = current_chat.vertical_scroll.saturating_add(2);
+                current_chat.vertical_scroll_state = current_chat
+                    .vertical_scroll_state
+                    .position(current_chat.vertical_scroll);
+            }
+            UIEvent::ScrollEnd => {
+                let Some(current_chat) = self.current_chat_mut() else {
+                    return;
+                };
+                // Keep the last 10 lines in view
+                let scroll_position = current_chat.num_lines.saturating_sub(10);
+
+                current_chat.vertical_scroll = scroll_position;
+                current_chat.vertical_scroll_state =
+                    current_chat.vertical_scroll_state.position(scroll_position);
             }
         }
     }

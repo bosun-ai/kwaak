@@ -87,6 +87,7 @@ ansi-to-tui = "7.0.0"
 # TODO: Suspect it's lancedb
 openssl-sys = { version = "0.9.104", features = ["vendored"] }
 copypasta = "0.10.1"
+strip-ansi-escapes = "0.2.1"
 
 tempfile = { version = "3.15.0", optional = true }
 
