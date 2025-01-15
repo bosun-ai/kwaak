@@ -1,1 +1,1 @@
-mod chat_mode;
+mod rendered_snapshots;
