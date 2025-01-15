@@ -32,6 +32,10 @@ jobs:
         uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
       # Required for copypasta builds on linux
       - name: Install libxcb
         run: sudo apt install libxcb1-dev libxcb-shape0-dev libxcb-xfixes0-dev
@@ -44,4 +48,4 @@ jobs:
       - name: clippy
         run: cargo clippy --all-targets --all-features
       - name: "Test"
-        run: cargo test --all-features
+        run: cargo nextest run --all-features
