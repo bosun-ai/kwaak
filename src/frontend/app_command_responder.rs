@@ -67,6 +67,7 @@ impl AppCommandResponder {
         }
     }
 
+    #[must_use]
     pub fn for_chat_id(&self, uuid: Uuid) -> Arc<dyn Responder> {
         Arc::new(AppCommandResponderForChatId {
             inner: self.tx.clone(),

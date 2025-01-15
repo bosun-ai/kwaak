@@ -5,7 +5,6 @@ use mockall::automock;
 use swiftide::chat_completion;
 use uuid::Uuid;
 
-
 /// Uuid here refers to the identifier of the command
 ///
 /// TODO: Remove the UUID here, the responder is expected to know the uuid

@@ -19,7 +19,7 @@ use crate::{
     chat::{Chat, ChatState},
     chat_message::ChatMessage,
     commands::{Command, CommandEvent},
-    frontend::{actions},
+    frontend::actions,
 };
 
 use super::{

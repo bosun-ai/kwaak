@@ -1,4 +1,4 @@
-//! Handles all the actions that can be performed in the frontend based on UIEvents
+//! Handles all the actions that can be performed in the frontend based on `UIEvents`
 //!
 //! NOTE: if we can remove the dependency on app, this could be so much nicer
 use copypasta::{ClipboardContext, ClipboardProvider as _};

@@ -105,6 +105,7 @@ impl ChatMessage {
         self
     }
 
+    #[must_use]
     pub fn rendered(&self) -> Option<&Text<'static>> {
         self.rendered.as_ref()
     }

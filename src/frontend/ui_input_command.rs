@@ -5,7 +5,7 @@
 /// or an `UIEvent` depending on which is implemented
 ///
 /// Alternative solution could be to have a thing that executes user input commands directly,
-/// removing the need for the UIEvent roundtrip
+/// removing the need for the `UIEvent` roundtrip
 use crate::commands::Command;
 use anyhow::{Context as _, Result};
 

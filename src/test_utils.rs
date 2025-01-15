@@ -109,6 +109,6 @@ impl ChatCompletion for NoopLLM {
         ChatCompletionResponse::builder()
             .message("Kwek kwek")
             .build()
-            .map_err(|e| e.into())
+            .map_err(std::convert::Into::into)
     }
 }

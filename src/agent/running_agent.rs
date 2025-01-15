@@ -27,6 +27,7 @@ pub struct RunningAgent {
 }
 
 impl RunningAgent {
+    #[must_use]
     pub fn builder() -> RunningAgentBuilder {
         RunningAgentBuilder::default()
     }
