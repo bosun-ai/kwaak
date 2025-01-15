@@ -12,9 +12,6 @@ fn setup() -> Context {
         .tempdir()
         .unwrap();
 
-    let mut cmd = Command::cargo_bin("kwaak").unwrap();
-    cmd.current_dir(&dir);
-
     Context { dir }
 }
 
@@ -22,6 +19,12 @@ impl Context {
     fn cmd(&mut self) -> Command {
         let mut cmd = Command::cargo_bin("kwaak").unwrap();
         cmd.current_dir(&self.dir);
+        cmd.env_clear();
+        cmd.env("TAVILY_API_KEY", "noop");
+        cmd.env("GITHUB_TOKEN", "noop");
+        cmd.env("KWAAK_OPENAI_API_KEY", "noop");
+        cmd.env("RUST_LOG", "debug");
+        cmd.env("RUST_BACKTRACE", "1");
         cmd
     }
 

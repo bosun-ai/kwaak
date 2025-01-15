@@ -77,7 +77,9 @@ impl<'de> Deserialize<'de> for ApiKey {
             let secret = std::fs::read_to_string(path).map_err(serde::de::Error::custom)?;
             Ok(ApiKey(SecretString::from(secret.trim().to_string())))
         } else {
-            Err(serde::de::Error::custom("Invalid API key format"))
+            Err(serde::de::Error::custom(
+                "expected an api key prefixed with `env:`, `text:` or `file:`",
+            ))
         }
     }
 }
@@ -88,5 +90,90 @@ impl Serialize for ApiKey {
         S: serde::ser::Serializer,
     {
         "ApiKey(****)".serialize(serializer)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde::Deserialize;
+    use std::env;
+
+    #[derive(Debug, Deserialize)]
+    struct Config {
+        api_key: ApiKey,
+    }
+
+    #[test]
+    fn test_deserialize_api_key_from_text() {
+        let toml = r#"
+            api_key = "text:my-secret-key"
+        "#;
+
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(config.api_key.expose_secret(), "my-secret-key");
+    }
+
+    #[test]
+    fn test_deserialize_api_key_from_env() {
+        env::set_var("MY_SECRET_KEY", "env-secret-key");
+
+        let toml = r#"
+            api_key = "env:MY_SECRET_KEY"
+        "#;
+
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(config.api_key.expose_secret(), "env-secret-key");
+
+        env::remove_var("MY_SECRET_KEY");
+    }
+
+    #[test]
+    fn test_deserialize_api_key_from_file() {
+        use std::fs::File;
+        use std::io::Write;
+        use tempfile::tempdir;
+
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("secret.txt");
+        let mut file = File::create(&file_path).unwrap();
+        writeln!(file, "file-secret-key").unwrap();
+
+        let toml = format!(
+            r#"
+            api_key = "file:{}"
+        "#,
+            file_path.to_str().unwrap()
+        );
+
+        let config: Config = toml::from_str(&toml).unwrap();
+        assert_eq!(config.api_key.expose_secret(), "file-secret-key");
+    }
+
+    #[test]
+    fn test_deserialize_api_key_without_prefix() {
+        let toml = r#"
+            api_key = "plain-secret-key"
+        "#;
+
+        let expected = "expected an api key prefixed with `env:`, `text:` or `file:`";
+        let config: Result<Config, _> = toml::from_str(toml);
+        assert!(config.is_err());
+        assert!(config.unwrap_err().to_string().contains(expected));
+    }
+
+    #[test]
+    fn test_correct_error_on_missing_env() {
+        let toml = r#"
+            api_key = "env:MY_SECRET_KEY"
+        "#;
+
+        let result: Result<Config, _> = toml::from_str(toml);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        dbg!(&err);
+        assert!(err.to_string().contains("environment variable not found"));
+
+        env::remove_var("MY_SECRET_KEY");
     }
 }

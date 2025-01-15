@@ -36,6 +36,7 @@ pub enum LLMConfiguration {
         prompt_model: OpenAIPromptModel,
         #[serde(default)]
         embedding_model: OpenAIEmbeddingModel,
+        #[serde(default)]
         base_url: Option<Url>,
     },
     Ollama {
