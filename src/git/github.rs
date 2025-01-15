@@ -253,7 +253,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_add_token_to_url() {
-        let (repository, _) = test_utils::test_repository(); // Assuming you have a default implementation for Repository
+        let (mut repository, _) = test_utils::test_repository(); // Assuming you have a default implementation for Repository
+        let config_mut = repository.config_mut();
+        config_mut.github.token = Some("token".into());
         let github_session = GithubSession::from_repository(&repository).unwrap();
 
         let repo_url = "https://github.com/owner/repo";

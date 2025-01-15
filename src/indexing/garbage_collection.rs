@@ -261,16 +261,18 @@ mod tests {
         node: Node,
         subject: GarbageCollector<'static>,
         guard: TestGuard,
+        repository: Repository,
     }
 
     async fn setup() -> TestContext {
         let (repository, guard) = test_utils::test_repository();
 
-        let tempfile = guard.tempdir.path().join("test_file");
+        let dir = repository.path();
+        let tempfile = dir.join("test_file");
         std::fs::write(&tempfile, "Test node").unwrap();
 
         let relative_path = tempfile
-            .strip_prefix(guard.tempdir.path())
+            .strip_prefix(repository.path())
             .unwrap()
             .display()
             .to_string();
@@ -313,6 +315,7 @@ mod tests {
             node,
             subject,
             guard,
+            repository,
         }
     }
 
@@ -397,29 +400,29 @@ mod tests {
 
         std::process::Command::new("git")
             .arg("init")
-            .current_dir(&context.guard.tempdir)
+            .current_dir(context.repository.path())
             .output()
             .expect("failed to stage file for git");
         std::process::Command::new("git")
             .arg("add")
             .arg(&context.node.path)
-            .current_dir(&context.guard.tempdir)
+            .current_dir(context.repository.path())
             .output()
             .expect("failed to stage file for git");
         std::process::Command::new("git")
             .arg("commit")
             .arg("-m")
             .arg("Add file before removal")
-            .current_dir(&context.guard.tempdir)
+            .current_dir(context.repository.path())
             .output()
             .expect("failed to commit file");
 
-        std::fs::remove_file(context.guard.tempdir.path().join(&context.node.path)).unwrap();
+        std::fs::remove_file(context.repository.path().join(&context.node.path)).unwrap();
 
         std::process::Command::new("git")
             .arg("add")
             .arg("-u")
-            .current_dir(&context.guard.tempdir)
+            .current_dir(context.repository.path())
             .output()
             .expect("failed to stage file for deletion");
 
@@ -427,7 +430,7 @@ mod tests {
             .arg("commit")
             .arg("-m")
             .arg("Remove file")
-            .current_dir(&context.guard.tempdir)
+            .current_dir(context.repository.path())
             .output()
             .expect("failed to commit file deletion");
 

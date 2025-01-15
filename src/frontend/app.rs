@@ -508,8 +508,8 @@ async fn poll_ui_events(ui_tx: mpsc::UnboundedSender<UIEvent>) -> Result<()> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_last_or_first_chat() {
+    #[tokio::test]
+    async fn test_last_or_first_chat() {
         let mut app = App::default();
         let chat = Chat::default();
         let first_uuid = app.current_chat_uuid;
@@ -529,22 +529,22 @@ mod tests {
         assert_eq!(app.current_chat_uuid, second_uuid);
     }
 
-    #[test]
-    fn test_app_mode_from_index() {
+    #[tokio::test]
+    async fn test_app_mode_from_index() {
         assert_eq!(AppMode::from_index(0), Some(AppMode::Chat));
         assert_eq!(AppMode::from_index(1), Some(AppMode::Logs));
         assert_eq!(AppMode::from_index(2), None);
     }
 
-    #[test]
-    fn test_app_mode_tab_index() {
+    #[tokio::test]
+    async fn test_app_mode_tab_index() {
         assert_eq!(AppMode::Chat.tab_index(), Some(0));
         assert_eq!(AppMode::Logs.tab_index(), Some(1));
         assert_eq!(AppMode::Quit.tab_index(), None);
     }
 
-    #[test]
-    fn test_change_mode() {
+    #[tokio::test]
+    async fn test_change_mode() {
         let mut app = App::default();
         assert_eq!(app.mode, AppMode::Chat);
         assert_eq!(app.selected_tab, 0);
@@ -558,8 +558,8 @@ mod tests {
         assert_eq!(app.selected_tab, 1);
     }
 
-    #[test]
-    fn test_add_chat() {
+    #[tokio::test]
+    async fn test_add_chat() {
         let mut app = App::default();
         let initial_chat_count = app.chats.len();
 
@@ -572,8 +572,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_next_chat() {
+    #[tokio::test]
+    async fn test_next_chat() {
         let mut app = App::default();
         let first_uuid = app.current_chat_uuid;
 
@@ -587,8 +587,8 @@ mod tests {
         assert_eq!(app.current_chat_uuid, second_uuid);
     }
 
-    #[test]
-    fn test_find_chat() {
+    #[tokio::test]
+    async fn test_find_chat() {
         let mut app = App::default();
         let chat = Chat::default();
         let uuid = chat.uuid;
@@ -599,8 +599,8 @@ mod tests {
         assert!(app.find_chat(Uuid::new_v4()).is_none());
     }
 
-    #[test]
-    fn test_find_chat_mut() {
+    #[tokio::test]
+    async fn test_find_chat_mut() {
         let mut app = App::default();
         let chat = Chat::default();
         let uuid = chat.uuid;
@@ -611,20 +611,20 @@ mod tests {
         assert!(app.find_chat_mut(Uuid::new_v4()).is_none());
     }
 
-    #[test]
-    fn test_current_chat() {
+    #[tokio::test]
+    async fn test_current_chat() {
         let app = App::default();
         assert!(app.current_chat().is_some());
     }
 
-    #[test]
-    fn test_current_chat_mut() {
+    #[tokio::test]
+    async fn test_current_chat_mut() {
         let mut app = App::default();
         assert!(app.current_chat_mut().is_some());
     }
 
-    #[test]
-    fn test_add_chat_message() {
+    #[tokio::test]
+    async fn test_add_chat_message() {
         let mut app = App::default();
         let message = ChatMessage::new_system("Test message");
 
