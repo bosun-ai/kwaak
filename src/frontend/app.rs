@@ -78,7 +78,7 @@ pub struct App<'a> {
     /// Skip indexing on boot
     pub skip_indexing: bool,
 
-    /// Overide the working directory if it is not "."
+    /// Override the working directory if it is not "."
     pub workdir: PathBuf,
 }
 
@@ -252,7 +252,7 @@ impl App<'_> {
     }
 
     #[must_use]
-    /// Overides the working directory
+    /// Overrides the working directory
     ///
     /// Any actions that use ie system commands use this directory
     pub fn with_workdir(mut self, workdir: impl Into<PathBuf>) -> Self {

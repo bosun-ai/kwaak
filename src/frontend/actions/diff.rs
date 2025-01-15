@@ -53,7 +53,7 @@ pub async fn diff_show(app: &mut App<'_>) {
     }
 }
 
-// Pulls the diff from the backend as a patch and applies it to the same branch as the agent is runing in
+// Pulls the diff from the backend as a patch and applies it to the same branch as the agent is running in
 #[allow(clippy::too_many_lines)]
 pub async fn diff_pull(app: &mut App<'_>) {
     // if the current branch is dirty, we should not pull
