@@ -1,8 +1,9 @@
+use std::sync::Arc;
+
 use kwaak::agent::tools;
 use serde_json::json;
-use swiftide::agents::DefaultContext;
-use swiftide_core::AgentContext;
-use swiftide_docker_executor::DockerExecutor;
+use swiftide::agents::{tools::local_executor::LocalExecutor, DefaultContext};
+use swiftide_core::{AgentContext, ToolExecutor};
 
 macro_rules! invoke {
     // Takes the context and the json value
@@ -20,20 +21,17 @@ macro_rules! invoke {
     }};
 }
 
-async fn setup_context() -> DefaultContext {
-    let executor = DockerExecutor::default()
-        .with_image_name("test")
-        .to_owned()
-        .start()
-        .await
-        .unwrap();
+fn setup_context() -> DefaultContext {
+    // WARN: These do NOT run in isolation
+    let executor = LocalExecutor::default();
 
-    DefaultContext::from_executor(executor)
+    DefaultContext::from_executor(Arc::new(executor) as Arc<dyn ToolExecutor>)
 }
-#[test_log::test(tokio::test(flavor = "multi_thread"))]
+
+#[test_log::test(tokio::test)]
 async fn test_search_file() {
     let tool = tools::search_file();
-    let context = setup_context().await;
+    let context = setup_context();
 
     // list dirs on empty
     let list_result = invoke!(&tool, &context, json!({"file_name": "."}));
@@ -66,10 +64,10 @@ async fn test_search_file() {
     assert!(with_case_insensitive.contains("src/main.rs"));
 }
 
-#[test_log::test(tokio::test(flavor = "multi_thread"))]
+#[test_log::test(tokio::test)]
 async fn test_search_code() {
     let tool = tools::search_code();
-    let context = setup_context().await;
+    let context = setup_context();
 
     // includes hidden
     let include_hidden = invoke!(&tool, &context, json!({"query": "runs-on"}));

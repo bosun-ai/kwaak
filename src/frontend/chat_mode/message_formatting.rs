@@ -243,6 +243,7 @@ mod tests {
     fn test_format_tool_call() {
         let tool_call = swiftide::chat_completion::ToolCall::builder()
             .name("shell_command")
+            .id("tool_id")
             .args("{\"cmd\":\"ls\"}")
             .build()
             .unwrap();
