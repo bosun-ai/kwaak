@@ -260,7 +260,7 @@ mod tests {
         lancedb: Arc<LanceDB>,
         node: Node,
         subject: GarbageCollector<'static>,
-        guard: TestGuard,
+        _guard: TestGuard,
         repository: Repository,
     }
 
@@ -314,7 +314,7 @@ mod tests {
             lancedb,
             node,
             subject,
-            guard,
+            _guard: guard,
             repository,
         }
     }

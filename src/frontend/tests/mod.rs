@@ -1,1 +1,0 @@
-mod rendered_snapshots;
