@@ -1,9 +1,8 @@
-use std::sync::Arc;
-
 use kwaak::agent::tools;
 use serde_json::json;
-use swiftide::agents::{tools::local_executor::LocalExecutor, DefaultContext};
-use swiftide_core::{AgentContext, ToolExecutor};
+use swiftide::agents::DefaultContext;
+use swiftide_core::AgentContext;
+use swiftide_docker_executor::DockerExecutor;
 
 macro_rules! invoke {
     // Takes the context and the json value
@@ -21,17 +20,21 @@ macro_rules! invoke {
     }};
 }
 
-fn setup_context() -> DefaultContext {
-    // WARN: These do NOT run in isolation
-    let executor = LocalExecutor::default();
+async fn setup_context() -> DefaultContext {
+    let executor = DockerExecutor::default()
+        .with_image_name("test")
+        .to_owned()
+        .start()
+        .await
+        .unwrap();
 
-    DefaultContext::from_executor(Arc::new(executor) as Arc<dyn ToolExecutor>)
+    DefaultContext::from_executor(executor)
 }
 
 #[test_log::test(tokio::test)]
 async fn test_search_file() {
     let tool = tools::search_file();
-    let context = setup_context();
+    let context = setup_context().await;
 
     // list dirs on empty
     let list_result = invoke!(&tool, &context, json!({"file_name": "."}));
@@ -67,7 +70,7 @@ async fn test_search_file() {
 #[test_log::test(tokio::test)]
 async fn test_search_code() {
     let tool = tools::search_code();
-    let context = setup_context();
+    let context = setup_context().await;
 
     // includes hidden
     let include_hidden = invoke!(&tool, &context, json!({"query": "runs-on"}));
