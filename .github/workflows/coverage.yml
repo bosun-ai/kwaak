@@ -13,7 +13,7 @@ concurrency:
 env:
   TAVILY_API_KEY: noop
   KWAAK_OPENAI_API_KEY: noop
-  GITHUB_TOKEN: noop
+  KWAAK_GITHUB_TOKEN: noop
 
 jobs:
   test:
@@ -43,7 +43,7 @@ jobs:
           tool: cargo-llvm-cov,cargo-nextest
       - name: Generate code coverage
         run: |
-          cargo +nightly llvm-cov nextest --all-features --lcov --output-path lcov.info -j 2
+          cargo +nightly llvm-cov nextest --all-features --lcov --output-path lcov.info
 
       - name: Coveralls
         uses: coverallsapp/github-action@v2

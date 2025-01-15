@@ -15,11 +15,35 @@ env:
   RUSTFLAGS: "-Dwarnings"
   TAVILY_API_KEY: noop
   KWAAK_OPENAI_API_KEY: noop
-  GITHUB_TOKEN: noop
+  KWAAK_GITHUB_TOKEN: noop
 
 jobs:
   test:
-    name: Test & lint
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+      # Required for copypasta builds on linux
+      - name: Install libxcb
+        run: sudo apt install libxcb1-dev libxcb-shape0-dev libxcb-xfixes0-dev
+      - name: "Test"
+        run: cargo nextest run --all-features --no-fail-fast
+
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -47,5 +71,3 @@ jobs:
       #   uses: EmbarkStudios/cargo-deny-action@v2
       - name: clippy
         run: cargo clippy --all-targets --all-features
-      - name: "Test"
-        run: cargo nextest run --all-features -j 2
