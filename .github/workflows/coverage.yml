@@ -25,11 +25,10 @@ jobs:
         uses: jlumbroso/free-disk-space@main
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@v2
 
       # Required for copypasta builds on linux
       - name: Install libxcb
