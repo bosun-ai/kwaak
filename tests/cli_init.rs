@@ -21,7 +21,7 @@ impl Context {
         cmd.current_dir(&self.dir);
         cmd.env_clear();
         cmd.env("TAVILY_API_KEY", "noop");
-        cmd.env("GITHUB_TOKEN", "noop");
+        cmd.env("KWAAK_GITHUB_TOKEN", "noop");
         cmd.env("KWAAK_OPENAI_API_KEY", "noop");
         cmd.env("RUST_LOG", "debug");
         cmd.env("RUST_BACKTRACE", "1");
