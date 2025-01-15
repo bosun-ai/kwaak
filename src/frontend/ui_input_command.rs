@@ -19,18 +19,34 @@ use super::ui_event::UIEvent;
     strum_macros::AsRefStr,
     strum_macros::EnumString,
     strum_macros::EnumIter,
+    strum_macros::EnumMessage,
     PartialEq,
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum UserInputCommand {
+    /// Stop the application
     Quit,
+    /// Show the current configuration
     ShowConfig,
+    /// Force a re-index of the repository
     IndexRepository,
+    /// Switch to the next chat
     NextChat,
+    /// Start a new chat
     NewChat,
+    /// Delete the current chat
     DeleteChat,
+    /// Copy the last message from an agent
     Copy,
+    /// Show or pull changes made by an agent
+    /// Defaults to `show` if no argument is given
+    ///
+    /// Usage:
+    ///     /diff show - Shows the diff in the chat
+    ///     /diff pull - Pulls the diff into a new branch
     Diff(DiffVariant),
+    /// Print help
+    Help,
 }
 
 #[derive(
@@ -77,6 +93,7 @@ impl UserInputCommand {
             UserInputCommand::NewChat => Some(UIEvent::NewChat),
             UserInputCommand::Copy => Some(UIEvent::CopyLastMessage),
             UserInputCommand::DeleteChat => Some(UIEvent::DeleteChat),
+            UserInputCommand::Help => Some(UIEvent::Help),
             UserInputCommand::Diff(diff_variant) => match diff_variant {
                 DiffVariant::Show => Some(UIEvent::DiffShow),
                 DiffVariant::Pull => Some(UIEvent::DiffPull),

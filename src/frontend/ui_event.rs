@@ -45,6 +45,8 @@ pub enum UIEvent {
     DiffPull,
     /// Show the current changes
     DiffShow,
+    /// Prints a help message
+    Help,
 }
 
 impl From<KeyEvent> for UIEvent {

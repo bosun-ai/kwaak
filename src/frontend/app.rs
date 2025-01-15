@@ -410,6 +410,7 @@ impl App<'_> {
                 current_chat.vertical_scroll_state =
                     current_chat.vertical_scroll_state.position(scroll_position);
             }
+            UIEvent::Help => actions::help(self),
         }
     }
 

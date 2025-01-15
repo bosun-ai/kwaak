@@ -65,10 +65,17 @@ pub fn ui(f: &mut ratatui::Frame, area: Rect, app: &mut App) {
 }
 
 fn render_chat_messages(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
+    let num_chats = app.chats.len();
     let Some(current_chat) = app.current_chat_mut() else {
         return;
     };
-    let messages = current_chat.messages.clone();
+    let mut messages = current_chat.messages.clone();
+
+    if messages.is_empty() && num_chats == 1 {
+        messages.push(crate::chat_message::ChatMessage::new_system(
+            "Let's get kwekking. Start chatting with an agent and confirm with ^s to send! At any time you can type `/help` to list keybindings and other slash commands.",
+        ));
+    }
     let chat_content: Text = messages
         .iter()
         .flat_map(|m| format_chat_message(current_chat, m))

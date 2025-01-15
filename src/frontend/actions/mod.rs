@@ -1,11 +1,14 @@
 //! Handles all the actions that can be performed in the frontend based on `UIEvent`
 //!
 //! NOTE: if we can remove the dependency on app, this could be so much nicer
+use std::collections::HashMap;
+
 use copypasta::{ClipboardContext, ClipboardProvider as _};
+use strum::{EnumMessage, IntoEnumIterator};
 
-use crate::{chat::Chat, chat_message::ChatMessage, commands::Command};
+use crate::{chat::Chat, chat_message::ChatMessage, commands::Command, templates::Templates};
 
-use super::App;
+use super::{App, UserInputCommand};
 
 mod diff;
 
@@ -57,4 +60,32 @@ pub fn copy_last_message(app: &mut App) {
         app.current_chat_uuid,
         ChatMessage::new_system("Copied last message to clipboard"),
     );
+}
+
+pub fn help(app: &mut App) {
+    let message = help_message();
+
+    app.add_chat_message(app.current_chat_uuid, ChatMessage::new_system(message));
+}
+
+fn help_message() -> String {
+    let input_commands_with_description = UserInputCommand::iter()
+        .map(|i| (i.to_string(), i.get_documentation()))
+        .collect::<HashMap<_, _>>();
+
+    let mut context = tera::Context::new();
+    context.insert("commands", &input_commands_with_description);
+
+    Templates::render("help.md", &context).expect("failed to render help message; nice")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_help_message() {
+        let message = help_message();
+        insta::assert_snapshot!(message);
+    }
 }

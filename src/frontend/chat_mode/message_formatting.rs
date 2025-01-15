@@ -92,7 +92,8 @@ pub fn format_chat_message<'a>(current_chat: &Chat, message: &'a ChatMessage) ->
         }
     }
 
-    if !message.role().is_assistant() {
+    // If it's a single line message and not an assistant message, apply the style to the whole line
+    if !message.role().is_assistant() && rendered_text.lines.len() == 1 {
         for line in &mut rendered_text.lines {
             for span in &mut line.spans {
                 span.style = style;
