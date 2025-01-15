@@ -6,7 +6,7 @@ use crate::{
     frontend::{ui_event::UIEvent, App},
 };
 
-// TODO: Remove panics :))
+// Shows a diff to the user
 pub async fn diff_show(app: &mut App<'_>) {
     // Create a oneshot
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
@@ -20,11 +20,7 @@ pub async fn diff_show(app: &mut App<'_>) {
         .build()
         .expect("Infallible; should not fail to build event for diff show");
 
-    app.command_tx
-        .as_ref()
-        .expect("Command tx not set")
-        .send(event)
-        .expect("Failed to dispatch command");
+    app.dispatch_command_event(event);
 
     // App tx so we forward everything else
     // TODO: Think of a nicer way to do this. It's a bit hacky. Maybe a forwarder?
@@ -56,4 +52,4 @@ pub async fn diff_show(app: &mut App<'_>) {
     }
 }
 
-pub async fn diff_pull(app: &mut App<'_>) {}
+pub async fn diff_pull(_app: &mut App<'_>) {}

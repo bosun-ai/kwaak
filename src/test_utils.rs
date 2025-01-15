@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(clippy::missing_panics_doc)]
 use swiftide::chat_completion::ChatCompletionResponse;
 use swiftide_core::{ChatCompletion, EmbeddingModel, SimplePrompt};
 use uuid::Uuid;

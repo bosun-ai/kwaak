@@ -118,13 +118,13 @@ impl Responder for Arc<dyn Responder> {
 
 // noop responder
 impl Responder for () {
-    fn send(&self, response: CommandResponse) {}
+    fn send(&self, _response: CommandResponse) {}
 
-    fn agent_message(&self, message: chat_completion::ChatMessage) {}
+    fn agent_message(&self, _message: chat_completion::ChatMessage) {}
 
-    fn system_message(&self, message: &str) {}
+    fn system_message(&self, _message: &str) {}
 
-    fn update(&self, state: &str) {}
+    fn update(&self, _state: &str) {}
 
-    fn rename(&self, name: &str) {}
+    fn rename(&self, _name: &str) {}
 }

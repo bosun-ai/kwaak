@@ -1,5 +1,5 @@
 /// When a user types an input command (/ prefix) it is parsed into a `UserInputCommand`
-/// and then bubled up to an `UIEvent::UserInputCommand``
+/// and then bubbled up to an `UIEvent::UserInputCommand`
 ///
 /// The event handler in the app will then try to convert the `UserInputCommand` into a `Command`
 /// or an `UIEvent` depending on which is implemented

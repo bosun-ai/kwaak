@@ -26,7 +26,7 @@ use super::ui_event::UIEvent;
 pub struct AppCommandResponder {
     // ui_tx: mpsc::UnboundedSender<UIEvent>,
     tx: mpsc::UnboundedSender<CommandResponse>,
-    handle: AbortOnDropHandle<()>,
+    _handle: AbortOnDropHandle<()>,
 }
 
 #[derive(Debug, Clone)]
@@ -63,7 +63,7 @@ impl AppCommandResponder {
         // clone of the responder without the rx
         AppCommandResponder {
             tx,
-            handle: AbortOnDropHandle::new(handle),
+            _handle: AbortOnDropHandle::new(handle),
         }
     }
 

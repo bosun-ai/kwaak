@@ -219,6 +219,15 @@ impl App<'_> {
             .build()
             .expect("Infallible; Failed to build command event");
 
+        self.dispatch_command_event(event);
+    }
+
+    /// Dispatch a command event to the backend
+    ///
+    /// # Panics
+    ///
+    /// If the command dispatcher is not set or the handler is disconnected
+    pub fn dispatch_command_event(&mut self, event: CommandEvent) {
         self.command_tx
             .as_ref()
             .expect("Command tx not set")
