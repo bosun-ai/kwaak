@@ -12,7 +12,7 @@ lint_and_fix = "cargo clippy --fix --allow-dirty --allow-staged; cargo fmt"
 owner = "bosun-ai"
 repository = "kwaak"
 main_branch = "master"
-token = "env:GITHUB_TOKEN"
+token = "env:KWAAK_GITHUB_TOKEN"
 
 [llm.indexing]
 api_key = "env:KWAAK_OPENAI_API_KEY"
