@@ -1,7 +1,7 @@
 use anyhow::Result;
 use derive_builder::Builder;
 use std::sync::Arc;
-use swiftide_core::ToolExecutor;
+use swiftide::traits::{AgentContext, ToolExecutor};
 
 use swiftide::agents::Agent;
 use tokio::sync::Mutex;
@@ -18,6 +18,9 @@ pub struct RunningAgent {
     pub agent: Arc<Mutex<Agent>>,
     /// A copy of the running tool executor the agent is using
     pub executor: Arc<dyn ToolExecutor>,
+    /// The content the agent is running with
+    #[builder(setter(into))]
+    pub agent_context: Arc<dyn AgentContext>,
     /// Used to kill the agent
     #[builder(default)]
     pub cancel_token: CancellationToken,

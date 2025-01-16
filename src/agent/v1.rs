@@ -10,7 +10,7 @@ use swiftide::{
     traits::{AgentContext, Command, SimplePrompt, ToolExecutor},
 };
 use tavily::Tavily;
-use uuid::Uuid;
+use uuid::{timestamp::context, Uuid};
 
 use super::{
     conversation_summarizer::ConversationSummarizer,
@@ -159,8 +159,9 @@ pub async fn start_agent(
         ConversationSummarizer::new(query_provider.clone(), &tools, &agent_env.start_ref);
     let maybe_lint_fix_command = repository.config().commands.lint_and_fix.clone();
 
+    let context = Arc::new(context);
     let agent = Agent::builder()
-        .context(context)
+        .context(Arc::clone(&context))
         .system_prompt(system_prompt)
         .tools(tools)
         .before_all(move |context| {
@@ -254,6 +255,7 @@ pub async fn start_agent(
         .agent(agent)
         .executor(executor)
         .agent_environment(agent_env)
+        .agent_context(context as Arc<dyn AgentContext>)
         .build()
 }
 

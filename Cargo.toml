@@ -129,9 +129,9 @@ default = ["otel"]
 
 
 [patch.crates-io]
-# swiftide = { path = "../swiftide/swiftide" }
-# swiftide-macros = { path = "../swiftide/swiftide-macros" }
-# swiftide-core = { path = "../swiftide/swiftide-core" }
+swiftide = { path = "../swiftide/swiftide" }
+swiftide-macros = { path = "../swiftide/swiftide-macros" }
+swiftide-core = { path = "../swiftide/swiftide-core" }
 
 
 # The profile that 'dist' will build with

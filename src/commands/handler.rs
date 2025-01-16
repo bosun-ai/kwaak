@@ -160,6 +160,16 @@ impl CommandHandler {
 
                 event.responder().system_message(&output);
             }
+            Command::RetryChat => {
+                let Some(agent) = self.find_agent_by_uuid(event.uuid()).await else {
+                    event
+                        .responder()
+                        .system_message("No agent found (yet), is it starting up?");
+                    return Ok(());
+                };
+
+                agent.agent_context.redrive().await;
+            }
             Command::Quit { .. } => unreachable!("Quit should be handled earlier"),
         }
         // Sleep for a tiny bit to avoid racing with agent responses
@@ -186,12 +196,6 @@ impl CommandHandler {
         query: &str,
         responder: Arc<dyn Responder>,
     ) -> Result<RunningAgent> {
-        if let Some(agent) = self.agents.write().await.get_mut(&uuid) {
-            // Ensure we always send a fresh cancellation token
-            agent.cancel_token = CancellationToken::new();
-            return Ok(agent.clone());
-        }
-
         let running_agent = agent::start_agent(uuid, &self.repository, query, responder).await?;
         let cloned = running_agent.clone();
 
@@ -201,8 +205,14 @@ impl CommandHandler {
     }
 
     async fn find_agent_by_uuid(&self, uuid: Uuid) -> Option<RunningAgent> {
-        let agents = self.agents.read().await;
-        agents.get(&uuid).cloned()
+        if let Some(agent) = self.agents.read().await.get(&uuid) {
+            // Ensure we always send a fresh cancellation token
+            // WARN: WHY DOES THIS NOT GIVE A COMPILE ERROR
+            agent.cancel_token = CancellationToken::new();
+
+            return Some(agent.clone());
+        }
+        None
     }
 
     async fn stop_agent(&self, uuid: Uuid, responder: Arc<dyn Responder>) -> Result<()> {
