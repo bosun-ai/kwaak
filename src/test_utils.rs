@@ -17,11 +17,17 @@ pub fn test_repository() -> (Repository, TestGuard) {
             test = "cargo test"
             coverage = "cargo tarpaulin"
 
-            [github]
+            [git]
             owner = "bosun-ai"
             repository = "kwaak"
             
-            [llm]
+            [llm.indexing]
+            provider = "Testing"
+
+            [llm.query]
+            provider = "Testing"
+
+            [llm.embedding]
             provider = "Testing"
             "#;
     let config: Config = toml.parse().unwrap();

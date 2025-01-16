@@ -50,7 +50,14 @@ async fn main() -> Result<()> {
     init_panic_hook();
 
     // Load configuration
-    let config = Config::load(&args.config_path).await?;
+    let config = match Config::load(&args.config_path).await {
+        Ok(config) => config,
+        Err(error) => {
+            eprintln!("Failed to load configuration: {error:#}");
+
+            std::process::exit(1);
+        }
+    };
     let repository = repository::Repository::from_config(config);
 
     fs::create_dir_all(repository.config().cache_dir()).await?;

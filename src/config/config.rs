@@ -39,11 +39,20 @@ pub struct Config {
     #[serde(default)]
     pub docker: DockerConfiguration,
 
-    pub github: GithubConfiguration,
+    pub git: GitConfiguration,
 
     /// Optional: Use tavily as a search tool
     #[serde(default)]
     pub tavily_api_key: Option<ApiKey>,
+
+    /// Optional: Use github for code search, creating pull requests, and automatic pushing to
+    /// remotes
+    #[serde(default)]
+    pub github_api_key: Option<ApiKey>,
+
+    /// Required if using `OpenAI`
+    #[serde(default)]
+    pub openai_api_key: Option<ApiKey>,
 
     #[serde(default)]
     pub tool_executor: SupportedToolExecutors,
@@ -98,22 +107,22 @@ impl Default for DockerConfiguration {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GithubConfiguration {
+pub struct GitConfiguration {
     // TODO: Repo and owner can probably be derived from the origin url
     // Personally would prefer an onboarding that prefils instead of inferring at runtime
     pub repository: String,
     pub owner: String,
     #[serde(default = "default_main_branch")]
     pub main_branch: String,
-
-    pub token: Option<ApiKey>,
 }
 
 impl FromStr for Config {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        toml::from_str(s).context("Failed to parse configuration")
+        toml::from_str(s)
+            .context("Failed to parse configuration")
+            .and_then(Config::fill_llm_api_keys)
     }
 }
 
@@ -124,31 +133,41 @@ impl Config {
             .await
             .context("Could not find `kwaak.toml` in current directory")?;
 
-        toml::from_str(std::str::from_utf8(&file)?).context("Failed to parse configuration")
+        Self::from_str(std::str::from_utf8(&file)?)
+    }
+
+    // Seeds the api keys into the LLM configurations
+    //
+    pub fn fill_llm_api_keys(mut self) -> Result<Self> {
+        let LLMConfigurations {
+            indexing,
+            embedding,
+            query,
+        } = &mut *self.llm;
+        {
+            fill_llm(indexing, self.openai_api_key.as_ref())?;
+            fill_llm(embedding, self.openai_api_key.as_ref())?;
+            fill_llm(query, self.openai_api_key.as_ref())?;
+        }
+        Ok(self)
     }
 
     #[must_use]
     pub fn indexing_provider(&self) -> &LLMConfiguration {
-        match &*self.llm {
-            LLMConfigurations::Single(config) => config,
-            LLMConfigurations::Multiple { indexing, .. } => indexing,
-        }
+        let LLMConfigurations { indexing, .. } = &*self.llm;
+        indexing
     }
 
     #[must_use]
     pub fn embedding_provider(&self) -> &LLMConfiguration {
-        match &*self.llm {
-            LLMConfigurations::Single(config) => config,
-            LLMConfigurations::Multiple { embedding, .. } => embedding,
-        }
+        let LLMConfigurations { embedding, .. } = &*self.llm;
+        embedding
     }
 
     #[must_use]
     pub fn query_provider(&self) -> &LLMConfiguration {
-        match &*self.llm {
-            LLMConfigurations::Single(config) => config,
-            LLMConfigurations::Multiple { query, .. } => query,
-        }
+        let LLMConfigurations { query, .. } = &*self.llm;
+        query
     }
 
     #[must_use]
@@ -190,6 +209,28 @@ impl Config {
     }
 }
 
+fn fill_llm(llm: &mut LLMConfiguration, root_key: Option<&ApiKey>) -> Result<()> {
+    match llm {
+        LLMConfiguration::OpenAI { api_key, .. } => {
+            // If the user omitted api_key in the config,
+            // fill from the root-level openai_api_key if present.
+            if api_key.is_none() {
+                if let Some(root) = root_key {
+                    *api_key = Some(root.clone());
+                } else {
+                    anyhow::bail!("OpenAI config requires an `api_key`, and none was provided or available in the root");
+                }
+            }
+        }
+        LLMConfiguration::Ollama { .. } => {
+            // Nothing to do for Ollama
+        }
+        #[cfg(debug_assertions)]
+        LLMConfiguration::Testing => {}
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(irrefutable_let_patterns)]
@@ -197,45 +238,6 @@ mod tests {
 
     use super::*;
     use swiftide::integrations::treesitter::SupportedLanguages;
-
-    #[test]
-    fn test_deserialize_toml_single() {
-        let toml = r#"
-            language = "rust"
-
-            [commands]
-            test = "cargo test"
-            coverage = "cargo tarpaulin"
-
-            [github]
-            owner = "bosun-ai"
-            repository = "kwaak"
-            token = "text:some-token"
-
-            [llm]
-            provider = "OpenAI"
-            api_key = "text:test-key"
-            prompt_model = "gpt-4o-mini"
-            "#;
-
-        let config: Config = toml::from_str(toml).unwrap();
-        assert_eq!(config.language, SupportedLanguages::Rust);
-
-        if let LLMConfigurations::Single(LLMConfiguration::OpenAI {
-            api_key,
-            prompt_model,
-            ..
-        }) = &*config.llm
-        {
-            assert_eq!(api_key.expose_secret(), "test-key");
-            assert_eq!(prompt_model, &OpenAIPromptModel::GPT4OMini);
-        } else {
-            panic!("Expected single OpenAI configuration");
-        }
-
-        // Verify default otel_enabled
-        assert!(!config.otel_enabled);
-    }
 
     #[test]
     fn test_deserialize_toml_multiple() {
@@ -246,10 +248,9 @@ mod tests {
             test = "cargo test"
             coverage = "cargo tarpaulin"
 
-            [github]
+            [git]
             owner = "bosun-ai"
             repository = "kwaak"
-            token = "text:some-token"
 
             [llm.indexing]
             provider = "OpenAI"
@@ -267,10 +268,10 @@ mod tests {
             embedding_model = "text-embedding-3-small"
             "#;
 
-        let config: Config = toml::from_str(toml).unwrap();
+        let config: Config = Config::from_str(toml).unwrap();
         assert_eq!(config.language, SupportedLanguages::Rust);
 
-        if let LLMConfigurations::Multiple {
+        if let LLMConfigurations {
             indexing,
             embedding,
             query,
@@ -282,7 +283,7 @@ mod tests {
                 ..
             } = indexing
             {
-                assert_eq!(api_key.expose_secret(), "test-key");
+                assert_eq!(api_key.as_ref().unwrap().expose_secret(), "test-key");
                 assert_eq!(prompt_model, &OpenAIPromptModel::GPT4OMini);
             } else {
                 panic!("Expected OpenAI configuration for indexing");
@@ -294,7 +295,7 @@ mod tests {
                 ..
             } = query
             {
-                assert_eq!(api_key.expose_secret(), "other-test-key");
+                assert_eq!(api_key.as_ref().unwrap().expose_secret(), "other-test-key");
                 assert_eq!(prompt_model, &OpenAIPromptModel::GPT4OMini);
             } else {
                 panic!("Expected OpenAI configuration for query");
@@ -306,7 +307,7 @@ mod tests {
                 ..
             } = embedding
             {
-                assert_eq!(api_key.expose_secret(), "other-test-key");
+                assert_eq!(api_key.as_ref().unwrap().expose_secret(), "other-test-key");
                 assert_eq!(embedding_model, &OpenAIEmbeddingModel::TextEmbedding3Small);
             }
         } else {
@@ -315,5 +316,52 @@ mod tests {
 
         // Verify default otel_enabled
         assert!(!config.otel_enabled);
+    }
+
+    #[test]
+    fn test_seed_openai_api_key_from_root_multiple_with_overwrite() {
+        let toml = r#"
+            language = "rust"
+
+            openai_api_key = "text:root-api-key"
+
+            [commands]
+            test = "cargo test"
+            coverage = "cargo tarpaulin"
+
+            [git]
+            owner = "bosun-ai"
+            repository = "kwaak"
+
+            [llm.indexing]
+            provider = "OpenAI"
+            prompt_model = "gpt-4o-mini"
+
+            [llm.query]
+            provider = "OpenAI"
+            api_key = "text:child-api-key"
+            prompt_model = "gpt-4o-mini"
+
+            [llm.embedding]
+            provider = "OpenAI"
+            embedding_model = "text-embedding-3-small"
+        "#;
+
+        let config: Config = Config::from_str(toml).unwrap();
+
+        let LLMConfiguration::OpenAI { api_key, .. } = config.indexing_provider() else {
+            panic!("Expected OpenAI configuration for indexing")
+        };
+
+        assert_eq!(
+            api_key.as_ref().unwrap().expose_secret(),
+            config.openai_api_key.as_ref().unwrap().expose_secret()
+        );
+
+        let LLMConfiguration::OpenAI { api_key, .. } = config.query_provider() else {
+            panic!("Expected OpenAI configuration for indexing")
+        };
+
+        assert_eq!(api_key.as_ref().unwrap().expose_secret(), "child-api-key");
     }
 }

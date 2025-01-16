@@ -25,8 +25,7 @@ impl GithubSession {
     pub fn from_repository(repository: &Repository) -> Result<Self> {
         let token = repository
             .config()
-            .github
-            .token
+            .github_api_key
             .clone()
             .ok_or(anyhow::anyhow!("No github token found in config"))?;
 
@@ -66,7 +65,7 @@ impl GithubSession {
     }
 
     pub fn main_branch(&self) -> &str {
-        &self.repository.config().github.main_branch
+        &self.repository.config().git.main_branch
     }
 
     #[tracing::instrument(skip(self), err)]
@@ -95,8 +94,8 @@ impl GithubSession {
         description: impl AsRef<str>,
         messages: &[ChatMessage],
     ) -> Result<PullRequest> {
-        let owner = &self.repository.config().github.owner;
-        let repo = &self.repository.config().github.repository;
+        let owner = &self.repository.config().git.owner;
+        let repo = &self.repository.config().git.repository;
 
         tracing::debug!(messages = ?messages,
             "Creating pull request for {}/{} from branch {} onto {}",
@@ -255,7 +254,7 @@ mod tests {
     async fn test_add_token_to_url() {
         let (mut repository, _) = test_utils::test_repository(); // Assuming you have a default implementation for Repository
         let config_mut = repository.config_mut();
-        config_mut.github.token = Some("token".into());
+        config_mut.github_api_key = Some("token".into());
         let github_session = GithubSession::from_repository(&repository).unwrap();
 
         let repo_url = "https://github.com/owner/repo";
@@ -267,8 +266,7 @@ mod tests {
                 "https://x-access-token:{}@github.com/owner/repo",
                 repository
                     .config()
-                    .github
-                    .token
+                    .github_api_key
                     .as_ref()
                     .unwrap()
                     .expose_secret()
@@ -280,7 +278,7 @@ mod tests {
     async fn test_add_token_to_git_url() {
         let (mut repository, _) = test_utils::test_repository(); // Assuming you have a default implementation for Repository
         let config_mut = repository.config_mut();
-        config_mut.github.token = Some("token".into());
+        config_mut.github_api_key = Some("token".into());
         let github_session = GithubSession::from_repository(&repository).unwrap();
 
         let repo_url = "git@github.com:user/repo.git";
@@ -292,8 +290,7 @@ mod tests {
                 "https://x-access-token:{}@github.com/user/repo.git",
                 repository
                     .config()
-                    .github
-                    .token
+                    .github_api_key
                     .as_ref()
                     .unwrap()
                     .expose_secret()

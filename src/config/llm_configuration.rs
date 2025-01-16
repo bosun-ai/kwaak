@@ -14,24 +14,21 @@ use swiftide::{
 };
 use url::Url;
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(untagged)]
-#[allow(clippy::large_enum_variant)] // Parent is always on the heap in config
-pub enum LLMConfigurations {
-    Single(LLMConfiguration),
-    Multiple {
-        // TODO: Should probably be with reduced attrs on needed per item
-        indexing: LLMConfiguration,
-        embedding: LLMConfiguration,
-        query: LLMConfiguration,
-    },
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LLMConfigurations {
+    pub indexing: LLMConfiguration,
+    pub embedding: LLMConfiguration,
+    pub query: LLMConfiguration,
 }
+
+// Custom deserialize for LLMConfigurations so it gives better errors (i.e. on partial match llm
+// configuration or missing 'query' from multiple)
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(tag = "provider")]
 pub enum LLMConfiguration {
     OpenAI {
-        api_key: ApiKey,
+        api_key: Option<ApiKey>,
         #[serde(default)]
         prompt_model: OpenAIPromptModel,
         #[serde(default)]
@@ -131,11 +128,12 @@ pub enum OpenAIEmbeddingModel {
 }
 
 fn build_openai(
-    api_key: &ApiKey,
+    api_key: Option<&ApiKey>,
     embedding_model: &OpenAIEmbeddingModel,
     prompt_model: &OpenAIPromptModel,
     base_url: Option<&Url>,
 ) -> Result<integrations::openai::OpenAI> {
+    let api_key = api_key.context("Expected an api key")?;
     let mut config =
         async_openai::config::OpenAIConfig::default().with_api_key(api_key.expose_secret());
 
@@ -194,7 +192,7 @@ impl TryInto<Box<dyn EmbeddingModel>> for &LLMConfiguration {
                 prompt_model,
                 base_url,
             } => Box::new(build_openai(
-                api_key,
+                api_key.as_ref(),
                 embedding_model,
                 prompt_model,
                 base_url.as_ref(),
@@ -220,7 +218,7 @@ impl TryInto<Box<dyn SimplePrompt>> for &LLMConfiguration {
                 prompt_model,
                 base_url,
             } => Box::new(build_openai(
-                api_key,
+                api_key.as_ref(),
                 embedding_model,
                 prompt_model,
                 base_url.as_ref(),
@@ -246,7 +244,7 @@ impl TryInto<Box<dyn ChatCompletion>> for &LLMConfiguration {
                 prompt_model,
                 base_url,
             } => Box::new(build_openai(
-                api_key,
+                api_key.as_ref(),
                 embedding_model,
                 prompt_model,
                 base_url.as_ref(),

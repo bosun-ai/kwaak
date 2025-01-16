@@ -1,5 +1,9 @@
 language = "rust"
+
 tavily_api_key = "env:TAVILY_API_KEY"
+github_api_key = "env:GITHUB_TOKEN"
+openai_api_key = "env:KWAAK_OPENAI_API_KEY"
+
 tool_executor = "docker"
 otel_enabled = true
 
@@ -8,24 +12,20 @@ test = "RUST_LOG=kwaak=debug,swiftide=debug RUST_BACKTRACE=1 cargo nextest run -
 coverage = "cargo llvm-cov nextest --no-clean --summary-only"
 lint_and_fix = "cargo clippy --fix --allow-dirty --allow-staged; cargo fmt"
 
-[github]
+[git]
 owner = "bosun-ai"
 repository = "kwaak"
 main_branch = "master"
-token = "env:GITHUB_TOKEN"
 
 [llm.indexing]
-api_key = "env:KWAAK_OPENAI_API_KEY"
 provider = "OpenAI"
 prompt_model = "gpt-4o-mini"
 
 [llm.query]
-api_key = "env:KWAAK_OPENAI_API_KEY"
 provider = "OpenAI"
 prompt_model = "gpt-4o"
 
 [llm.embedding]
-api_key = "env:KWAAK_OPENAI_API_KEY"
 provider = "OpenAI"
 embedding_model = "text-embedding-3-large"
 

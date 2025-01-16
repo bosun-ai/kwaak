@@ -4,12 +4,14 @@
 project_name = "{{ project_name }}"
 language = "{{ language }}"
 
+## If you are using OpenAI, set the api key here
+#openai_api_key = "env:OPENAI_API_KEY"
+
+## Optional: Connect kwaak to github to create PRs, search code, and automatically push to a  remote
+#github_api_key = "env:GITHUB_TOKEN"
+
 ## Optional: Connect kwaak to tavily to enable it to search the web
 #tavily_api_key = "env:TAVILY_API_KEY"
-
-## Optional: Override the tool executor. Valid options are `local` and `docker`
-## Since agents write code, running kwaak in a sandbox is highly recommended
-#tool_executor = "docker"
 
 ## Commands the agent uses for tools
 ## Test and coverage are required. Kwaak expects coverage to run the tests as well and echo both the test and coverage results to stdout
@@ -27,7 +29,7 @@ coverage = "REQUIRED"
 #
 ## Kwaak can create and update PRs on Github, search github code, and interact with the git repository. This requires a github token.
 ## If you leave the token empty, kwaak will not create PRs.
-[github]
+[git]
 owner = "{{ github.owner }}"
 repository = "{{ github.repository }}"
 main_branch = "{{ github.main_branch }}"
@@ -36,18 +38,20 @@ main_branch = "{{ github.main_branch }}"
 
 ## Kwaak uses different LLMs for different tasks. As a rule of thumb, tasks that happen often (like indexing, summarizing) require a small, fast model
 ## and tasks that happen less often (like completion) can use a larger, more accurate model.
+#
+## You can overwrite the api key per kind of task if needed.
 [llm.indexing]
-api_key = "env:KWAAK_OPENAI_API_KEY"
+#api_key = "env:KWAAK_OPENAI_API_KEY"
 provider = "OpenAI"
 prompt_model = "gpt-4o-mini"
 
 [llm.query]
-api_key = "env:KWAAK_OPENAI_API_KEY"
+#api_key = "env:KWAAK_OPENAI_API_KEY"
 provider = "OpenAI"
 prompt_model = "gpt-4o"
 
 [llm.embedding]
-api_key = "env:KWAAK_OPENAI_API_KEY"
+#api_key = "env:KWAAK_OPENAI_API_KEY"
 provider = "OpenAI"
 embedding_model = "text-embedding-3-large"
 
