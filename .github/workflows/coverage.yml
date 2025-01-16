@@ -33,7 +33,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Install deps
-        run: sudo apt install libxcb1-dev libxcb-shape0-dev libxcb-xfixes0-dev ripgrep
+        run: sudo apt install libxcb1-dev libxcb-shape0-dev libxcb-xfixes0-dev ripgrep fd-find
+      # Temporary fix until docker runs properly in ci
+      - name: copy fdfind
+        run: sudo cp /usr/bin/fdfind /usr/bin/fd
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
