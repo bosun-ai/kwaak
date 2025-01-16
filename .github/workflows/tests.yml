@@ -38,7 +38,7 @@ jobs:
       - name: copy fdfind
         run: sudo cp /usr/bin/fdfind /usr/bin/fd
       - name: "Test"
-        run: cargo test
+        run: cargo nextest run
 
   lint:
     name: Lint
