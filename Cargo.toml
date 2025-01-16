@@ -84,12 +84,11 @@ htmd = "0.1.6"
 ansi-to-tui = "7.0.0"
 tempfile = { version = "3.15.0" }
 
-#fml
-# TODO: Suspect it's lancedb
-openssl-sys = { version = "0.9.104", features = ["vendored"] }
 copypasta = "0.10.1"
 strip-ansi-escapes = "0.2.1"
 
+# Disabled for now, might be better to just try https://opensource.axo.dev/cargo-dist/book/reference/config.html#install-libraries
+# openssl-sys = { version = "0.9.104", features = ["vendored"], optional = true }
 
 [dev-dependencies]
 test-log = { version = "0.2.16", features = ["trace"] }
