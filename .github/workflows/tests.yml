@@ -9,6 +9,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_LOG: debug
+  RUST_BACKTRACE: 1
   RUSTFLAGS: "-Dwarnings"
   TAVILY_API_KEY: noop
   KWAAK_OPENAI_API_KEY: noop

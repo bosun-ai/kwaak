@@ -7,6 +7,8 @@ on:
       - master
 
 env:
+  RUST_LOG: debug
+  RUST_BACKTRACE: 1
   TAVILY_API_KEY: noop
   KWAAK_OPENAI_API_KEY: noop
   KWAAK_GITHUB_TOKEN: noop
