@@ -3510,7 +3510,6 @@ dependencies = [
  "assert_cmd",
  "async-openai",
  "async-trait",
- "chrono",
  "clap",
  "copypasta",
  "crossterm",
