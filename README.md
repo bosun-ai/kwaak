@@ -43,6 +43,7 @@
 -->
 
 ![CI](https://img.shields.io/github/actions/workflow/status/bosun-ai/kwaak/tests.yml?style=flat-square)
+![Coverage Status](https://img.shields.io/coverallsCoverage/github/bosun-ai/kwaak?style=flat-square)
 [![Crate Badge]][Crate]
 [![Contributors][contributors-shield]][contributors-url]
 [![Stargazers][stars-shield]][stars-url]
@@ -103,6 +104,7 @@ Kwaak is part of the [bosun.ai](https://bosun.ai) project. An upcoming platform 
 - Quacking terminal interface
 - As fast as it gets; written in Rust, powered by Swiftide
 - Agents operate on code, use tools, and can be interacted with
+- View and pull code changes from an agent; or have it create a pull request
 - Sandboxed execution in docker
 - Python, TypeScript/Javascript, Java, Ruby, and Rust
 
@@ -118,7 +120,12 @@ Kwaak is part of the [bosun.ai](https://bosun.ai) project. An upcoming platform 
 
 Before you can run Kwaak, make sure you have Docker installed on your machine.
 
-Kwaak expects a Dockerfile in the root of your project. This Dockerfile should contain all the dependencies required to test and run your code. Additionally, it expects the following to be present:
+Kwaak expects a Dockerfile in the root of your project. If you already have a Dockerfile, you can just name it differently and configure it in the configuration file. This Dockerfile should contain all the dependencies required to test and run your code.
+
+> [!NOTE]
+> Docker is used to provide a safe execution environment for the agents. It does not affect the performance of the LLMs. The LLMs are running either locally or in the cloud, and the docker container is only used to run the code. This is done to ensure that the agents cannot access your local system. Kwaak itself runs locally.
+
+Additionally, it expects the following to be present:
 
 - **git**: Required for git operations
 - **fd** [github](https://github.com/sharkdp/fd): Required for searching files. Note that it should be available as `fd`, some systems have it as `fdfind`.
@@ -178,6 +185,8 @@ Keybindings:
 - **_Page Down_**: Scroll chat down
 - **_tab_**: Switch between agents
 
+Additionally, kwaak provides a number of slash commands, `/help` will show all available commands.
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### How does it work?
@@ -202,12 +211,6 @@ All of these are inferred from the project directory and can be overridden in th
 
 - **`project_name`**: Defaults to the current directory name. Represents the name of your project.
 - **`language`**: The programming language of the project, for instance, Rust, Python, JavaScript, etc.
-- **`cache_dir`, `log_dir`**: Directories for cache and logs. Defaults are within your system's cache directory.
-- **`indexing_concurrency`**: Adjust concurrency for indexing, defaults based on CPU count.
-- **`indexing_batch_size`**: Batch size setting for indexing. Defaults to a higher value for Ollama and a lower value for OpenAI.
-- **`endless_mode`**: **DANGER** If enabled, agents run continuously until manually stopped or completion is reached. This is meant for debugging and evaluation purposes.
-- **`otel_enabled`**: Enables OpenTelemetry tracing if set and respects all the standard OpenTelemetry environment variables.
-- **`tool_executor`**: Defaults to `docker`. Can also be `local`. We **HIGHLY** recommend using `docker` for security reasons unless you are running in a secure environment.
 
 #### Command Configuration
 
@@ -267,8 +270,14 @@ For both you can provide a `base_url` to use a custom API endpoint.
 
 These configurations allow you to leverage the strengths of each model effectively for indexing, querying, and embedding processes.
 
-#### Other integrations
+#### Other configuration
 
+- **`cache_dir`, `log_dir`**: Directories for cache and logs. Defaults are within your system's cache directory.
+- **`indexing_concurrency`**: Adjust concurrency for indexing, defaults based on CPU count.
+- **`indexing_batch_size`**: Batch size setting for indexing. Defaults to a higher value for Ollama and a lower value for OpenAI.
+- **`endless_mode`**: **DANGER** If enabled, agents run continuously until manually stopped or completion is reached. This is meant for debugging and evaluation purposes.
+- **`otel_enabled`**: Enables OpenTelemetry tracing if set and respects all the standard OpenTelemetry environment variables.
+- **`tool_executor`**: Defaults to `docker`. Can also be `local`. We **HIGHLY** recommend using `docker` for security reasons unless you are running in a secure environment.
 - **`tavily_api_key`**: Enables the agent to use [tavily](https://tavily.com) for web search. Their entry-level plan is free. (we are not affiliated)
 
 <!-- ROADMAP -->
@@ -301,6 +310,18 @@ These configurations allow you to leverage the strengths of each model effective
 **Q:** I get an `error from Bollard: Socket not found /var/run/docker.sock`
 
 **A**: Enable the default Docker socket in docker desktop in General -> Advanced settings.
+
+**Q:** I get an `data did not match any variant of untagged enum LLMConfigurations`
+
+**A**: Make sure any env variables are set correctly, and that the configuration file is correct. This is unfortunately a very generic error.
+
+**Q:** So why docker? How does it work? Does it affect local LLM performance?
+
+**A**: Docker is only used to provide a save execution environment for the agents. It does not affect the performance of the LLMs. The LLMs are running either locally or in the cloud, and the docker container is only used to run the code. This is done to ensure that the agents cannot access your local system. Kwaak itself runs locally.
+
+**Q**: What is the github token used for?
+
+**A**: The github token is used to create pull requests, search code, and push code to a remote repository. It is not used for anything else.
 
 ## Community
 

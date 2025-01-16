@@ -22,8 +22,10 @@ macro_rules! invoke {
 }
 
 fn setup_context() -> DefaultContext {
-    // WARN: These do NOT run in isolation
-    let executor = LocalExecutor::default();
+    let executor = LocalExecutor::builder()
+        .workdir(env!("CARGO_MANIFEST_DIR"))
+        .build()
+        .unwrap();
 
     DefaultContext::from_executor(Arc::new(executor) as Arc<dyn ToolExecutor>)
 }
@@ -70,13 +72,13 @@ async fn test_search_code() {
     let context = setup_context();
 
     // includes hidden
-    let include_hidden = invoke!(&tool, &context, json!({"query": "runs-on"}));
+    let include_hidden = invoke!(&tool, &context, json!({"query": "first-line-heading"}));
 
-    assert!(include_hidden.contains(".github/workflows"));
+    assert!(include_hidden.contains(".markdownlint.yaml"));
 
     // always ignores case
-    let case_insensitive = invoke!(&tool, &context, json!({"query": "RuNs-On"}));
-    assert!(case_insensitive.contains(".github/workflows"));
+    let case_insensitive = invoke!(&tool, &context, json!({"query": "First-Line-HEADING"}));
+    assert!(case_insensitive.contains(".markdownlint.yaml"));
 
     // Should only do literal searches
     let literal_search = invoke!(&tool, &context, json!({"query": "[test_search_code]"}));

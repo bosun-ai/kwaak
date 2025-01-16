@@ -13,7 +13,7 @@ concurrency:
 env:
   TAVILY_API_KEY: noop
   KWAAK_OPENAI_API_KEY: noop
-  GITHUB_TOKEN: noop
+  KWAAK_GITHUB_TOKEN: noop
 
 jobs:
   test:
@@ -25,14 +25,18 @@ jobs:
         uses: jlumbroso/free-disk-space@main
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: llvm-tools-preview
       - uses: Swatinem/rust-cache@v2
 
-      # Required for copypasta builds on linux
-      - name: Install libxcb
-        run: sudo apt install libxcb1-dev libxcb-shape0-dev libxcb-xfixes0-dev
+      - name: Install deps
+        run: sudo apt install libxcb1-dev libxcb-shape0-dev libxcb-xfixes0-dev ripgrep fd-find
+      # Temporary fix until docker runs properly in ci
+      - name: copy fdfind
+        run: sudo cp /usr/bin/fdfind /usr/bin/fd
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
