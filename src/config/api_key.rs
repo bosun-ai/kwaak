@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn test_correct_error_on_missing_env() {
         let toml = r#"
-            api_key = "env:MY_SECRET_KEY"
+            api_key = "env:MY_SECRET_KEY_MISSING"
         "#;
 
         let result: Result<Config, _> = toml::from_str(toml);
@@ -174,6 +174,6 @@ mod tests {
         dbg!(&err);
         assert!(err.to_string().contains("environment variable not found"));
 
-        env::remove_var("MY_SECRET_KEY");
+        env::remove_var("MY_SECRET_KEY_MISSING");
     }
 }
