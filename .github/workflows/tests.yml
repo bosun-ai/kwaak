@@ -37,8 +37,8 @@ jobs:
         with:
           tool: cargo-nextest
       # Required for copypasta builds on linux
-      - name: Install libxcb
-        run: sudo apt install libxcb1-dev libxcb-shape0-dev libxcb-xfixes0-dev
+      - name: Install deps
+        run: sudo apt install libxcb1-dev libxcb-shape0-dev libxcb-xfixes0-dev ripgrep
       - name: "Test"
         run: cargo nextest run --all-features --no-fail-fast
 
