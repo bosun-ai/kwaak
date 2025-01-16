@@ -21,10 +21,6 @@ macro_rules! assert_command_done {
 /// Tests showing the diff of an agent workspace, and then pulling the diff into a local branch
 #[test_log::test(tokio::test(flavor = "multi_thread"))]
 async fn test_diff() {
-    // TODO: Currently not working on CI, complains it's not a git dir
-    if std::env::var("CI").is_ok() {
-        return;
-    }
     let (repository, _guard) = test_utils::test_repository();
     let workdir = repository.path().clone();
     let mut app = App::default().with_workdir(repository.path());
