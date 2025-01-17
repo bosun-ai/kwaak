@@ -393,15 +393,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-convert"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d416feee97712e43152cd42874de162b8f9b77295b1c85e5d92725cc8310bae"
-dependencies = [
- "async-trait",
-]
-
-[[package]]
 name = "async-io"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -443,11 +434,10 @@ dependencies = [
 
 [[package]]
 name = "async-openai"
-version = "0.26.0"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d226540b4ecf884b0fb4370008631ccbd9605cf82f98bb504ec8f2cee0810e8"
+checksum = "31eccf20e8169ce394fea4ffc8fe3187045bb0789499df19ab91ca2dad4a6bed"
 dependencies = [
- "async-convert",
  "backoff",
  "base64 0.22.1",
  "bytes",
@@ -457,10 +447,10 @@ dependencies = [
  "rand",
  "reqwest",
  "reqwest-eventsource",
- "secrecy 0.8.0",
+ "secrecy",
  "serde",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
  "tokio",
  "tokio-stream",
  "tokio-util",
@@ -3535,7 +3525,7 @@ dependencies = [
  "copypasta",
  "crossterm",
  "derive_builder",
- "dirs 5.0.1",
+ "dirs 6.0.0",
  "htmd",
  "ignore",
  "indoc",
@@ -3556,7 +3546,7 @@ dependencies = [
  "regex",
  "reqwest",
  "rust-embed",
- "secrecy 0.10.3",
+ "secrecy",
  "serde",
  "serde_json",
  "strip-ansi-escapes",
@@ -4709,7 +4699,7 @@ dependencies = [
  "once_cell",
  "percent-encoding",
  "pin-project",
- "secrecy 0.10.3",
+ "secrecy",
  "serde",
  "serde_json",
  "serde_path_to_error",
@@ -6055,16 +6045,6 @@ dependencies = [
 
 [[package]]
 name = "secrecy"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9bd1c54ea06cfd2f6b63219704de0b9b4f72dcc2b8fdef820be6cd799780e91e"
-dependencies = [
- "serde",
- "zeroize",
-]
-
-[[package]]
-name = "secrecy"
 version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e891af845473308773346dc847b2c23ee78fe442e0472ac50e22a18a93d3ae5a"
@@ -6617,9 +6597,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "swiftide"
-version = "0.16.4"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60d8be845f487d65de3731ae8a4be5fb50ce3e746e5b11970c714838a7dc3983"
+checksum = "6ae02e04ccd3a7e5b6e654c8899aefc163f7ccfb1bca602d5f2d0bc95a657ce3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6635,9 +6615,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-agents"
-version = "0.16.4"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23bd67ae356a5e7827f0a5be3f799f5c8f9f8b107246322dd7bccc2ba9a9ce22"
+checksum = "35c77ce5597bab6cd8db7e427dd4ed5134dc0222e8d9aea641865106e2fe9a4d"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6657,9 +6637,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-core"
-version = "0.16.4"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "253d33982d8bdb5c9951fe42da93c449e43894c98fe61dbf49a33ba37be7bca9"
+checksum = "593452372b88419ae59b933fb1c5eb5e34189a6e055819f149c6bac675258a32"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6685,9 +6665,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-docker-executor"
-version = "0.2.3"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bec94ef0f65b2df2a1c7fef7c263f489a3bfb03f9e8d5ed80e82b1b9a016957d"
+checksum = "16863a24ee7eeddf1e4218626a19d3838d6ae796312427053b0b9e0bcb3b157f"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6695,20 +6675,20 @@ dependencies = [
  "dirs 6.0.0",
  "ignore",
  "indoc",
- "swiftide-agents",
  "swiftide-core",
  "thiserror 2.0.11",
  "tokio",
  "tokio-tar",
  "tracing",
  "uuid",
+ "walkdir",
 ]
 
 [[package]]
 name = "swiftide-indexing"
-version = "0.16.4"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "acd21b1399ae9332941976724963b69db0641b3902ca6d83403c018ab8d97707"
+checksum = "ccdbf5de08ff08eec1e73f9a23b9717bee71292d1d169ea379728e3a2356d944"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6732,9 +6712,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-integrations"
-version = "0.16.4"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3049784ee76a887e111afea992da1b5e33745663f78d3411287019a8b29b6d1"
+checksum = "26364f3953497bbe667132dae5f9a73d6a9b9ca899af4769a6bda8f8a729ddae"
 dependencies = [
  "anyhow",
  "arrow",
@@ -6750,7 +6730,7 @@ dependencies = [
  "redb",
  "regex",
  "reqwest",
- "secrecy 0.8.0",
+ "secrecy",
  "serde",
  "serde_json",
  "strum",
@@ -6760,6 +6740,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tree-sitter",
+ "tree-sitter-go",
  "tree-sitter-java",
  "tree-sitter-javascript",
  "tree-sitter-python",
@@ -6770,9 +6751,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-macros"
-version = "0.16.4"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82d29225442105e6cd7df0cd0dbf0d19eee37eb90919c9ce660440a79c0fe6ea"
+checksum = "04844fcf5c6c9d8971c085713975d1214439e2c9a59a702c492349c07912b9a2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6787,9 +6768,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-query"
-version = "0.16.4"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "066f009426b420446900f6e30a8e986f9bb10e3ee7847841c14f7183746abc9c"
+checksum = "ed90f178517c15b1f2e5e46fcc08d135529babaa031fbc75341eefe6546ee8e4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7605,6 +7586,16 @@ dependencies = [
  "cc",
  "regex",
  "regex-syntax 0.8.5",
+ "tree-sitter-language",
+]
+
+[[package]]
+name = "tree-sitter-go"
+version = "0.23.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b13d476345220dbe600147dd444165c5791bf85ef53e28acbedd46112ee18431"
+dependencies = [
+ "cc",
  "tree-sitter-language",
 ]
 
