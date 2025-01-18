@@ -69,8 +69,9 @@ pub fn test_repository() -> (Repository, TestGuard) {
         .unwrap();
     std::process::Command::new("git")
         .arg("commit")
+        .arg("-n")
         .arg("-m")
-        .arg("Initial commit")
+        .arg("\"Initial commit\"")
         .current_dir(repository.path())
         .output()
         .unwrap();
