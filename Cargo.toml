@@ -59,7 +59,7 @@ throbber-widgets-tui = "0.8.0"
 ignore = "0.4.23"
 async-trait = "0.1.84"
 url = "2.5.4"
-octocrab = "0.42.0"
+octocrab = "0.43.0"
 indoc = "2.0.5"
 tavily = "2.0.3"
 regex = "1.11.1"
@@ -75,7 +75,7 @@ reqwest = { version = "0.12.12", features = [
   "macos-system-configuration",
 ], default-features = false }
 redb = { version = "2.3.0" }
-lancedb = { version = "0.14.1", default-features = false, features = [
+lancedb = { version = "0.15.0", default-features = false, features = [
   "rustls-tls",
 ] }
 num_cpus = "1.16.0"
