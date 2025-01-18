@@ -80,7 +80,6 @@ async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Arc<
             }
             let running_executor = executor
                 .with_context_path(&repository.config().docker.context)
-                .with_working_dir(repository.path())
                 .with_image_name(&repository.config().project_name)
                 .with_dockerfile(dockerfile)
                 .with_container_uuid(uuid)
