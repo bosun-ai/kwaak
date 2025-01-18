@@ -45,7 +45,7 @@ pub fn test_repository() -> (Repository, TestGuard) {
 
     // Copy this dockerfile to the context
     std::fs::create_dir_all(&config.docker.context).unwrap();
-    std::fs::copy("Dockerfile", config.docker.context.join("Dockerfile")).unwrap();
+    std::fs::copy("Dockerfile.tests", config.docker.context.join("Dockerfile")).unwrap();
 
     std::fs::create_dir_all(&repository.config().cache_dir).unwrap();
     std::fs::create_dir_all(&repository.config().log_dir).unwrap();
