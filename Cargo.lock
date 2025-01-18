@@ -6665,9 +6665,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-docker-executor"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8eaf3851361977ba6a991d1469fff33ed9b59c532b0db0e4141398c022d3562e"
+checksum = "cc445398eec40ae6f177c9901b55fa0694ddecfc9b15507ef0ef3bdadd897acd"
 dependencies = [
  "anyhow",
  "async-trait",
