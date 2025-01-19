@@ -9,7 +9,6 @@ use uuid::Uuid;
 use crate::config::SupportedToolExecutors;
 use crate::git::github::GithubSession;
 use crate::repository::Repository;
-use crate::util::accept_non_zero_exit;
 
 /// Configures and sets up a git (and github if enabled) environment for the agent to run in
 pub struct EnvSetup<'a> {

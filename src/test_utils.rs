@@ -4,11 +4,7 @@ use swiftide::chat_completion::ChatCompletionResponse;
 use swiftide_core::{ChatCompletion, EmbeddingModel, SimplePrompt};
 use uuid::Uuid;
 
-use crate::{
-    config::{defaults::default_main_branch, Config},
-    git,
-    repository::Repository,
-};
+use crate::{config::Config, git, repository::Repository};
 
 pub struct TestGuard {
     pub tempdir: tempfile::TempDir,
