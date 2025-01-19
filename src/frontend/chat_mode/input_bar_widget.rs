@@ -30,7 +30,7 @@ impl InputBarWidget {
 
             f.render_widget(throbber, block.inner(area));
             block.render(area, f.buffer_mut());
-         } else {
+        } else {
             app.text_input.set_block(block);
             f.render_widget(&app.text_input, area);
         }
