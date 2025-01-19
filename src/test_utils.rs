@@ -72,12 +72,22 @@ pub fn test_repository() -> (Repository, TestGuard) {
     let user_email = std::process::Command::new("git")
         .arg("config")
         .arg("user.email")
-        .arg("\"kwaak@localhost\"")
+        .arg("\"kwaak@bosun.ai\"")
         .current_dir(repository.path())
         .output()
         .unwrap();
 
     assert!(user_email.status.success(), "failed to set git user email");
+
+    let user_name = std::process::Command::new("git")
+        .arg("config")
+        .arg("user.name")
+        .arg("\"kwaak\"")
+        .current_dir(repository.path())
+        .output()
+        .unwrap();
+
+    assert!(user_name.status.success(), "failed to set git user name");
 
     let initial = std::process::Command::new("git")
         .arg("commit")
@@ -91,7 +101,10 @@ pub fn test_repository() -> (Repository, TestGuard) {
 
     let output = std::str::from_utf8(&initial.stdout).unwrap().to_string()
         + std::str::from_utf8(&initial.stderr).unwrap();
-    dbg!(&output);
+
+    if !initial.status.success() {
+        tracing::error!("Failed to commit initial commit: {}", output);
+    }
 
     // For some reason in some unit tests this can fail?
     // assert!(
