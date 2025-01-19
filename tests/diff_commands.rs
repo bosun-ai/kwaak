@@ -1,6 +1,6 @@
 use kwaak::commands::{Command, CommandHandler};
 use kwaak::frontend::{ui, App, DiffVariant, UIEvent, UserInputCommand};
-use kwaak::{storage, test_utils};
+use kwaak::{git, storage, test_utils};
 use ratatui::backend::TestBackend;
 use ratatui::Terminal;
 use swiftide_core::Persist;
@@ -28,7 +28,7 @@ async fn test_diff() {
     lancedb.setup().await.unwrap();
     let mut terminal = Terminal::new(TestBackend::new(160, 40)).unwrap();
 
-    let mut handler = CommandHandler::from_repository(repository);
+    let mut handler = CommandHandler::from_repository(repository.clone());
     handler.register_ui(&mut app);
     let _handler_guard = handler.start();
 
@@ -88,18 +88,9 @@ async fn test_diff() {
 
     assert_command_done!(app, fixed_uuid);
 
-    // First check that the current branch is still main
-    let current_branch = tokio::process::Command::new("git")
-        .arg("rev-parse")
-        .arg("--abbrev-ref")
-        .arg("HEAD")
-        .current_dir(&workdir)
-        .output()
-        .await
-        .unwrap();
+    let current_branch = git::util::main_branch(&workdir);
+    assert_eq!(&current_branch, &repository.config().git.main_branch);
 
-    let current_branch = std::str::from_utf8(&current_branch.stdout).unwrap().trim();
-    assert_eq!(current_branch, "main");
     // Now let's check out the branch and verify we have the hello.txt
     let output = tokio::process::Command::new("git")
         .arg("checkout")

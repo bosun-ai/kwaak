@@ -4,7 +4,11 @@ use swiftide::chat_completion::ChatCompletionResponse;
 use swiftide_core::{ChatCompletion, EmbeddingModel, SimplePrompt};
 use uuid::Uuid;
 
-use crate::{config::Config, repository::Repository};
+use crate::{
+    config::{defaults::default_main_branch, Config},
+    git,
+    repository::Repository,
+};
 
 pub struct TestGuard {
     pub tempdir: tempfile::TempDir,
@@ -67,14 +71,35 @@ pub fn test_repository() -> (Repository, TestGuard) {
         .current_dir(repository.path())
         .output()
         .unwrap();
-    std::process::Command::new("git")
+
+    // set the git author
+    let user_email = std::process::Command::new("git")
+        .arg("config")
+        .arg("user.email")
+        .arg("\"kwaak@localhost\"")
+        .current_dir(repository.path())
+        .output()
+        .unwrap();
+
+    assert!(user_email.status.success(), "failed to set git user email");
+
+    let initial = std::process::Command::new("git")
         .arg("commit")
         .arg("-n")
+        .arg("--allow-empty")
         .arg("-m")
         .arg("\"Initial commit\"")
         .current_dir(repository.path())
         .output()
         .unwrap();
+
+    assert!(
+        initial.status.success(),
+        "failed to commit initial commit for test"
+    );
+
+    // Update the mainbranch as it could be main or master depending on the os
+    repository.config_mut().git.main_branch = git::util::main_branch(repository.path());
 
     // debug files in app dir, list all including hidden
     tracing::debug!(
@@ -84,6 +109,8 @@ pub fn test_repository() -> (Repository, TestGuard) {
             .map(|entry| entry.unwrap().path())
             .collect::<Vec<_>>()
     );
+
+    tracing::debug!("Initial commit: {:?}", initial);
 
     (repository, TestGuard { tempdir })
 }
