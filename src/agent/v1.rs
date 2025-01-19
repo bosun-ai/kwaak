@@ -137,7 +137,7 @@ pub async fn start_agent(
     let mut context = DefaultContext::from_executor(Arc::clone(&executor));
 
     let top_level_project_overview = context
-        .exec_cmd(&Command::shell("fd -iH -d2"))
+        .exec_cmd(&Command::shell("fd -iH -d2 -E '.git/'"))
         .await?
         .output;
     tracing::debug!(top_level_project_overview = ?top_level_project_overview, "Top level project overview");
@@ -169,7 +169,7 @@ pub async fn start_agent(
                     .add_message(chat_completion::ChatMessage::new_user(initial_context))
                     .await;
 
-                let top_level_project_overview = context.exec_cmd(&Command::shell("fd -iH -d2")).await?.output;
+                let top_level_project_overview = context.exec_cmd(&Command::shell("fd -iH -d2 -E '.git/*'")).await?.output;
                 context.add_message(chat_completion::ChatMessage::new_user(format!("The following is a max depth 2, high level overview of the directory structure of the project: \n ```{top_level_project_overview}```"))).await;
 
                 Ok(())

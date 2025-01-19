@@ -41,8 +41,17 @@ async fn test_search_file() {
     assert!(list_result.contains("tests"));
     assert!(list_result.contains("src"));
 
-    // include hidden
-    assert!(list_result.contains(".git"));
+    eprintln!("{list_result}");
+
+    // Ensure we never list everything in the git dir
+    // as that is a lot of tokens
+    assert_eq!(
+        list_result
+            .split('\n')
+            .filter(|f| f.starts_with(".git/"))
+            .count(),
+        1
+    );
     assert!(list_result.contains(".github"));
 
     // search with path
