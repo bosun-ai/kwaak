@@ -1,5 +1,5 @@
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, Wrap};
+use ratatui::widgets::{Block, Borders, Padding, Paragraph, Scrollbar, ScrollbarOrientation, Wrap};
 
 use crate::frontend::App;
 
@@ -67,8 +67,14 @@ impl ChatMessagesWidget {
         // Render scrollbar
         f.render_stateful_widget(
             Scrollbar::new(ScrollbarOrientation::VerticalRight)
-                .begin_symbol(Some("↑")) // Fixed the unterminated string
-                .end_symbol(Some("↓")),
+                .begin_symbol(Some(
+                    "
+increase",
+                )) // Fixed the unterminated string
+                .end_symbol(Some(
+                    "
+decrease",
+                )),
             area,
             &mut current_chat.vertical_scroll_state,
         );

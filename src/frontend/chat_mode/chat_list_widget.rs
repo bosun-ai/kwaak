@@ -1,5 +1,5 @@
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, HighlightSpacing, List, ListItem};
+use ratatui::widgets::{Block, Borders, HighlightSpacing, List, ListItem, Padding};
 
 use crate::chat::Chat;
 use crate::frontend::App;
@@ -28,10 +28,17 @@ impl ChatListWidget {
 }
 
 fn format_chat_in_list(chat: &Chat) -> ListItem {
-    const LOADING: &str = "";
-    const CAN_MESSAGE: &str = "󰍩";
-    const NEW_MESSAGE: &str = "󱥁";
-    const MESSAGE_LOCK: &str = "󱅳";
+    const LOADING: &str = "
+f110";
+    const CAN_MESSAGE: &str = "
+db80
+df69";
+    const NEW_MESSAGE: &str = "
+db86
+dd41";
+    const MESSAGE_LOCK: &str = "
+db84
+dd73";
 
     let prefix = if chat.is_loading() && chat.new_message_count > 0 {
         MESSAGE_LOCK
