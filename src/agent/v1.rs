@@ -10,7 +10,7 @@ use swiftide::{
     traits::{AgentContext, Command, SimplePrompt, ToolExecutor},
 };
 use tavily::Tavily;
-use uuid::{timestamp::context, Uuid};
+use uuid::Uuid;
 
 use super::{
     conversation_summarizer::ConversationSummarizer,
@@ -161,7 +161,7 @@ pub async fn start_agent(
 
     let context = Arc::new(context);
     let agent = Agent::builder()
-        .context(Arc::clone(&context))
+        .context(Arc::clone(&context) as Arc<dyn AgentContext>)
         .system_prompt(system_prompt)
         .tools(tools)
         .before_all(move |context| {

@@ -169,6 +169,7 @@ impl CommandHandler {
                 };
 
                 agent.agent_context.redrive().await;
+                agent.
             }
             Command::Quit { .. } => unreachable!("Quit should be handled earlier"),
         }
@@ -208,8 +209,14 @@ impl CommandHandler {
         if let Some(agent) = self.agents.read().await.get(&uuid) {
             // Ensure we always send a fresh cancellation token
             // WARN: WHY DOES THIS NOT GIVE A COMPILE ERROR
-            agent.cancel_token = CancellationToken::new();
+            if let Some(agent) = self.agents.write().await.get_mut(&uuid) {
+                agent.cancel_token = CancellationToken::new();
 
+                return Some(agent.clone());
+            }
+            tracing::error!(
+                "Agent not found, but was in the read lock, cancellation token not updated"
+            );
             return Some(agent.clone());
         }
         None
