@@ -28,17 +28,10 @@ impl ChatListWidget {
 }
 
 fn format_chat_in_list(chat: &Chat) -> ListItem {
-    const LOADING: &str = "
-f110";
-    const CAN_MESSAGE: &str = "
-db80
-df69";
-    const NEW_MESSAGE: &str = "
-db86
-dd41";
-    const MESSAGE_LOCK: &str = "
-db84
-dd73";
+    const LOADING: &str = "";
+    const CAN_MESSAGE: &str = "󰍩";
+    const NEW_MESSAGE: &str = "󱥁";
+    const MESSAGE_LOCK: &str = "󱅳";
 
     let prefix = if chat.is_loading() && chat.new_message_count > 0 {
         MESSAGE_LOCK

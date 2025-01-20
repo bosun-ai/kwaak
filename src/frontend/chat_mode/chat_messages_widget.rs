@@ -67,14 +67,8 @@ impl ChatMessagesWidget {
         // Render scrollbar
         f.render_stateful_widget(
             Scrollbar::new(ScrollbarOrientation::VerticalRight)
-                .begin_symbol(Some(
-                    "
-increase",
-                )) // Fixed the unterminated string
-                .end_symbol(Some(
-                    "
-decrease",
-                )),
+                .begin_symbol(Some("↑")) // Fixed the unterminated string
+                .end_symbol(Some("↓")),
             area,
             &mut current_chat.vertical_scroll_state,
         );
