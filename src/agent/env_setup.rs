@@ -4,7 +4,6 @@ use anyhow::Result;
 use secrecy::ExposeSecret;
 use swiftide::traits::Command;
 use swiftide::traits::ToolExecutor;
-use uuid::Uuid;
 
 use crate::config::SupportedToolExecutors;
 use crate::git::github::GithubSession;
@@ -12,7 +11,6 @@ use crate::repository::Repository;
 
 /// Configures and sets up a git (and github if enabled) environment for the agent to run in
 pub struct EnvSetup<'a> {
-    uuid: Uuid,
     repository: &'a Repository,
     github_session: Option<&'a GithubSession>,
     executor: &'a dyn ToolExecutor,
@@ -29,13 +27,11 @@ pub struct AgentEnvironment {
 
 impl EnvSetup<'_> {
     pub fn new<'a>(
-        uuid: Uuid,
         repository: &'a Repository,
         github_session: Option<&'a GithubSession>,
         executor: &'a dyn ToolExecutor,
     ) -> EnvSetup<'a> {
         EnvSetup {
-            uuid,
             repository,
             github_session,
             executor,
@@ -107,13 +103,8 @@ impl EnvSetup<'_> {
     }
 
     async fn switch_to_work_branch(&self, branch_name: String) -> Result<()> {
-        // get the first 8 characters of the uuid
-        let uuid_start = self.uuid.to_string().chars().take(8).collect::<String>();
-
-        let full_branch_name = format!("kwaak/{branch_name}-{uuid_start}");
-        let cmd = Command::Shell(format!("git checkout -b {full_branch_name}"));
+        let cmd = Command::Shell(format!("git checkout -b {branch_name}"));
         self.executor.exec_cmd(&cmd).await?;
-
         Ok(())
     }
 

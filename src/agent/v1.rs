@@ -125,12 +125,12 @@ pub async fn start_agent(
     let system_prompt = build_system_prompt(&repository)?;
     let ((), branch_name, executor, initial_context) = tokio::try_join!(
         rename_chat(&query, &fast_query_provider, &command_responder),
-        create_branch_name(&query, &fast_query_provider, &command_responder),
+        create_branch_name(&query, &uuid, &fast_query_provider, &command_responder),
         start_tool_executor(uuid, &repository),
         generate_initial_context(&repository, query)
     )?;
 
-    let env_setup = EnvSetup::new(uuid, &repository, github_session.as_deref(), &*executor);
+    let env_setup = EnvSetup::new(&repository, github_session.as_deref(), &*executor);
     // TODO: Feels a bit off to have EnvSetup return an Env, just to pass it to tool creation to
     // get the ref/branch name
     let agent_env = env_setup.exec_setup_commands(branch_name).await?;
@@ -343,10 +343,11 @@ async fn rename_chat(
 
 async fn create_branch_name(
     query: &str,
+    uuid: &Uuid,
     fast_query_provider: &dyn SimplePrompt,
     command_responder: &dyn Responder,
 ) -> Result<String> {
-    let chat_name = fast_query_provider
+    let name = fast_query_provider
         .prompt(
             format!("Give a good, short, max 30 chars git-branch-name for the following query. Only respond with the git-branch-name.:\n{query}")
                 .into(),
@@ -359,18 +360,22 @@ async fn create_branch_name(
         .collect::<String>();
 
     // only keep ascii characters
-    let chat_name = chat_name.chars().filter(char::is_ascii).collect::<String>();
-    let chat_name = chat_name.to_lowercase();
+    let name = name.chars().filter(char::is_ascii).collect::<String>();
+    let name = name.to_lowercase();
 
     // replace all whitespace with dashes
-    let chat_name = chat_name
+    let name = name
         .chars()
         .map(|c| if c.is_whitespace() { '-' } else { c })
         .collect::<String>();
 
-    command_responder.rename_branch(&chat_name);
+    // get the first 8 characters of the uuid
+    let uuid_start = uuid.to_string().chars().take(8).collect::<String>();
+    let branch_name = format!("kwaak/{name}-{uuid_start}");
 
-    Ok(chat_name)
+    command_responder.rename_branch(&branch_name);
+
+    Ok(branch_name)
 }
 
 #[cfg(test)]
@@ -393,7 +398,7 @@ mod tests {
         let mut mock_responder = MockResponder::default();
 
         mock_responder
-            .expect_rename()
+            .expect_rename_chat()
             .with(predicate::eq("Excellent title"))
             .once()
             .returning(|_| ());
@@ -414,7 +419,7 @@ mod tests {
         let mut mock_responder = MockResponder::default();
 
         mock_responder
-            .expect_rename()
+            .expect_rename_chat()
             .with(
                 predicate::str::starts_with("Excellent title")
                     .and(predicate::function(|s: &str| s.len() == 60)),
