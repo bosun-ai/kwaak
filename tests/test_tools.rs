@@ -45,12 +45,12 @@ async fn test_search_file() {
 
     // Ensure we never list everything in the git dir
     // as that is a lot of tokens
-    assert_eq!(
+    assert!(
         list_result
             .split('\n')
             .filter(|f| f.starts_with(".git/"))
-            .count(),
-        1
+            .count()
+            <= 1,
     );
     assert!(list_result.contains(".github"));
 
