@@ -21,6 +21,8 @@ pub enum UIEvent {
     NextChat,
     /// Rename a chat
     RenameChat(Uuid, String),
+    /// Rename a branch name
+    RenameBranch(Uuid, String),
     /// Change the view mode of the frontend
     ChangeMode(AppMode),
     /// Command finished

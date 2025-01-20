@@ -125,7 +125,7 @@ pub async fn start_agent(
     let system_prompt = build_system_prompt(&repository)?;
     let ((), branch_name, executor, initial_context) = tokio::try_join!(
         rename_chat(&query, &fast_query_provider, &command_responder),
-        create_branch_name(&query, &fast_query_provider),
+        create_branch_name(&query, &fast_query_provider, &command_responder),
         start_tool_executor(uuid, &repository),
         generate_initial_context(&repository, query)
     )?;
@@ -336,15 +336,19 @@ async fn rename_chat(
         .take(60)
         .collect::<String>();
 
-    command_responder.rename(&chat_name);
+    command_responder.rename_chat(&chat_name);
 
     Ok(())
 }
 
-async fn create_branch_name(query: &str, fast_query_provider: &dyn SimplePrompt) -> Result<String> {
+async fn create_branch_name(
+    query: &str,
+    fast_query_provider: &dyn SimplePrompt,
+    command_responder: &dyn Responder,
+) -> Result<String> {
     let chat_name = fast_query_provider
         .prompt(
-            format!("Give a good, short, max 30 chars name for the following query. Only respond with the name.:\n{query}")
+            format!("Give a good, short, max 30 chars git-branch-name for the following query. Only respond with the git-branch-name.:\n{query}")
                 .into(),
         )
         .await
@@ -363,6 +367,8 @@ async fn create_branch_name(query: &str, fast_query_provider: &dyn SimplePrompt)
         .chars()
         .map(|c| if c.is_whitespace() { '-' } else { c })
         .collect::<String>();
+
+    command_responder.rename_branch(&chat_name);
 
     Ok(chat_name)
 }

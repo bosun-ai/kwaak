@@ -18,6 +18,8 @@ pub enum CommandResponse {
     Activity(Uuid, String),
     /// A chat has been renamed
     RenameChat(Uuid, String),
+    /// A chat branch has been renamed
+    RenameBranch(Uuid, String),
     /// Backend system messages (kwaak currently just renders these as system chat like messages)
     BackendMessage(Uuid, String),
     /// A command has been completed
@@ -31,6 +33,7 @@ impl CommandResponse {
             CommandResponse::Chat(uuid, msg) => CommandResponse::Chat(uuid, msg),
             CommandResponse::Activity(_, state) => CommandResponse::Activity(uuid, state),
             CommandResponse::RenameChat(_, name) => CommandResponse::RenameChat(uuid, name),
+            CommandResponse::RenameBranch(_, name) => CommandResponse::RenameBranch(uuid, name),
             CommandResponse::BackendMessage(_, msg) => CommandResponse::BackendMessage(uuid, msg),
             CommandResponse::Completed(_) => CommandResponse::Completed(uuid),
         }
@@ -58,7 +61,10 @@ pub trait Responder: std::fmt::Debug + Send + Sync {
     fn update(&self, state: &str);
 
     /// Response to a rename request
-    fn rename(&self, name: &str);
+    fn rename_chat(&self, name: &str);
+
+    /// Response to a branch rename request
+    fn rename_branch(&self, name: &str);
 }
 
 // TODO: Naming should be identical to command response
@@ -86,10 +92,17 @@ impl Responder for tokio::sync::mpsc::UnboundedSender<CommandResponse> {
         ));
     }
 
-    fn rename(&self, name: &str) {
+    fn rename_chat(&self, name: &str) {
         let _ = self.send(CommandResponse::RenameChat(
             Uuid::default(),
             name.to_string(),
+        ));
+    }
+
+    fn rename_branch(&self, branch_name: &str) {
+        let _ = self.send(CommandResponse::RenameBranch(
+            Uuid::default(),
+            branch_name.to_string(),
         ));
     }
 }
@@ -111,8 +124,12 @@ impl Responder for Arc<dyn Responder> {
         self.as_ref().update(state);
     }
 
-    fn rename(&self, name: &str) {
-        self.as_ref().rename(name);
+    fn rename_chat(&self, name: &str) {
+        self.as_ref().rename_chat(name);
+    }
+
+    fn rename_branch(&self, name: &str) {
+        self.as_ref().rename_branch(name);
     }
 }
 
@@ -126,5 +143,7 @@ impl Responder for () {
 
     fn update(&self, _state: &str) {}
 
-    fn rename(&self, _name: &str) {}
+    fn rename_chat(&self, _name: &str) {}
+
+    fn rename_branch(&self, _name: &str) {}
 }

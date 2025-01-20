@@ -156,7 +156,9 @@ async fn start_agent(mut repository: repository::Repository, initial_message: &s
                 CommandResponse::BackendMessage(.., message) => {
                     println!("Backend: {message}");
                 }
-                CommandResponse::RenameChat(..) | CommandResponse::Completed(..) => {}
+                CommandResponse::RenameChat(..)
+                | CommandResponse::RenameBranch(..)
+                | CommandResponse::Completed(..) => {}
             }
         }
     });

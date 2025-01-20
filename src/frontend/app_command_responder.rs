@@ -46,6 +46,7 @@ impl AppCommandResponder {
                     CommandResponse::Chat(uuid, msg) => UIEvent::ChatMessage(uuid, msg.into()),
                     CommandResponse::Activity(uuid, state) => UIEvent::ActivityUpdate(uuid, state),
                     CommandResponse::RenameChat(uuid, name) => UIEvent::RenameChat(uuid, name),
+                    CommandResponse::RenameBranch(uuid, name) => UIEvent::RenameBranch(uuid, name),
                     CommandResponse::Completed(uuid) => UIEvent::CommandDone(uuid),
                     CommandResponse::BackendMessage(uuid, msg) => {
                         UIEvent::ChatMessage(uuid, ChatMessage::new_system(&msg))
@@ -86,6 +87,10 @@ impl Responder for AppCommandResponderForChatId {
         }
     }
 
+    fn agent_message(&self, message: chat_completion::ChatMessage) {
+        self.send(CommandResponse::Chat(self.uuid, message));
+    }
+
     fn system_message(&self, message: &str) {
         self.send(CommandResponse::Chat(
             self.uuid,
@@ -97,12 +102,12 @@ impl Responder for AppCommandResponderForChatId {
         self.send(CommandResponse::Activity(self.uuid, state.into()));
     }
 
-    fn rename(&self, name: &str) {
+    fn rename_chat(&self, name: &str) {
         self.send(CommandResponse::RenameChat(self.uuid, name.into()));
     }
 
-    fn agent_message(&self, message: chat_completion::ChatMessage) {
-        self.send(CommandResponse::Chat(self.uuid, message));
+    fn rename_branch(&self, branch_name: &str) {
+        self.send(CommandResponse::RenameBranch(self.uuid, branch_name.into()));
     }
 }
 

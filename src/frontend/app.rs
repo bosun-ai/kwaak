@@ -354,6 +354,11 @@ impl App<'_> {
                     chat.name = name.to_string();
                 };
             }
+            UIEvent::RenameBranch(uuid, branch_name) => {
+                if let Some(chat) = self.find_chat_mut(*uuid) {
+                    chat.branch_name = Some(branch_name.to_string());
+                };
+            }
             UIEvent::NextChat => self.next_chat(),
             UIEvent::ChangeMode(mode) => self.change_mode(*mode),
             UIEvent::Quit => {
@@ -485,13 +490,14 @@ impl App<'_> {
             return;
         };
 
-        if let Some(chat) = self.chats.get(next_idx) {
+        let chat = if let Some(chat) = self.chats.get(next_idx) {
             self.chats_state.select(Some(next_idx));
-            self.current_chat_uuid = chat.uuid;
+            chat
         } else {
             self.chats_state.select(Some(0));
-            self.current_chat_uuid = self.chats[0].uuid;
-        }
+            &self.chats[0]
+        };
+        self.current_chat_uuid = chat.uuid;
     }
 
     fn draw_base_ui(&self, f: &mut Frame) -> Rect {

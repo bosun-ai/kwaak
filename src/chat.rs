@@ -10,6 +10,7 @@ pub struct Chat {
     pub name: String,
     /// Identifier used to match responses
     pub uuid: uuid::Uuid,
+    pub branch_name: Option<String>,
     pub messages: Vec<ChatMessage>,
     pub state: ChatState,
     pub new_message_count: usize,
@@ -78,6 +79,7 @@ impl Default for Chat {
         Self {
             name: "Chat".to_string(),
             uuid: uuid::Uuid::new_v4(),
+            branch_name: None,
             messages: Vec::new(),
             state: ChatState::default(),
             new_message_count: 0,

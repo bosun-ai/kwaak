@@ -48,10 +48,18 @@ pub fn ui(f: &mut ratatui::Frame, area: Rect, app: &mut App) {
     // Render help section
     HelpSectionWidget::render(f, app, help_area);
 
-    // Bottom paragraph with the git branch, right aligned italic
+    // Bottom paragraph with the uuid and git branch, right aligned italic
+    let branch_name = if let Some(current_chat) = app.current_chat() {
+        current_chat
+            .branch_name
+            .as_deref()
+            .unwrap_or("not yet named")
+    } else {
+        "not yet named"
+    };
     Paragraph::new(Line::from(vec![Span::raw(format!(
-        "kwaak/{}",
-        app.current_chat_uuid
+        "uuid: {}   branch-name: {}",
+        app.current_chat_uuid, branch_name
     ))]))
     .style(Style::default().fg(Color::DarkGray).italic())
     .block(Block::default().padding(Padding::right(1)))
