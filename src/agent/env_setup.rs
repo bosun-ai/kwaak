@@ -43,7 +43,7 @@ impl EnvSetup<'_> {
     }
 
     #[tracing::instrument(skip_all, err)]
-    pub async fn exec_setup_commands(&self) -> Result<AgentEnvironment> {
+    pub async fn exec_setup_commands(&self, branch_name: String) -> Result<AgentEnvironment> {
         // Only run these commands if we are running inside a docker container
         if self.repository.config().tool_executor != SupportedToolExecutors::Docker {
             return Ok(AgentEnvironment {
@@ -60,7 +60,7 @@ impl EnvSetup<'_> {
         }
 
         self.configure_git_user().await?;
-        self.switch_to_work_branch().await?;
+        self.switch_to_work_branch(branch_name).await?;
 
         Ok(AgentEnvironment {
             branch_name: self.get_current_branch().await?,
@@ -106,9 +106,12 @@ impl EnvSetup<'_> {
         Ok(())
     }
 
-    async fn switch_to_work_branch(&self) -> Result<()> {
-        let branch_name = format!("kwaak/{}", self.uuid);
-        let cmd = Command::Shell(format!("git checkout -b {branch_name}"));
+    async fn switch_to_work_branch(&self, branch_name: String) -> Result<()> {
+        // get the first 8 characters of the uuid
+        let uuid_start = self.uuid.to_string().chars().take(8).collect::<String>();
+
+        let full_branch_name = format!("kwaak/{branch_name}-{uuid_start}");
+        let cmd = Command::Shell(format!("git checkout -b {full_branch_name}"));
         self.executor.exec_cmd(&cmd).await?;
 
         Ok(())

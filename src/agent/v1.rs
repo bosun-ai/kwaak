@@ -123,8 +123,9 @@ pub async fn start_agent(
     };
 
     let system_prompt = build_system_prompt(&repository)?;
-    let ((), executor, initial_context) = tokio::try_join!(
+    let ((), branch_name, executor, initial_context) = tokio::try_join!(
         rename_chat(&query, &fast_query_provider, &command_responder),
+        create_branch_name(&query, &fast_query_provider),
         start_tool_executor(uuid, &repository),
         generate_initial_context(&repository, query)
     )?;
@@ -132,7 +133,7 @@ pub async fn start_agent(
     let env_setup = EnvSetup::new(uuid, &repository, github_session.as_deref(), &*executor);
     // TODO: Feels a bit off to have EnvSetup return an Env, just to pass it to tool creation to
     // get the ref/branch name
-    let agent_env = env_setup.exec_setup_commands().await?;
+    let agent_env = env_setup.exec_setup_commands(branch_name).await?;
 
     let tools = available_tools(&repository, github_session.as_ref(), Some(&agent_env))?;
 
@@ -338,6 +339,32 @@ async fn rename_chat(
     command_responder.rename(&chat_name);
 
     Ok(())
+}
+
+async fn create_branch_name(query: &str, fast_query_provider: &dyn SimplePrompt) -> Result<String> {
+    let chat_name = fast_query_provider
+        .prompt(
+            format!("Give a good, short, max 30 chars name for the following query. Only respond with the name.:\n{query}")
+                .into(),
+        )
+        .await
+        .context("Could not get chat name")?
+        .trim_matches('"')
+        .chars()
+        .take(30)
+        .collect::<String>();
+
+    // only keep ascii characters
+    let chat_name = chat_name.chars().filter(char::is_ascii).collect::<String>();
+    let chat_name = chat_name.to_lowercase();
+
+    // replace all whitespace with dashes
+    let chat_name = chat_name
+        .chars()
+        .map(|c| if c.is_whitespace() { '-' } else { c })
+        .collect::<String>();
+
+    Ok(chat_name)
 }
 
 #[cfg(test)]
