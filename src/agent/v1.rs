@@ -441,7 +441,7 @@ mod tests {
             .returning(|_| Ok("excellent-name".to_string()));
 
         let mut mock_responder = MockResponder::default();
-        let uuid = Uuid::new_v4();
+        let fixed_uuid = Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap();
 
         mock_responder
             .expect_rename_branch()
@@ -451,7 +451,7 @@ mod tests {
 
         create_branch_name(
             &query,
-            &uuid,
+            &fixed_uuid,
             &llm_mock as &dyn SimplePrompt,
             &mock_responder,
         )
@@ -470,7 +470,7 @@ mod tests {
             .returning(|_| Ok("excellent-name".repeat(100).to_string()));
 
         let mut mock_responder = MockResponder::default();
-        let uuid = Uuid::new_v4();
+        let fixed_uuid = Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap();
 
         mock_responder
             .expect_rename_branch()
@@ -483,7 +483,7 @@ mod tests {
 
         create_branch_name(
             &query,
-            &uuid,
+            &fixed_uuid,
             &llm_mock as &dyn SimplePrompt,
             &mock_responder,
         )

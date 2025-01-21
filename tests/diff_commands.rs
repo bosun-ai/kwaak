@@ -67,10 +67,16 @@ async fn test_diff() {
     let current_branch = git::util::main_branch(&workdir);
     assert_eq!(&current_branch, &repository.config().git.main_branch);
 
+    let branch_name = if let Some(chat) = app.current_chat() {
+        chat.branch_name.clone().expect("branch not yet named")
+    } else {
+        panic!("No current chat");
+    };
+
     // Now let's check out the branch and verify we have the hello.txt
     let output = tokio::process::Command::new("git")
         .arg("checkout")
-        .arg(format!("kwaak/{uuid}"))
+        .arg(&branch_name)
         .current_dir(&workdir)
         .output()
         .await
