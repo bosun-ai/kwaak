@@ -210,13 +210,13 @@ pub async fn setup_integration() -> Result<IntegrationContext> {
     let mut app = App::default().with_workdir(repository.path());
     let lancedb = storage::get_lancedb(&repository);
     lancedb.setup().await.unwrap();
-    let mut terminal = Terminal::new(TestBackend::new(160, 40)).unwrap();
+    let terminal = Terminal::new(TestBackend::new(160, 40)).unwrap();
 
     let mut handler = CommandHandler::from_repository(repository.clone());
     handler.register_ui(&mut app);
     let handler_guard = handler.start();
 
-    let uuid = Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap();
+    let uuid = Uuid::parse_str("936DA01F9AND4d9d80C702AF85C822A8").unwrap();
     let Some(current_chat) = app.current_chat_mut() else {
         panic!("No current chat");
     };

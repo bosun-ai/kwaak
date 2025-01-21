@@ -1,11 +1,7 @@
-use kwaak::commands::{Command, CommandHandler};
-use kwaak::frontend::{ui, App, DiffVariant, UIEvent, UserInputCommand};
+use kwaak::commands::Command;
+use kwaak::frontend::{ui, DiffVariant, UIEvent, UserInputCommand};
 use kwaak::test_utils::{setup_integration, IntegrationContext};
-use kwaak::{assert_command_done, git, storage, test_utils};
-use ratatui::backend::TestBackend;
-use ratatui::Terminal;
-use swiftide_core::Persist;
-use uuid::Uuid;
+use kwaak::{assert_command_done, git};
 
 /// Tests showing the diff of an agent workspace, and then pulling the diff into a local branch
 #[test_log::test(tokio::test(flavor = "multi_thread"))]
