@@ -10,7 +10,7 @@ async fn retry_chat() {
         uuid,
         mut terminal,
 
-        handler_guard: _handler_guard,
+        handler_guard,
         repository_guard: _repository_guard,
         ..
     } = setup_integration().await.unwrap();
@@ -39,4 +39,7 @@ async fn retry_chat() {
 
     terminal.draw(|f| ui(f, f.area(), &mut app)).unwrap();
     insta::assert_snapshot!("after_retry", terminal.backend());
+
+    // Force dropping it, for some reason it's not being dropped
+    drop(handler_guard);
 }

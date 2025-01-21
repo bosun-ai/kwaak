@@ -216,7 +216,7 @@ pub async fn setup_integration() -> Result<IntegrationContext> {
     handler.register_ui(&mut app);
     let handler_guard = handler.start();
 
-    let uuid = Uuid::parse_str("936DA01F9AND4d9d80C702AF85C822A8").unwrap();
+    let uuid = Uuid::parse_str("a1a2a3a4b1b2c1c2d1d2d3d4d5d6d7d8").unwrap();
     let Some(current_chat) = app.current_chat_mut() else {
         panic!("No current chat");
     };

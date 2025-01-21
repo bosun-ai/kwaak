@@ -185,7 +185,7 @@ impl CommandHandler {
             Command::Quit { .. } => unreachable!("Quit should be handled earlier"),
         }
         // Sleep for a tiny bit to avoid racing with agent responses
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        tokio::time::sleep(Duration::from_millis(100)).await;
         let mut elapsed = now.elapsed();
 
         // We cannot pause time in tokio because the larger tests
