@@ -363,10 +363,10 @@ async fn create_branch_name(
     let name = name.chars().filter(char::is_ascii).collect::<String>();
     let name = name.to_lowercase();
 
-    // replace all whitespace with dashes
+    // replace all non-alphanumeric characters with dashes
     let name = name
         .chars()
-        .map(|c| if c.is_whitespace() { '-' } else { c })
+        .map(|c| if c.is_alphanumeric() { c } else { '-' })
         .collect::<String>();
 
     // get the first 8 characters of the uuid
