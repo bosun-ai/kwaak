@@ -431,4 +431,63 @@ mod tests {
             .await
             .unwrap();
     }
+
+    #[tokio::test]
+    async fn test_rename_branch() {
+        let query = "This is a query";
+        let mut llm_mock = MockSimplePrompt::new();
+        llm_mock
+            .expect_prompt()
+            .returning(|_| Ok("excellent-name".to_string()));
+
+        let mut mock_responder = MockResponder::default();
+        let uuid = Uuid::new_v4();
+
+        mock_responder
+            .expect_rename_branch()
+            .with(predicate::str::starts_with("kwaak/excellent-name"))
+            .once()
+            .returning(|_| ());
+
+        create_branch_name(
+            &query,
+            &uuid,
+            &llm_mock as &dyn SimplePrompt,
+            &mock_responder,
+        )
+        .await
+        .unwrap();
+    }
+
+    // NOTE the prompt is intended to be limited to 30 characters, but the branch name in total
+    // has 15 more characters (total 45): "kwaak/" + "-" + 8 characters from the uuid
+    #[tokio::test]
+    async fn test_rename_branch_limits_45() {
+        let query = "This is a query";
+        let mut llm_mock = MockSimplePrompt::new();
+        llm_mock
+            .expect_prompt()
+            .returning(|_| Ok("excellent-name".repeat(100).to_string()));
+
+        let mut mock_responder = MockResponder::default();
+        let uuid = Uuid::new_v4();
+
+        mock_responder
+            .expect_rename_branch()
+            .with(
+                predicate::str::starts_with("kwaak/excellent-name")
+                    .and(predicate::function(|s: &str| s.len() == 45)),
+            )
+            .once()
+            .returning(|_| ());
+
+        create_branch_name(
+            &query,
+            &uuid,
+            &llm_mock as &dyn SimplePrompt,
+            &mock_responder,
+        )
+        .await
+        .unwrap();
+    }
 }
