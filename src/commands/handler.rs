@@ -167,9 +167,20 @@ impl CommandHandler {
                         .system_message("No agent found (yet), is it starting up?");
                     return Ok(());
                 };
+                let mut token = agent.cancel_token.clone();
+                if token.is_cancelled() {
+                    if let Some(agent) = self.agents.write().await.get_mut(&event.uuid()) {
+                        agent.cancel_token = CancellationToken::new();
+                        token = agent.cancel_token.clone();
+                    }
+                }
 
                 agent.agent_context.redrive().await;
-                agent.
+                tokio::select! {
+                    () = token.cancelled() => Ok(()),
+                    result = agent.run() => result,
+
+                }?;
             }
             Command::Quit { .. } => unreachable!("Quit should be handled earlier"),
         }
@@ -197,6 +208,13 @@ impl CommandHandler {
         query: &str,
         responder: Arc<dyn Responder>,
     ) -> Result<RunningAgent> {
+        if let Some(agent) = self.find_agent_by_uuid(uuid).await {
+            if let Some(agent) = self.agents.write().await.get_mut(&uuid) {
+                agent.cancel_token = CancellationToken::new();
+            }
+            return Ok(agent);
+        }
+
         let running_agent = agent::start_agent(uuid, &self.repository, query, responder).await?;
         let cloned = running_agent.clone();
 
@@ -208,15 +226,6 @@ impl CommandHandler {
     async fn find_agent_by_uuid(&self, uuid: Uuid) -> Option<RunningAgent> {
         if let Some(agent) = self.agents.read().await.get(&uuid) {
             // Ensure we always send a fresh cancellation token
-            // WARN: WHY DOES THIS NOT GIVE A COMPILE ERROR
-            if let Some(agent) = self.agents.write().await.get_mut(&uuid) {
-                agent.cancel_token = CancellationToken::new();
-
-                return Some(agent.clone());
-            }
-            tracing::error!(
-                "Agent not found, but was in the read lock, cancellation token not updated"
-            );
             return Some(agent.clone());
         }
         None

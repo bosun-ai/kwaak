@@ -39,6 +39,10 @@ impl RunningAgent {
         self.agent.lock().await.query(query).await
     }
 
+    pub async fn run(&self) -> Result<()> {
+        self.agent.lock().await.run().await
+    }
+
     pub async fn stop(&self) {
         self.cancel_token.cancel();
         self.agent.lock().await.stop();

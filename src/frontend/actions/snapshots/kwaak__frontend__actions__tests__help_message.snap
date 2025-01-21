@@ -18,6 +18,7 @@ Usage:
 **/new_chat** - Start a new chat
 **/next_chat** - Switch to the next chat
 **/quit** - Stop the application
+**/retry** - Retries the last chat with the agent.
 **/show_config** - Show the current configuration
 
 

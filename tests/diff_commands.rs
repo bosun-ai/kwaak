@@ -1,92 +1,72 @@
 use kwaak::commands::{Command, CommandHandler};
 use kwaak::frontend::{ui, App, DiffVariant, UIEvent, UserInputCommand};
-use kwaak::{git, storage, test_utils};
+use kwaak::test_utils::{setup_integration, IntegrationContext};
+use kwaak::{assert_command_done, git, storage, test_utils};
 use ratatui::backend::TestBackend;
 use ratatui::Terminal;
 use swiftide_core::Persist;
 use uuid::Uuid;
 
-/// Macro to wait for a command to be done
-macro_rules! assert_command_done {
-    ($app:expr, $uuid:expr) => {
-        let event = $app
-            .handle_events_until(UIEvent::is_command_done)
-            .await
-            .unwrap();
-
-        assert_eq!(event, UIEvent::CommandDone($uuid));
-    };
-}
-
 /// Tests showing the diff of an agent workspace, and then pulling the diff into a local branch
 #[test_log::test(tokio::test(flavor = "multi_thread"))]
 async fn test_diff() {
-    let (repository, _guard) = test_utils::test_repository();
-    let workdir = repository.path().clone();
-    let mut app = App::default().with_workdir(repository.path());
-    let lancedb = storage::get_lancedb(&repository);
-    lancedb.setup().await.unwrap();
-    let mut terminal = Terminal::new(TestBackend::new(160, 40)).unwrap();
+    let IntegrationContext {
+        mut app,
+        uuid,
+        repository,
+        mut terminal,
+        workdir,
 
-    let mut handler = CommandHandler::from_repository(repository.clone());
-    handler.register_ui(&mut app);
-    let _handler_guard = handler.start();
-
-    let fixed_uuid = Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap();
-    let Some(current_chat) = app.current_chat_mut() else {
-        panic!("No current chat");
-    };
-
-    // Force to fixed uuid so that snapshots are stable
-    current_chat.uuid = fixed_uuid;
-    app.current_chat_uuid = fixed_uuid;
+        repository_guard: _repository_guard,
+        handler_guard: _handler_guard,
+    } = setup_integration().await.unwrap();
 
     // First, let's start a noop agent so an environment is running
     app.dispatch_command(
-        fixed_uuid,
+        uuid,
         Command::Chat {
             message: "hello".to_string(),
         },
     );
 
-    assert_command_done!(app, fixed_uuid);
+    assert_command_done!(app, uuid);
 
     // The user asks for a diff, it should be empty
     app.send_ui_event(UIEvent::UserInputCommand(
-        fixed_uuid,
+        uuid,
         UserInputCommand::Diff(DiffVariant::Show),
     ));
 
-    assert_command_done!(app, fixed_uuid);
+    assert_command_done!(app, uuid);
 
     // Now let's add a file and check the diff
     app.dispatch_command(
-        fixed_uuid,
+        uuid,
         Command::Exec {
             cmd: swiftide::traits::Command::write_file("hello.txt", "world"),
         },
     );
 
-    assert_command_done!(app, fixed_uuid);
+    assert_command_done!(app, uuid);
 
     // now get the diff
     app.send_ui_event(UIEvent::UserInputCommand(
-        fixed_uuid,
+        uuid,
         UserInputCommand::Diff(DiffVariant::Show),
     ));
 
-    assert_command_done!(app, fixed_uuid);
+    assert_command_done!(app, uuid);
 
     terminal.draw(|f| ui(f, f.area(), &mut app)).unwrap();
     insta::assert_snapshot!(terminal.backend());
 
     // let's pull the diff
     app.send_ui_event(UIEvent::UserInputCommand(
-        fixed_uuid,
+        uuid,
         UserInputCommand::Diff(DiffVariant::Pull),
     ));
 
-    assert_command_done!(app, fixed_uuid);
+    assert_command_done!(app, uuid);
 
     let current_branch = git::util::main_branch(&workdir);
     assert_eq!(&current_branch, &repository.config().git.main_branch);
@@ -94,7 +74,7 @@ async fn test_diff() {
     // Now let's check out the branch and verify we have the hello.txt
     let output = tokio::process::Command::new("git")
         .arg("checkout")
-        .arg(format!("kwaak/{fixed_uuid}"))
+        .arg(format!("kwaak/{uuid}"))
         .current_dir(&workdir)
         .output()
         .await

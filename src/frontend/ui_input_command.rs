@@ -46,8 +46,6 @@ pub enum UserInputCommand {
     ///     /diff pull - Pulls the diff into a new branch
     Diff(DiffVariant),
     /// Retries the last chat with the agent.
-    ///
-    /// I.e. if a completion failed, or it was aborted, this will manually fix the agent.
     Retry,
     /// Print help
     Help,
