@@ -1,7 +1,7 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Padding, Paragraph};
 
-use crate::frontend::App;
+use crate::frontend::{App, UserInputCommand};
 
 pub struct HelpSectionWidget;
 
@@ -13,31 +13,47 @@ impl HelpSectionWidget {
         };
         let [top, bottom] = Layout::vertical([
             #[allow(clippy::cast_possible_truncation)]
-            Constraint::Length(app.supported_commands().len() as u16 + 3),
-            Constraint::Min(4),
+            Constraint::Length((app.supported_commands().len() / 2) as u16 + 3),
+            Constraint::Min(9),
         ])
         .areas(area);
 
-        Paragraph::new(
-            app.supported_commands()
-                .iter()
-                .map(|c| Line::from(format!("/{c}").bold()))
-                .collect::<Vec<Line>>(),
-        )
-        .block(
-            Block::default()
-                .title("Chat commands".bold())
-                .title_alignment(Alignment::Center)
-                .borders(Borders::TOP | Borders::RIGHT)
-                .border_set(border_set)
-                .padding(Padding::uniform(1)),
-        )
-        .render(top, f.buffer_mut());
+        let mut command_columns =
+            Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
+                .split(top)
+                .to_vec();
 
+        let mut supported_commands = app.supported_commands();
+        supported_commands.retain(|c| !c.is_help());
+        supported_commands.insert(0, UserInputCommand::Help);
+
+        Block::default()
+            .title("Chat commands".bold())
+            .title_alignment(Alignment::Center)
+            .borders(Borders::TOP | Borders::RIGHT)
+            .border_set(border_set)
+            .padding(Padding::uniform(2))
+            .render(top, f.buffer_mut());
+        // )
+
+        let (left_commands, right_commands) =
+            supported_commands.split_at(supported_commands.len() / 2);
+
+        for commands in &[left_commands, right_commands] {
+            Paragraph::new(
+                commands
+                    .iter()
+                    .map(|c| Line::from(format!("/{c}").bold()))
+                    .collect::<Vec<Line>>(),
+            )
+            .block(Block::default().padding(Padding::uniform(2)))
+            .render(command_columns.pop().unwrap(), f.buffer_mut());
+        }
         Paragraph::new(
             [
                 "Page Up/Down - Scroll",
                 "End - Scroll to end",
+                "Tab - Next chat",
                 "^s - Send message",
                 "^x - Stop agent",
                 "^n - New chat",
