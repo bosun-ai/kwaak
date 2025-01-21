@@ -20,7 +20,7 @@ tokio-util = { version = "0.7.13", features = ["rt"] }
 strum = "0.26.3"
 strum_macros = "0.26.4"
 swiftide-docker-executor = "0.4.1"
-swiftide = { version = "0.17.1", features = [
+swiftide = { version = "0.17.2", features = [
   "lancedb",
   "openai",
   "tree-sitter",
@@ -29,8 +29,8 @@ swiftide = { version = "0.17.1", features = [
   "swiftide-agents",
 
 ] }
-swiftide-core = { version = "0.17.1" }
-swiftide-macros = { version = "0.17.1" }
+swiftide-core = { version = "0.17.2" }
+swiftide-macros = { version = "0.17.2" }
 toml = "0.8.19"
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.134"
