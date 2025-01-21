@@ -261,7 +261,7 @@ fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
     let mut constraints = vec![
         // General
         "Research your solution before providing it",
-        "Tool calls are in parallel. You can run multiple tool calls at the same time, but they must not rely on eachother",
+        "Tool calls are in parallel. You can run multiple tool calls at the same time, but they must not rely on each other",
         "Your first response to ANY user message, must ALWAYS be your thoughts on how to solve the problem",
         "Keep a neutral tone, refrain from using superlatives and unnecessary adjectives",
 
@@ -279,15 +279,15 @@ fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
         "If you intend to edit multiple files or multiple edits in a single file, outline your plan first, then call the first tool immediately",
         "If you create a pull request, you must ensure the tests pass",
         "If you just want to run the tests, prefer running the tests over running coverage, as running tests is faster",
-        "NEVER write a file behavore having read it",
+        "NEVER write a file before having read it",
 
         // Code writing
-        "When writing code or tests, make sure this is ideomatic for the language",
+        "When writing code or tests, make sure this is idiomatic for the language",
         "When writing tests, verify that test coverage has changed. If it hasn't, the tests are not doing anything. This means you _must_ run coverage after creating a new test.",
         "When writing tests, make sure you cover all edge cases",
         "When writing tests, if a specific test continues to be troublesome, think out of the box and try to solve the problem in a different way, or reset and focus on other tests first",
         "When writing code, make sure the code runs, tests pass, and is included in the build",
-        "When writing code, make sure all public facing functions, methods, modules, etc are documented ideomatically",
+        "When writing code, make sure all public facing functions, methods, modules, etc are documented idiomatically",
         "Do NOT remove any existing comments",
         "ALWAYS consider existing functionality and code when writing new code. Functionality must remain the same unless explicitly instructed otherwise.",
         "When writing code, make sure you understand the existing architecture and its intend. Use tools to explore the project.",
