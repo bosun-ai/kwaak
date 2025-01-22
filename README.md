@@ -61,8 +61,7 @@
   <h3 align="center">Kwaak</h3>
 
   <p align="center">
-    Run a team of autonomous AI agents on your code, right from your terminal!
-    <br />
+Burn through your tech debt with AI agents.
     <a href="https://swiftide.rs"><strong>Powered by swiftide »</strong></a>
     <br />
     <br />
