@@ -93,7 +93,8 @@ async fn test_replace_block() {
     std::fs::write(
         tempdir.path().join("test.txt"),
         "line1\nline2\nline3\nline4\nline5",
-    ).unwrap();
+    )
+    .unwrap();
 
     let tool_response = invoke!(
         &tool,
@@ -114,7 +115,8 @@ async fn test_replace_block() {
     std::fs::write(
         tempdir.path().join("test.txt"),
         "line1\nline2\nline3\nline4\nline5",
-    ).unwrap();
+    )
+    .unwrap();
 
     let tool_response = invoke!(
         &tool,
@@ -180,7 +182,8 @@ async fn test_read_file_with_line_numbers() {
     std::fs::write(
         tempdir.path().join("test.txt"),
         "line1\nline2\nline3\nline4\nline5",
-    ).unwrap();
+    )
+    .unwrap();
 
     let file_content = invoke!(
         &tool,
@@ -200,12 +203,13 @@ async fn test_read_file() {
     let context = setup_context();
 
     let tempdir = tempdir().unwrap();
-    std::fs::write(
-        tempdir.path().join("test.txt"),
-        "line1\nline2\nline3",
-    ).unwrap();
+    std::fs::write(tempdir.path().join("test.txt"), "line1\nline2\nline3").unwrap();
 
-    let file_content = invoke!(&tool, &context, json!({"file_name": tempdir.path().join("test.txt").to_str().unwrap()}));
+    let file_content = invoke!(
+        &tool,
+        &context,
+        json!({"file_name": tempdir.path().join("test.txt").to_str().unwrap()})
+    );
 
     let expected_content = "line1\nline2\nline3";
     assert_eq!(file_content, expected_content);
