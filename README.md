@@ -61,8 +61,7 @@
   <h3 align="center">Kwaak</h3>
 
   <p align="center">
-Burn through your tech debt with AI agents.
-    <a href="https://swiftide.rs"><strong>Powered by swiftide »</strong></a>
+Burn through tech debt with AI agents!<br />
     <br />
     <br />
     <!-- <a href="https://github.com/bosun-ai/swiftide">View Demo</a> -->
