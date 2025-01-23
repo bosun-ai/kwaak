@@ -60,31 +60,29 @@ pub fn default_main_branch() -> String {
 ///
 /// Panics if the git remote url is not available
 #[must_use]
-pub fn default_owner_and_repo() -> (String, String) {
+pub fn default_owner_and_repo() -> Option<(String, String)> {
     let url = std::string::String::from_utf8(
         Command::new("git")
             .arg("remote")
             .arg("get-url")
             .arg("origin")
             .output()
-            .expect("Failed to get git remote url")
+            .ok()?
             .stdout,
     )
-    .unwrap();
+    .ok()?;
 
     extract_owner_and_repo(&url)
 }
 
-fn extract_owner_and_repo(url: &str) -> (String, String) {
+fn extract_owner_and_repo(url: &str) -> Option<(String, String)> {
     let re = Regex::new(r"^(?:https://|git@|ssh://|git://|http://)?(?:[^@/]+@)?(?:[^/:]+[/:])?([^/]+)/([^/.]+)(?:\.git)?$").unwrap();
 
-    re.captures(&url.trim())
-        .and_then(|caps| {
-            let owner = caps.get(1)?.as_str().to_string();
-            let repo = caps.get(2)?.as_str().to_string();
-            Some((owner, repo))
-        })
-        .expect("Failed to extract owner and repo from git remote url")
+    re.captures(&url.trim()).and_then(|caps| {
+        let owner = caps.get(1)?.as_str().to_string();
+        let repo = caps.get(2)?.as_str().to_string();
+        Some((owner, repo))
+    })
 }
 
 #[cfg(test)]
@@ -93,7 +91,7 @@ mod test {
 
     #[test]
     fn test_extract_owner_and_repo() {
-        let (owner, repo) = default_owner_and_repo();
+        let (owner, repo) = default_owner_and_repo().unwrap();
 
         assert_eq!(owner, "bosun-ai");
         assert_eq!(repo, "kwaak");
@@ -111,7 +109,7 @@ mod test {
         ];
 
         for url in urls {
-            let (owner, repo) = extract_owner_and_repo(url);
+            let (owner, repo) = extract_owner_and_repo(url).unwrap();
             assert_eq!(owner, "owner");
             assert_eq!(repo, "repo");
         }
