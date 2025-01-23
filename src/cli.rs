@@ -21,7 +21,10 @@ pub struct Args {
 #[derive(Subcommand, Debug, Clone, Default)]
 pub enum Commands {
     /// Initializes a new kwaak project in the current directory
-    Init,
+    Init {
+        #[arg(long, default_value_t = false)]
+        dry_run: bool,
+    },
     /// Start the TUI (default)
     #[default]
     Tui,

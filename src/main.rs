@@ -39,8 +39,8 @@ async fn main() -> Result<()> {
     let args = cli::Args::parse();
 
     // Handle the `init` command immediately after parsing args
-    if let Some(cli::Commands::Init) = args.command {
-        if let Err(error) = onboarding::run() {
+    if let Some(cli::Commands::Init { dry_run }) = args.command {
+        if let Err(error) = onboarding::run(dry_run) {
             eprintln!("Error: {error}");
             std::process::exit(1);
         }
@@ -99,7 +99,7 @@ async fn main() -> Result<()> {
                 println!("{}", toml::to_string_pretty(repository.config())?);
                 Ok(())
             }
-            cli::Commands::Init => unreachable!(),
+            cli::Commands::Init { .. } => unreachable!(),
         }
     };
 

@@ -24,8 +24,17 @@ pub struct LLMConfigurations {
 // Custom deserialize for LLMConfigurations so it gives better errors (i.e. on partial match llm
 // configuration or missing 'query' from multiple)
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(
+    Debug,
+    Clone,
+    Deserialize,
+    Serialize,
+    strum_macros::EnumString,
+    strum_macros::VariantNames,
+    strum_macros::Display,
+)]
 #[serde(tag = "provider")]
+#[strum(ascii_case_insensitive)]
 pub enum LLMConfiguration {
     OpenAI {
         api_key: Option<ApiKey>,
@@ -95,6 +104,7 @@ impl LLMConfiguration {
     PartialEq,
     strum_macros::EnumString,
     strum_macros::Display,
+    strum_macros::VariantNames,
     Default,
 )]
 pub enum OpenAIPromptModel {
@@ -114,6 +124,7 @@ pub enum OpenAIPromptModel {
     Serialize,
     strum_macros::EnumString,
     strum_macros::Display,
+    strum_macros::VariantNames,
     PartialEq,
     Default,
 )]

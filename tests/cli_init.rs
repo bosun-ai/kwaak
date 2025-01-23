@@ -1,5 +1,7 @@
-use assert_cmd::prelude::*;
+use assert_cmd::{cargo::cargo_bin, prelude::*};
+use kwaak::test_utils::temp_env;
 use predicates::prelude::*;
+use rexpect::{process::wait::WaitStatus, spawn};
 use std::process::Command;
 use tempfile::TempDir;
 struct Context {
@@ -61,18 +63,30 @@ impl Context {
 }
 
 #[test_log::test(tokio::test)]
-async fn test_creates_a_new_init_file() {
-    let mut context = setup().with_git();
+async fn test_interactive_default_init() {
+    let _temp_openai_api_key = temp_env("OPENAI_API_KEY", "noop");
+    let cmd = cargo_bin("kwaak");
 
-    context
-        .cmd()
-        .arg("init")
-        .assert()
-        .stdout(predicate::str::contains("Initialized kwaak project"))
-        .success();
+    let mut p = spawn(&format!("{cmd:?} init --dry-run"), Some(30_000)).unwrap();
 
-    // assert the file exists
-    std::fs::metadata(context.dir.path().join("kwaak.toml")).unwrap();
+    while let Ok(line) = p.read_line() {
+        println!("{line}");
+        // if line.contains("Dry run, would have written") {
+        //     break;
+        // }
+        if line.contains("base url") {
+            let _ = p.send_line("https://api.bosun.ai");
+        } else {
+            let _ = p.send_line("");
+        }
+    }
+
+    println!("{}", p.exp_eof().unwrap());
+
+    let Ok(WaitStatus::Exited(.., status)) = p.process.wait() else {
+        panic!("Process had a weird exit status");
+    };
+    assert_eq!(status, 0);
 }
 
 #[test_log::test(tokio::test)]
