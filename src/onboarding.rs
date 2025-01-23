@@ -1,5 +1,3 @@
-use std::{io::Write as _, str::FromStr as _};
-
 use crate::{
     config::{
         defaults::{default_main_branch, default_owner_and_repo, default_project_name},
@@ -8,7 +6,6 @@ use crate::{
     templates::Templates,
 };
 use anyhow::{Context as _, Result};
-use inquire::validator::StringValidator as _;
 use serde_json::json;
 use strum::{IntoEnumIterator as _, VariantNames};
 use swiftide::integrations::treesitter::SupportedLanguages;
@@ -169,7 +166,7 @@ fn llm_questions(context: &mut tera::Context) {
     match valid_llm {
         LLMConfiguration::OpenAI { .. } => openai_questions(context),
         LLMConfiguration::Ollama { .. } => ollama_questions(context),
-        _ => println!("{} currently should be configured manually", valid_llm),
+        _ => println!("{valid_llm} currently should be configured manually"),
     }
 }
 
