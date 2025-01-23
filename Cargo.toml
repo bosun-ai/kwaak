@@ -98,6 +98,7 @@ assert_cmd = "2.0.16"
 predicates = "3.1.3"
 swiftide-core = { version = "0.17.1", features = ["test-utils"] }
 mockall = "0.13.1"
+rexpect = "0.6.0"
 
 
 [lints.rust]

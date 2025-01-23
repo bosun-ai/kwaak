@@ -37,6 +37,12 @@ pub fn run(dry_run: bool) -> Result<()> {
     let config =
         Templates::render("kwaak.toml", &context).context("Failed to render default config")?;
 
+    debug_assert!(
+        toml::from_str::<crate::config::Config>(&config).is_ok(),
+        "Failed to parse the rendered config with error: {error}, config: \n{config}",
+        error = toml::from_str::<crate::config::Config>(&config).unwrap_err()
+    );
+
     // Since we want the template annotated with comments, just return the template
     if dry_run {
         println!("Dry run, would have written the following to kwaak.toml:\n\n{config}");
@@ -293,23 +299,3 @@ fn naive_lang_detect() -> Option<String> {
 
     None
 }
-
-// #[cfg(test)]
-// mod test {
-//     use super::*;
-//
-//     #[test]
-//     fn test_valid_template() {
-//         // Clean up env variables for a pure test
-//         std::env::vars().for_each(|(key, _)| {
-//             if key.starts_with("KWAAK") {
-//                 std::env::remove_var(key);
-//             }
-//         });
-//         std::env::set_var("KWAAK_OPENAI_API_KEY", "test");
-//         std::env::set_var("KWAAK_GITHUB_TOKEN", "test");
-//         let config = create_template_config().unwrap();
-//
-//         toml::from_str::<crate::config::Config>(&config).unwrap();
-//     }
-// }
