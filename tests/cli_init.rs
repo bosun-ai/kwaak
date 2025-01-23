@@ -1,4 +1,5 @@
 use assert_cmd::{cargo::cargo_bin, prelude::*};
+use kwaak::test_utils::temp_env;
 use predicates::prelude::*;
 use rexpect::{process::wait::WaitStatus, spawn};
 use std::process::Command;
@@ -63,6 +64,7 @@ impl Context {
 
 #[test_log::test(tokio::test)]
 async fn test_interactive_default_init() {
+    let _temp_openai_api_key = temp_env("OPENAI_API_KEY", "noop");
     let cmd = cargo_bin("kwaak");
 
     let mut p = spawn(&format!("{cmd:?} init --dry-run"), Some(30_000)).unwrap();

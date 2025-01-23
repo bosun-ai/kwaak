@@ -14,6 +14,7 @@ use crate::{
 pub struct TestGuard {
     pub tempdir: tempfile::TempDir,
 }
+
 pub fn test_repository() -> (Repository, TestGuard) {
     let toml = r#"
             language = "rust"
@@ -235,4 +236,27 @@ pub async fn setup_integration() -> Result<IntegrationContext> {
         handler_guard,
         repository_guard,
     })
+}
+
+pub struct TempEnv<'a> {
+    key: &'a str,
+    original: Option<String>,
+}
+#[must_use]
+// Sets a temporary env variable, when dropped it will be reset to the original value
+pub fn temp_env<'a>(key: &'a str, value: &str) -> TempEnv<'a> {
+    let original = std::env::var(key).ok();
+    std::env::set_var(key, value);
+
+    TempEnv { key, original }
+}
+
+impl Drop for TempEnv<'_> {
+    fn drop(&mut self) {
+        if let Some(original) = self.original.take() {
+            std::env::set_var(self.key, original);
+        } else {
+            std::env::remove_var(self.key);
+        }
+    }
 }
