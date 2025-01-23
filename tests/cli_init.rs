@@ -65,6 +65,7 @@ impl Context {
 #[test_log::test(tokio::test)]
 async fn test_interactive_default_init() {
     let _temp_openai_api_key = temp_env("OPENAI_API_KEY", "noop");
+    let _temp_github_token = temp_env("GITHUB_TOKEN", "noop");
     let cmd = cargo_bin("kwaak");
 
     let mut p = spawn(&format!("{cmd:?} init --dry-run"), Some(30_000)).unwrap();
