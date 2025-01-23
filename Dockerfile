@@ -3,6 +3,7 @@ ARG RUST_VERSION=1.83-slim
 FROM rust:${RUST_VERSION} as builder
 
 RUN rustup component add clippy rustfmt
+RUN rustup toolchain install nightly
 
 # Install tool dependencies for app and git/ssh for the workspace
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -17,7 +18,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/* \
   && cp /usr/bin/fdfind /usr/bin/fd
 
-RUN cargo install cargo-llvm-cov cargo-nextest
+RUN cargo install cargo-nextest
+RUN cargo +nightly install cargo-llvm-cov cargo-nextest
 
 COPY . /app
 

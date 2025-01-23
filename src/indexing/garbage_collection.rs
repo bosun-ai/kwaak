@@ -386,10 +386,6 @@ mod tests {
 
     #[test_log::test(tokio::test)]
     async fn test_detect_deleted_file() {
-        // Skip on CI, not a clue
-        if std::env::var("CI").is_ok() {
-            return;
-        }
         let context = setup().await;
         context
             .subject
@@ -398,11 +394,6 @@ mod tests {
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
-        std::process::Command::new("git")
-            .arg("init")
-            .current_dir(context.repository.path())
-            .output()
-            .expect("failed to stage file for git");
         std::process::Command::new("git")
             .arg("add")
             .arg(&context.node.path)

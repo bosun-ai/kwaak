@@ -16,7 +16,7 @@ docker-build:
 
 # Mac and Linux have slightly different behaviour when it comes to git/docker/filesystems.
 # This ensures a fast feedback loop on macs.
-test-in-docker: docker-build
+test-in-docker TEST="": docker-build
   docker volume create kwaak-target-cache
   docker volume create kwaak-cargo-cache
   docker run --rm -it \
@@ -28,9 +28,9 @@ test-in-docker: docker-build
       -e RUST_LOG=debug \
       -e RUST_BACKTRACE=1 \
       kwaak \
-      bash -c "cargo nextest run --no-fail-fast"
+      bash -c "cargo nextest run --no-fail-fast {{TEST}}"
 
-build-in-docker: docker-build
+build-in-docker PROFILE="release": docker-build
   docker volume create kwaak-target-cache
   docker volume create kwaak-cargo-cache
   docker run --rm -it \
@@ -42,5 +42,5 @@ build-in-docker: docker-build
       -e RUST_LOG=debug \
       -e RUST_BACKTRACE=1 \
       kwaak \
-      bash -c "cargo build --release"
+      bash -c "cargo build --profile {{PROFILE}}"
 
