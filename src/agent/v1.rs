@@ -39,15 +39,15 @@ pub fn available_tools(
 
     let mut tools = vec![
         tools::read_file(),
+        tools::read_file_with_line_numbers(),
         tools::write_file(),
         tools::search_file(),
         tools::git(),
         tools::shell_command(),
         tools::search_code(),
         tools::fetch_url(),
+        tools::replace_block(),
         tools::ExplainCode::new(query_pipeline).boxed(),
-        tools::RunTests::new(&repository.config().commands.test).boxed(),
-        tools::RunCoverage::new(&repository.config().commands.coverage).boxed(),
     ];
 
     if let Some(github_session) = github_session {
@@ -59,6 +59,14 @@ pub fn available_tools(
         let tavily = Tavily::builder(tavily_api_key.expose_secret()).build()?;
         tools.push(tools::SearchWeb::new(tavily, tavily_api_key.clone()).boxed());
     };
+
+    if let Some(test_command) = &repository.config().commands.test {
+        tools.push(tools::RunTests::new(test_command).boxed());
+    }
+
+    if let Some(coverage_command) = &repository.config().commands.coverage {
+        tools.push(tools::RunCoverage::new(coverage_command).boxed());
+    }
 
     if let Some(env) = agent_env {
         tools.push(tools::ResetFile::new(&env.start_ref).boxed());
@@ -80,7 +88,6 @@ async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Arc<
             }
             let running_executor = executor
                 .with_context_path(&repository.config().docker.context)
-                .with_working_dir(repository.path())
                 .with_image_name(&repository.config().project_name)
                 .with_dockerfile(dockerfile)
                 .with_container_uuid(uuid)
@@ -132,7 +139,7 @@ pub async fn start_agent(
     let mut context = DefaultContext::from_executor(Arc::clone(&executor));
 
     let top_level_project_overview = context
-        .exec_cmd(&Command::shell("fd -iH -d2"))
+        .exec_cmd(&Command::shell("fd -iH -d2 -E '.git/'"))
         .await?
         .output;
     tracing::debug!(top_level_project_overview = ?top_level_project_overview, "Top level project overview");
@@ -152,8 +159,9 @@ pub async fn start_agent(
         ConversationSummarizer::new(query_provider.clone(), &tools, &agent_env.start_ref);
     let maybe_lint_fix_command = repository.config().commands.lint_and_fix.clone();
 
+    let context = Arc::new(context);
     let agent = Agent::builder()
-        .context(context)
+        .context(Arc::clone(&context) as Arc<dyn AgentContext>)
         .system_prompt(system_prompt)
         .tools(tools)
         .before_all(move |context| {
@@ -164,7 +172,7 @@ pub async fn start_agent(
                     .add_message(chat_completion::ChatMessage::new_user(initial_context))
                     .await;
 
-                let top_level_project_overview = context.exec_cmd(&Command::shell("fd -iH -d2")).await?.output;
+                let top_level_project_overview = context.exec_cmd(&Command::shell("fd -iH -d2 -E '.git/*'")).await?.output;
                 context.add_message(chat_completion::ChatMessage::new_user(format!("The following is a max depth 2, high level overview of the directory structure of the project: \n ```{top_level_project_overview}```"))).await;
 
                 Ok(())
@@ -247,6 +255,7 @@ pub async fn start_agent(
         .agent(agent)
         .executor(executor)
         .agent_environment(agent_env)
+        .agent_context(context as Arc<dyn AgentContext>)
         .build()
 }
 
@@ -254,7 +263,7 @@ fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
     let mut constraints = vec![
         // General
         "Research your solution before providing it",
-        "Tool calls are in parallel. You can run multiple tool calls at the same time, but they must not rely on eachother",
+        "Tool calls are in parallel. You can run multiple tool calls at the same time, but they must not rely on each other",
         "Your first response to ANY user message, must ALWAYS be your thoughts on how to solve the problem",
         "Keep a neutral tone, refrain from using superlatives and unnecessary adjectives",
 
@@ -267,17 +276,20 @@ fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
 
         // Tool usage
         "When writing files, ensure you write and implement everything, everytime. Do NOT leave anything out. Writing a file overwrites the entire file, so it MUST include the full, completed contents of the file. Do not make changes other than the ones requested.",
+        "Prefer using block replacements over writing files, if possible. This is faster and less error prone. You can only make ONE block replacement at the time. Otherwise you must retrieve the line numbers again.",
+        "Before replacing a block, you MUST read the file content with the line numbers. You are not allowed to count lines yourself.",
+        "If you intend to edit multiple files or multiple edits in a single file, outline your plan first, then call the first tool immediately",
         "If you create a pull request, you must ensure the tests pass",
         "If you just want to run the tests, prefer running the tests over running coverage, as running tests is faster",
-        "NEVER write a file behavore having read it",
+        "NEVER write a file before having read it",
 
         // Code writing
-        "When writing code or tests, make sure this is ideomatic for the language",
+        "When writing code or tests, make sure this is idiomatic for the language",
         "When writing tests, verify that test coverage has changed. If it hasn't, the tests are not doing anything. This means you _must_ run coverage after creating a new test.",
         "When writing tests, make sure you cover all edge cases",
         "When writing tests, if a specific test continues to be troublesome, think out of the box and try to solve the problem in a different way, or reset and focus on other tests first",
         "When writing code, make sure the code runs, tests pass, and is included in the build",
-        "When writing code, make sure all public facing functions, methods, modules, etc are documented ideomatically",
+        "When writing code, make sure all public facing functions, methods, modules, etc are documented idiomatically",
         "Do NOT remove any existing comments",
         "ALWAYS consider existing functionality and code when writing new code. Functionality must remain the same unless explicitly instructed otherwise.",
         "When writing code, make sure you understand the existing architecture and its intend. Use tools to explore the project.",

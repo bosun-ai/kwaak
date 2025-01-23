@@ -160,10 +160,32 @@ impl CommandHandler {
 
                 event.responder().system_message(&output);
             }
+            Command::RetryChat => {
+                let Some(agent) = self.find_agent_by_uuid(event.uuid()).await else {
+                    event
+                        .responder()
+                        .system_message("No agent found (yet), is it starting up?");
+                    return Ok(());
+                };
+                let mut token = agent.cancel_token.clone();
+                if token.is_cancelled() {
+                    if let Some(agent) = self.agents.write().await.get_mut(&event.uuid()) {
+                        agent.cancel_token = CancellationToken::new();
+                        token = agent.cancel_token.clone();
+                    }
+                }
+
+                agent.agent_context.redrive().await;
+                tokio::select! {
+                    () = token.cancelled() => Ok(()),
+                    result = agent.run() => result,
+
+                }?;
+            }
             Command::Quit { .. } => unreachable!("Quit should be handled earlier"),
         }
         // Sleep for a tiny bit to avoid racing with agent responses
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        tokio::time::sleep(Duration::from_millis(100)).await;
         let mut elapsed = now.elapsed();
 
         // We cannot pause time in tokio because the larger tests
@@ -186,10 +208,11 @@ impl CommandHandler {
         query: &str,
         responder: Arc<dyn Responder>,
     ) -> Result<RunningAgent> {
-        if let Some(agent) = self.agents.write().await.get_mut(&uuid) {
-            // Ensure we always send a fresh cancellation token
-            agent.cancel_token = CancellationToken::new();
-            return Ok(agent.clone());
+        if let Some(agent) = self.find_agent_by_uuid(uuid).await {
+            if let Some(agent) = self.agents.write().await.get_mut(&uuid) {
+                agent.cancel_token = CancellationToken::new();
+            }
+            return Ok(agent);
         }
 
         let running_agent = agent::start_agent(uuid, &self.repository, query, responder).await?;
@@ -201,8 +224,11 @@ impl CommandHandler {
     }
 
     async fn find_agent_by_uuid(&self, uuid: Uuid) -> Option<RunningAgent> {
-        let agents = self.agents.read().await;
-        agents.get(&uuid).cloned()
+        if let Some(agent) = self.agents.read().await.get(&uuid) {
+            // Ensure we always send a fresh cancellation token
+            return Some(agent.clone());
+        }
+        None
     }
 
     async fn stop_agent(&self, uuid: Uuid, responder: Arc<dyn Responder>) -> Result<()> {

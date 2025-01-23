@@ -6,6 +6,7 @@ use crate::{
     chat_message::ChatMessage,
     commands::{Command, CommandEvent, CommandResponse, Responder},
     frontend::{ui_event::UIEvent, App},
+    git,
 };
 
 // Shows a diff to the user
@@ -56,19 +57,9 @@ pub async fn diff_show(app: &mut App<'_>) {
 // Pulls the diff from the backend as a patch and applies it to the same branch as the agent is running in
 #[allow(clippy::too_many_lines)]
 pub async fn diff_pull(app: &mut App<'_>) {
-    // if the current branch is dirty, we should not pull
+    // if the local current branch is dirty, we should not pull
     // Maybe we can move these to util, and then use a local executor
-    let is_dirty = tokio::process::Command::new("git")
-        .arg("diff-index")
-        .arg("--quiet")
-        .arg("HEAD")
-        .current_dir(&app.workdir)
-        .output()
-        .await
-        .map(|output| !output.status.success())
-        .unwrap_or(true);
-
-    if is_dirty {
+    if git::util::is_dirty(&app.workdir).await {
         app.send_ui_event(UIEvent::ChatMessage(
             app.current_chat_uuid,
             ChatMessage::new_system("Cannot pull diff, working directory is dirty".to_string()),

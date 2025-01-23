@@ -9,6 +9,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_LOG: debug
+  RUST_BACKTRACE: 1
   RUSTFLAGS: "-Dwarnings"
   TAVILY_API_KEY: noop
   KWAAK_OPENAI_API_KEY: noop
@@ -40,7 +42,7 @@ jobs:
       - name: copy fdfind
         run: sudo cp /usr/bin/fdfind /usr/bin/fd
       - name: "Test"
-        run: cargo nextest run
+        run: cargo nextest run -j 2
 
   lint:
     name: Lint

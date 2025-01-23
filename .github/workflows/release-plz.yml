@@ -29,6 +29,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+      - name: check release
+        run: cargo check --release
       - name: Run release-plz
         uses: release-plz/action@v0.5
         env:

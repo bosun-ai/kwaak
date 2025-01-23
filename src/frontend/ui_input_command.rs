@@ -45,6 +45,8 @@ pub enum UserInputCommand {
     ///     /diff show - Shows the diff in the chat
     ///     /diff pull - Pulls the diff into a new branch
     Diff(DiffVariant),
+    /// Retries the last chat with the agent.
+    Retry,
     /// Print help
     Help,
 }
@@ -76,9 +78,9 @@ impl UserInputCommand {
     #[must_use]
     pub fn to_command(&self) -> Option<Command> {
         match self {
-            UserInputCommand::Quit => Some(Command::Quit),
             UserInputCommand::ShowConfig => Some(Command::ShowConfig),
             UserInputCommand::IndexRepository => Some(Command::IndexRepository),
+            UserInputCommand::Retry => Some(Command::RetryChat),
             _ => None,
         }
     }
@@ -94,6 +96,7 @@ impl UserInputCommand {
             UserInputCommand::Copy => Some(UIEvent::CopyLastMessage),
             UserInputCommand::DeleteChat => Some(UIEvent::DeleteChat),
             UserInputCommand::Help => Some(UIEvent::Help),
+            UserInputCommand::Quit => Some(UIEvent::Quit),
             UserInputCommand::Diff(diff_variant) => match diff_variant {
                 DiffVariant::Show => Some(UIEvent::DiffShow),
                 DiffVariant::Pull => Some(UIEvent::DiffPull),

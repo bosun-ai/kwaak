@@ -61,6 +61,7 @@ fn naive_lang_detect() -> Option<SupportedLanguages> {
         ("Pipfile", "Python"),
         ("build.gradle", "Java"),
         ("pom.xml", "Java"),
+        ("go.mod", "Go"),
     ];
 
     // Iterate through the files and detect the language

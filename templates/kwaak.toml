@@ -17,12 +17,16 @@ language = "{{ language }}"
 ## Test and coverage are required. Kwaak expects coverage to run the tests as well and echo both the test and coverage results to stdout
 ## At the moment, the format of the output does not matter.
 [commands]
+## Optional: Allows an agent to run tests. Recommended.
 # Example: test = "cargo test --no-fail-fast --color=never"
-test = "REQUIRED"
+#test = "REQUIRED"
+
+## Optional: Allows an agent to run coverage. The coverage command should run the tests and output the coverage results to stdout.
 # Example: coverage = "cargo llvm-cov --no-clean --summary-only"
-coverage = "REQUIRED"
+#coverage = "REQUIRED"
+
 ## Optional: Lint and fix command. This command is run after each completion cycle, before committing the code.
-## Recommended to use, as it avoids the LLM getting distracted by linting issues
+# Recommended to use, as it avoids the LLM getting distracted by linting issues
 # Example: lint_and_fix = "cargo clippy --fix --allow-dirty --allow-staged && cargo fmt"
 
 ## Git and GitHub configuration

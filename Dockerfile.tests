@@ -1,0 +1,8 @@
+# A lightweight image used for tests
+FROM alpine:latest
+
+RUN apk add git fd ripgrep
+
+COPY . /app
+
+WORKDIR /app

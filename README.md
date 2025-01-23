@@ -61,9 +61,7 @@
   <h3 align="center">Kwaak</h3>
 
   <p align="center">
-    Run a team of autonomous AI agents on your code, right from your terminal!
-    <br />
-    <a href="https://swiftide.rs"><strong>Powered by swiftide »</strong></a>
+Burn through tech debt with AI agents!<br />
     <br />
     <br />
     <!-- <a href="https://github.com/bosun-ai/swiftide">View Demo</a> -->
@@ -106,7 +104,7 @@ Kwaak is part of the [bosun.ai](https://bosun.ai) project. An upcoming platform 
 - Agents operate on code, use tools, and can be interacted with
 - View and pull code changes from an agent; or have it create a pull request
 - Sandboxed execution in docker
-- Python, TypeScript/Javascript, Java, Ruby, and Rust
+- Python, TypeScript/Javascript, Go, Java, Ruby, and Rust
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -210,7 +208,7 @@ Kwaak supports configuring different Large Language Models (LLMs) for distinct t
 All of these are inferred from the project directory and can be overridden in the `kwaak.toml` configuration file.
 
 - **`project_name`**: Defaults to the current directory name. Represents the name of your project.
-- **`language`**: The programming language of the project, for instance, Rust, Python, JavaScript, etc.
+- **`language`**: The programming language of the project, for instance, Rust, Go, Python, JavaScript, etc.
 
 #### Command Configuration
 

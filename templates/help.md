@@ -8,6 +8,7 @@ Additionally, you can use the following keybindings to navigate the interface:
 
 "Page Up/Down - Scroll"
 "End - Scroll to end"
+"Tab - Next chat"
 "^s - Send a message to the agent"
 "^x - Stop agent"
 "^n - New chat"

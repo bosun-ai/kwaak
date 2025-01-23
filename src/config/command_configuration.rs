@@ -3,8 +3,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CommandConfiguration {
-    pub test: String,
-    pub coverage: String,
+    /// Optional: Enables the agent to run the tests
+    pub test: Option<String>,
+    /// Optional: Enables the agent to retrieve coverage information (it should print, preferably
+    /// concise, output to stdout)
+    pub coverage: Option<String>,
     /// Optional: Lint and fix the project
     /// This command is run if any files were written to the project.
     ///

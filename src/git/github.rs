@@ -50,7 +50,6 @@ impl GithubSession {
 
         if repo_url.starts_with("git@") {
             let converted = repo_url.replace(':', "/").replace("git@", "https://");
-            dbg!(&converted);
             let _ = std::mem::replace(&mut repo_url, converted);
         }
 

@@ -42,7 +42,7 @@ impl EnvSetup<'_> {
         }
     }
 
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip_all, err)]
     pub async fn exec_setup_commands(&self) -> Result<AgentEnvironment> {
         // Only run these commands if we are running inside a docker container
         if self.repository.config().tool_executor != SupportedToolExecutors::Docker {
@@ -58,6 +58,7 @@ impl EnvSetup<'_> {
             tracing::warn!(error = ?e, "Failed to setup github auth");
             remote_enabled = false;
         }
+
         self.configure_git_user().await?;
         self.switch_to_work_branch().await?;
 
@@ -116,12 +117,14 @@ impl EnvSetup<'_> {
     async fn get_current_ref(&self) -> Result<String> {
         let cmd = Command::shell("git rev-parse HEAD");
         let output = self.executor.exec_cmd(&cmd).await?;
+        tracing::debug!("agent starting from ref: {}", output.output.trim());
         Ok(output.output.trim().to_string())
     }
 
     async fn get_current_branch(&self) -> Result<String> {
         let cmd = Command::shell("git rev-parse --abbrev-ref HEAD");
         let output = self.executor.exec_cmd(&cmd).await?;
+        tracing::debug!("agent starting from branch: {}", output.output.trim());
         Ok(output.output.trim().to_string())
     }
 }

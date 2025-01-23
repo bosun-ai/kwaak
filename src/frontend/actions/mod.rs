@@ -8,7 +8,7 @@ use strum::{EnumMessage, IntoEnumIterator};
 
 use crate::{chat::Chat, chat_message::ChatMessage, commands::Command, templates::Templates};
 
-use super::{App, UserInputCommand};
+use super::{ui_input_command::UserInputCommand, App};
 
 mod diff;
 

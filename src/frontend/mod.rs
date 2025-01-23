@@ -13,11 +13,7 @@ mod logs_mode;
 /// to avoid coupling frontend and the rest
 pub use app::App;
 
-#[cfg(debug_assertions)]
 pub use app_command_responder::AppCommandResponder;
-#[cfg(debug_assertions)]
 pub use chat_mode::ui;
-#[cfg(debug_assertions)]
 pub use ui_event::UIEvent;
-#[cfg(debug_assertions)]
 pub use ui_input_command::{DiffVariant, UserInputCommand};

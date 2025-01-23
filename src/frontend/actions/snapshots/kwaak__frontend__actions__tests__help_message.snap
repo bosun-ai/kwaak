@@ -18,6 +18,7 @@ Usage:
 **/new_chat** - Start a new chat
 **/next_chat** - Switch to the next chat
 **/quit** - Stop the application
+**/retry** - Retries the last chat with the agent.
 **/show_config** - Show the current configuration
 
 
@@ -25,6 +26,7 @@ Additionally, you can use the following keybindings to navigate the interface:
 
 "Page Up/Down - Scroll"
 "End - Scroll to end"
+"Tab - Next chat"
 "^s - Send a message to the agent"
 "^x - Stop agent"
 "^n - New chat"

@@ -34,6 +34,10 @@ pub enum Command {
     /// Execute a command in the context of an agent
     /// and get the output
     Exec { cmd: swiftide::traits::Command },
+
+    /// Retry the last chat with the agent
+    /// Will reset history to the point of the last chat, then re-run the chat
+    RetryChat,
 }
 
 #[derive(Debug, Clone, Builder)]
