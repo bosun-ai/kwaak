@@ -256,5 +256,6 @@ async fn test_git() {
 
     let git_output = invoke!(&tool, &context, json!({"command": "status"}));
 
+    dbg!(&git_output);
     assert!(git_output.contains("On branch"));
 }
