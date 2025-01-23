@@ -11,10 +11,6 @@ use strum::{IntoEnumIterator as _, VariantNames};
 use swiftide::integrations::treesitter::SupportedLanguages;
 
 pub fn run(dry_run: bool) -> Result<()> {
-    // TODO:
-    // - Tavily
-    // - Commands ?
-
     if !dry_run {
         if std::fs::metadata(".git").is_err() {
             anyhow::bail!("Not a git repository, please run `git init` first");
@@ -83,6 +79,7 @@ fn prompt_api_key<'a>(prompt: &'a str, default: Option<&'a str>) -> inquire::Tex
     prompt
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn prompt_select<T>(prompt: &str, options: Vec<T>, default: Option<T>) -> String
 where
     T: std::fmt::Display + std::cmp::PartialEq + Clone,
@@ -173,7 +170,10 @@ fn llm_questions(context: &mut tera::Context) {
     match valid_llm {
         LLMConfiguration::OpenAI { .. } => openai_questions(context),
         LLMConfiguration::Ollama { .. } => ollama_questions(context),
-        _ => println!("{valid_llm} currently should be configured manually"),
+        #[cfg(debug_assertions)]
+        LLMConfiguration::Testing => {
+            println!("{valid_llm} is not meant for production use, skipping configuration");
+        }
     }
 }
 

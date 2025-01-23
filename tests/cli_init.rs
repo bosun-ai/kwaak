@@ -1,7 +1,7 @@
 use assert_cmd::{cargo::cargo_bin, prelude::*};
 use predicates::prelude::*;
 use rexpect::{process::wait::WaitStatus, spawn};
-use std::{io::Write, process::Command};
+use std::process::Command;
 use tempfile::TempDir;
 struct Context {
     dir: TempDir,
