@@ -28,6 +28,7 @@ pub fn run(dry_run: bool) -> Result<()> {
 
     println!("Welcome to Kwaak! Let's get started by initializing a new configuration file.");
     println!("\n");
+    println!("We have a few questions to ask you to get started, you can always change these later in the `kwaak.toml` file.");
 
     let mut context = tera::Context::new();
     project_questions(&mut context);
