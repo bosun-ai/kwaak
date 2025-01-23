@@ -179,7 +179,7 @@ fn llm_questions(context: &mut tera::Context) {
 
 fn openai_questions(context: &mut tera::Context) {
     let api_key = prompt_api_key(
-        "Where can we find your OpenAI api key?",
+        "Where can we find your OpenAI api key? (https://platform.openai.com/api-keys)",
         Some("env:OPENAI_API_KEY"),
     )
     .prompt()
