@@ -104,6 +104,7 @@ impl LLMConfiguration {
     PartialEq,
     strum_macros::EnumString,
     strum_macros::Display,
+    strum_macros::VariantNames,
     Default,
 )]
 pub enum OpenAIPromptModel {
@@ -123,6 +124,7 @@ pub enum OpenAIPromptModel {
     Serialize,
     strum_macros::EnumString,
     strum_macros::Display,
+    strum_macros::VariantNames,
     PartialEq,
     Default,
 )]

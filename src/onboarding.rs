@@ -3,21 +3,20 @@ use std::{io::Write as _, str::FromStr as _};
 use crate::{
     config::{
         defaults::{default_main_branch, default_owner_and_repo, default_project_name},
-        LLMConfiguration,
+        LLMConfiguration, OpenAIEmbeddingModel, OpenAIPromptModel,
     },
     templates::Templates,
 };
 use anyhow::{Context as _, Result};
+use inquire::validator::StringValidator as _;
 use serde_json::json;
 use strum::{IntoEnumIterator as _, VariantNames};
 use swiftide::integrations::treesitter::SupportedLanguages;
 
 pub fn run(dry_run: bool) -> Result<()> {
-    // Onboarding steps
-    // 1. Questions for general setup
-    // 2. Configure the llm
-    // 3. Ask for other api keys
-    // 3. Generate a dockerfile if possible
+    // TODO:
+    // - Tavily
+    // - Commands ?
 
     if !dry_run {
         if std::fs::metadata(".git").is_err() {
@@ -52,51 +51,101 @@ pub fn run(dry_run: bool) -> Result<()> {
     Ok(())
 }
 
-// Helper for getting user feedback with a default
-fn input_with_default(prompt: &str, default: &str) -> String {
-    print!("{prompt} [{default}]: ");
-    std::io::stdout().flush().unwrap();
-    let mut input = String::new();
-    std::io::stdin()
-        .read_line(&mut input)
-        .expect("Failed to read input");
-    let trimmed = input.trim();
-    if trimmed.is_empty() {
-        default.to_string()
-    } else {
-        trimmed.to_string()
+fn prompt_text<'a>(prompt: &'a str, default: Option<&'a str>) -> inquire::Text<'a> {
+    let mut prompt = inquire::Text::new(prompt);
+
+    if let Some(default) = default {
+        prompt = prompt.with_default(default);
     }
+
+    prompt
+}
+
+fn prompt_api_key<'a>(prompt: &'a str, default: Option<&'a str>) -> inquire::Text<'a> {
+    let mut prompt = inquire::Text::new(prompt).with_validator(|input: &str| {
+        if input.starts_with("env:") || input.starts_with("file:") {
+            Ok(inquire::validator::Validation::Valid)
+        } else {
+            Ok(inquire::validator::Validation::Invalid(
+                "API keys must start with `env:` or `file:`".into(),
+            ))
+        }
+    });
+
+    if let Some(default) = default {
+        prompt = prompt.with_default(default);
+    }
+
+    prompt
+}
+
+fn prompt_select<T>(prompt: &str, options: Vec<T>, default: Option<T>) -> String
+where
+    T: std::fmt::Display + std::cmp::PartialEq + Clone,
+{
+    let mut prompt = inquire::Select::new(prompt, options.clone());
+
+    if let Some(default) = default {
+        debug_assert!(
+            options.contains(&default),
+            "{} is not in the list of options, valid: {}",
+            default,
+            options
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        if let Some(idx) = options.iter().position(|l| l == &default) {
+            prompt = prompt.with_starting_cursor(idx);
+        }
+    }
+
+    prompt.prompt().unwrap().to_string()
 }
 
 fn project_questions(context: &mut tera::Context) {
     let project_name = default_project_name();
-    let project_name_input = input_with_default("Enter the project name", &project_name);
+    let project_name_input = prompt_text("Project name", Some(&project_name))
+        .prompt()
+        .unwrap();
     context.insert("project_name", &project_name_input);
 
     // Get user inputs with defaults
-    let language = naive_lang_detect().map_or_else(|| "REQUIRED".to_string(), |l| l.to_string());
-    let language_input = input_with_default(
-        &format!(
-            "Enter the programming language ({})",
-            SupportedLanguages::iter()
-                .map(|l| l.to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
-        ),
-        &language,
-    );
+    let detected = naive_lang_detect();
+    let options = SupportedLanguages::iter()
+        .map(|l| l.to_string())
+        .collect::<Vec<_>>();
+
+    let language_input = prompt_select("Programming language", options.clone(), detected);
+
     context.insert("language", &language_input);
 }
 
 fn git_questions(context: &mut tera::Context) {
     let (default_owner, default_repository) = default_owner_and_repo();
-    let owner_input = input_with_default("Enter the GitHub owner/org", &default_owner);
-    let repository_input = input_with_default("Enter the GitHub repository", &default_repository);
     let default_branch = default_main_branch();
-    let branch_input = input_with_default("Enter the main branch", &default_branch);
+    let branch_input = prompt_text("Default git branch", Some(&default_branch))
+        .prompt()
+        .unwrap();
 
+    let owner_input = prompt_text("Git owner", Some(&default_owner))
+        .prompt()
+        .unwrap();
+    let repository_input = prompt_text("Git repository", Some(&default_repository))
+        .prompt()
+        .unwrap();
+
+    let github_api_key = prompt_api_key(
+        "GitHub api key (optional, <esc> to skip)",
+        Some("env:GITHUB_TOKEN"),
+    )
+    .prompt_skippable()
+    .unwrap();
+
+    context.insert("github_api_key", &github_api_key);
     context.insert(
-        "github",
+        "git",
         &json!({
             "owner": owner_input,
             "repository": repository_input,
@@ -109,32 +158,119 @@ fn git_questions(context: &mut tera::Context) {
 fn llm_questions(context: &mut tera::Context) {
     let valid_llms = LLMConfiguration::VARIANTS;
 
-    let mut valid_llm = None;
+    let valid_llm: LLMConfiguration = prompt_select(
+        "What LLM would you like to use?",
+        valid_llms.to_vec(),
+        Some("OpenAI"),
+    )
+    .parse()
+    .unwrap();
 
-    while valid_llm.is_none() {
-        let llm_input = input_with_default(
-            &format!(
-                "What LLM would you like to use? ({})",
-                valid_llms.join(", ")
-            ),
-            "OpenAI",
-        );
-        let Ok(llm) = LLMConfiguration::from_str(&llm_input) else {
-            println!("Invalid LLM, please try again");
-            continue;
-        };
-        valid_llm = Some(llm);
-    }
-
-    let valid_llm = valid_llm.unwrap();
     match valid_llm {
         LLMConfiguration::OpenAI { .. } => openai_questions(context),
         LLMConfiguration::Ollama { .. } => ollama_questions(context),
         _ => println!("{} currently should be configured manually", valid_llm),
     }
+}
 
-    // Handle the OpenAI specific questions
-    // Handle Ollama specific questions
+fn openai_questions(context: &mut tera::Context) {
+    let api_key = prompt_api_key(
+        "Where can we find your OpenAI api key?",
+        Some("env:OPENAI_API_KEY"),
+    )
+    .prompt()
+    .unwrap();
+    let indexing_model = prompt_select(
+        "Model used for fast operations (like indexing)",
+        OpenAIPromptModel::VARIANTS.to_vec(),
+        Some("gpt-4o-mini"),
+    );
+    let query_model = prompt_select(
+        "Model used for querying and code generation",
+        OpenAIPromptModel::VARIANTS.to_vec(),
+        Some("gpt-4o"),
+    );
+
+    let embedding_model = prompt_select(
+        "Model used for embeddings",
+        OpenAIEmbeddingModel::VARIANTS.to_vec(),
+        Some("text-embedding-3-large"),
+    );
+
+    let base_url = inquire::Text::new("Custom base url (optional, <esc> to skip)")
+        .with_validator(|input: &str| match url::Url::parse(input) {
+            Ok(_) => Ok(inquire::validator::Validation::Valid),
+            Err(_) => Ok(inquire::validator::Validation::Invalid(
+                "Invalid URL".into(),
+            )),
+        })
+        .prompt_skippable()
+        .unwrap();
+
+    context.insert("openai_api_key", &api_key);
+    context.insert(
+        "llm",
+        &json!({
+            "provider": "OpenAI",
+            "indexing_model": indexing_model,
+            "query_model": query_model,
+            "embedding_model": embedding_model,
+            "base_url": base_url,
+        }),
+    );
+}
+
+fn ollama_questions(context: &mut tera::Context) {
+    println!("Note that you need to have a running Ollama instance.");
+
+    let indexing_model = prompt_text(
+        "Model used for fast operations (like indexing). This model does not need to support tool calls.",
+        None
+
+    ).prompt().unwrap();
+
+    let query_model = prompt_text(
+        "Model used for querying and code generation. This model needs to support tool calls.",
+        None,
+    )
+    .prompt()
+    .unwrap();
+
+    let embedding_model = prompt_text("Model used for embeddings, bge-m3 is a solid choice", None)
+        .prompt()
+        .unwrap();
+
+    let vector_size = inquire::Text::new("Vector size for the embedding model")
+        .with_validator(|input: &str| match input.parse::<usize>() {
+            Ok(_) => Ok(inquire::validator::Validation::Valid),
+            Err(_) => Ok(inquire::validator::Validation::Invalid(
+                "Invalid number".into(),
+            )),
+        })
+        .prompt()
+        .unwrap();
+
+    let base_url = inquire::Text::new("Custom base url? (optional, <esc> to skip)")
+        .with_validator(|input: &str| match url::Url::parse(input) {
+            Ok(_) => Ok(inquire::validator::Validation::Valid),
+            Err(_) => Ok(inquire::validator::Validation::Invalid(
+                "Invalid URL".into(),
+            )),
+        })
+        .prompt_skippable()
+        .unwrap();
+
+    context.insert(
+        "llm",
+        &json!({
+            "provider": "Ollama",
+            "indexing_model": indexing_model,
+            "query_model": query_model,
+            "embedding_model": embedding_model,
+            "vector_size": vector_size,
+            "base_url": base_url,
+        }),
+    );
 }
 
 fn naive_lang_detect() -> Option<String> {

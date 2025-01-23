@@ -5,59 +5,78 @@ project_name = "{{ project_name }}"
 language = "{{ language }}"
 
 ## If you are using OpenAI, set the api key here
+{% if openai_api_key -%}
+openai_api_key = {{ openai_api_key}}
+{% else -%}
 #openai_api_key = "env:OPENAI_API_KEY"
+{% endif %}
 
 ## Optional: Connect kwaak to github to create PRs, search code, and automatically push to a  remote
+{% if github_api_key -%}
+github_api_key = "{{ github_api_key }}"
+{% else -%}
 #github_api_key = "env:GITHUB_TOKEN"
+{% endif %}
 
 ## Optional: Connect kwaak to tavily to enable it to search the web
 #tavily_api_key = "env:TAVILY_API_KEY"
 
 ## Commands the agent uses for tools
-## Test and coverage are required. Kwaak expects coverage to run the tests as well and echo both the test and coverage results to stdout
+## Kwaak can use tests, coverage, and lints to verify generated code.
 ## At the moment, the format of the output does not matter.
 [commands]
 ## Optional: Allows an agent to run tests. Recommended.
 # Example: test = "cargo test --no-fail-fast --color=never"
-#test = "REQUIRED"
+#test = "<YOUR TEST COMMAND>"
 
 ## Optional: Allows an agent to run coverage. The coverage command should run the tests and output the coverage results to stdout.
 # Example: coverage = "cargo llvm-cov --no-clean --summary-only"
-#coverage = "REQUIRED"
+#coverage = "<YOUR COVERAGE COMMAND>"
 
 ## Optional: Lint and fix command. This command is run after each completion cycle, before committing the code.
 # Recommended to use, as it avoids the LLM getting distracted by linting issues
 # Example: lint_and_fix = "cargo clippy --fix --allow-dirty --allow-staged && cargo fmt"
+#lint_and_fix = "<YOUR LINT AND FIX COMMAND>"
 
 ## Git and GitHub configuration
 #
 ## Kwaak can create and update PRs on Github, search github code, and interact with the git repository. This requires a github token.
 ## If you leave the token empty, kwaak will not create PRs.
 [git]
-owner = "{{ github.owner }}"
-repository = "{{ github.repository }}"
-main_branch = "{{ github.main_branch }}"
+main_branch = "{{ git.main_branch }}"
+owner = "{{ git.owner }}"
+repository = "{{ git.repository }}"
+
 ## The token is expected to have read and write access for git, and the ability to create and update pull requests.
 # token = "env:KWAAK_GITHUB_TOKEN"
 
 ## Kwaak uses different LLMs for different tasks. As a rule of thumb, tasks that happen often (like indexing, summarizing) require a small, fast model
 ## and tasks that happen less often (like completion) can use a larger, more accurate model.
 #
-## You can overwrite the api key per kind of task if needed.
+## You can overwrite the api key and base url per kind of task if needed.
 [llm.indexing]
-#api_key = "env:KWAAK_OPENAI_API_KEY"
-provider = "OpenAI"
-prompt_model = "gpt-4o-mini"
+provider = "{{ llm.provider }}"
+prompt_model = "{{ llm.indexing_model }}"
+{% if llm.base_url -%}
+base_url = "{{ llm.base_url }}"
+{% endif -%}
 
 [llm.query]
-#api_key = "env:KWAAK_OPENAI_API_KEY"
-provider = "OpenAI"
-prompt_model = "gpt-4o"
+provider = "{{ llm.provider }}"
+prompt_model = "{{ llm.query_model }}"
+{% if llm.base_url -%}
+base_url = "{{ llm.base_url }}"
+{% endif -%}
 
 [llm.embedding]
-#api_key = "env:KWAAK_OPENAI_API_KEY"
-provider = "OpenAI"
-embedding_model = "text-embedding-3-large"
+provider = "{{ llm.provider }}"
+embedding_model = "{{ llm.embedding_model }}"
+{% if llm.base_url -%}
+base_url = "{{ llm.base_url }}"
+{% endif -%}
+{% if llm.vector_size -%}
+vector_size = {{ llm.vector_size }}
+{% endif -%}
 
 ## Docker configuration
 ## kwaak requires a Dockerfile for the tool execution environment.
