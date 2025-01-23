@@ -7,8 +7,6 @@ use swiftide_core::{AgentContext, ToolExecutor};
 use tempfile::tempdir;
 
 macro_rules! invoke {
-    // Takes the context and the json value
-    // Returns the result
     ($tool:expr, $context:expr, $json:expr) => {{
         let json = $json.to_string();
 
@@ -36,7 +34,6 @@ async fn test_search_file() {
     let tool = tools::search_file();
     let context = setup_context();
 
-    // list dirs on empty
     let list_result = invoke!(&tool, &context, json!({"file_name": "."}));
 
     assert!(list_result.contains("tests"));
@@ -44,8 +41,6 @@ async fn test_search_file() {
 
     eprintln!("{list_result}");
 
-    // Ensure we never list everything in the git dir
-    // as that is a lot of tokens
     assert!(
         list_result
             .split('\n')
@@ -55,22 +50,18 @@ async fn test_search_file() {
     );
     assert!(list_result.contains(".github"));
 
-    // search with path
     let with_path = invoke!(&tool, &context, json!({"file_name": "src"}));
 
     assert!(with_path.contains("src/main.rs"));
 
-    // search single file (no path)
     let with_single_file = invoke!(&tool, &context, json!({"file_name": "main.rs"}));
 
     assert!(with_single_file.contains("src/main.rs"));
 
-    // with single file and path
     let with_single_file_and_path = invoke!(&tool, &context, json!({"file_name": "src/main.rs"}));
 
     assert!(with_single_file_and_path.contains("src/main.rs"));
 
-    // Always case insensitive
     let with_case_insensitive = invoke!(&tool, &context, json!({"file_name": "MaIn.Rs"}));
 
     assert!(with_case_insensitive.contains("src/main.rs"));
@@ -81,16 +72,13 @@ async fn test_search_code() {
     let tool = tools::search_code();
     let context = setup_context();
 
-    // includes hidden
     let include_hidden = invoke!(&tool, &context, json!({"query": "first-line-heading"}));
 
     assert!(include_hidden.contains(".markdownlint.yaml"));
 
-    // always ignores case
     let case_insensitive = invoke!(&tool, &context, json!({"query": "First-Line-HEADING"}));
     assert!(case_insensitive.contains(".markdownlint.yaml"));
 
-    // Should only do literal searches
     let literal_search = invoke!(&tool, &context, json!({"query": "[test_search_code]"}));
     assert!(literal_search.lines().count() < 3);
     assert!(literal_search.contains("test_tools.rs"));
@@ -102,13 +90,12 @@ async fn test_replace_block() {
     let context = setup_context();
 
     let tempdir = tempdir().unwrap();
-    // create a fake file with multiple lines
     std::fs::write(
         tempdir.path().join("test.txt"),
         "line1\nline2\nline3\nline4\nline5",
     )
     .unwrap();
-    // then invoke the tool
+
     let tool_response = invoke!(
         &tool,
         &context,
@@ -125,7 +112,6 @@ async fn test_replace_block() {
     assert_eq!(new_file_content, "line1\none line\nline5");
     assert!(tool_response.contains("Successfully replaced block"));
 
-    // Replacing multiple lines with multiple lines
     std::fs::write(
         tempdir.path().join("test.txt"),
         "line1\nline2\nline3\nline4\nline5",
@@ -149,8 +135,6 @@ async fn test_replace_block() {
         "line1\none\nline\nline5"
     );
 
-    // Index out of bounds
-    //
     let tool_response = invoke!(
         &tool,
         &context,
@@ -168,7 +152,6 @@ async fn test_replace_block() {
         &tool_response
     );
 
-    // File not found
     let tool_args = json!({
         "file_name": tempdir.path().join("test2.txt").to_str().unwrap(),
         "start_line": "2",
@@ -212,4 +195,67 @@ async fn test_read_file_with_line_numbers() {
 
     let expected = "1: line1\n2: line2\n3: line3\n4: line4\n5: line5";
     assert_eq!(file_content, expected);
+}
+
+#[test_log::test(tokio::test)]
+async fn test_read_file() {
+    let tool = tools::read_file();
+    let context = setup_context();
+
+    let tempdir = tempdir().unwrap();
+    std::fs::write(tempdir.path().join("test.txt"), "line1\nline2\nline3").unwrap();
+
+    let file_content = invoke!(
+        &tool,
+        &context,
+        json!({"file_name": tempdir.path().join("test.txt").to_str().unwrap()})
+    );
+
+    let expected_content = "line1\nline2\nline3";
+    assert_eq!(file_content, expected_content);
+}
+
+#[test_log::test(tokio::test)]
+async fn test_write_file() {
+    let tool = tools::write_file();
+    let context = setup_context();
+
+    let tempdir = tempdir().unwrap();
+    let file_path = tempdir.path().join("test.txt");
+    let content = "new content";
+
+    let tool_response = invoke!(
+        &tool,
+        &context,
+        json!({
+            "file_name": file_path.to_str().unwrap(),
+            "content": content
+        })
+    );
+
+    let written_content = std::fs::read_to_string(file_path).unwrap();
+
+    assert_eq!(written_content, content);
+    assert!(tool_response.contains("File written successfully"));
+}
+
+#[tokio::test]
+async fn test_shell_command() {
+    let tool = tools::shell_command();
+    let context = setup_context();
+
+    let command_output = invoke!(&tool, &context, json!({"cmd": "echo 'test'"}));
+
+    assert!(command_output.contains("test"));
+}
+
+#[tokio::test]
+async fn test_git() {
+    let tool = tools::git();
+    let context = setup_context();
+
+    let git_output = invoke!(&tool, &context, json!({"command": "status"}));
+
+    dbg!(&git_output);
+    assert!(git_output.contains("On branch") || git_output.contains("HEAD detached"));
 }
