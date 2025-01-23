@@ -124,22 +124,28 @@ fn project_questions(context: &mut tera::Context) {
 }
 
 fn git_questions(context: &mut tera::Context) {
-    let (default_owner, default_repository) = default_owner_and_repo();
+    let (default_owner, default_repository) = default_owner_and_repo().unzip();
     let default_branch = default_main_branch();
     let branch_input = prompt_text("Default git branch", Some(&default_branch))
         .prompt()
         .unwrap();
 
-    let owner_input = prompt_text("Git owner", Some(&default_owner))
-        .prompt()
-        .unwrap();
-    let repository_input = prompt_text("Git repository", Some(&default_repository))
-        .prompt()
-        .unwrap();
-
+    println!("With a github token, Kwaak can create pull requests, search github code, and automatically push to the remote.");
     let github_api_key = prompt_api_key(
         "GitHub api key (optional, <esc> to skip)",
         Some("env:GITHUB_TOKEN"),
+    )
+    .prompt_skippable()
+    .unwrap();
+    let owner_input = prompt_text(
+        "Git owner (optional, <esc> to skip)",
+        default_owner.as_deref(),
+    )
+    .prompt_skippable()
+    .unwrap();
+    let repository_input = prompt_text(
+        "Git repository (optional, <esc> to skip)",
+        default_repository.as_deref(),
     )
     .prompt_skippable()
     .unwrap();

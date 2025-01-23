@@ -29,6 +29,12 @@ impl GithubSession {
             .clone()
             .ok_or(anyhow::anyhow!("No github token found in config"))?;
 
+        if !&repository.config().is_github_enabled() {
+            return Err(anyhow::anyhow!(
+                "Github is not enabled; make it is properly configured."
+            ));
+        }
+
         let octocrab = Octocrab::builder()
             .personal_token(token.expose_secret())
             .build()?;
@@ -93,8 +99,12 @@ impl GithubSession {
         description: impl AsRef<str>,
         messages: &[ChatMessage],
     ) -> Result<PullRequest> {
-        let owner = &self.repository.config().git.owner;
-        let repo = &self.repository.config().git.repository;
+        if !self.repository.config().is_github_enabled() {
+            return Err(anyhow::anyhow!("Github is not enabled"));
+        }
+        // Above checks make the unwrap infallible
+        let owner = self.repository.config().git.owner.as_deref().unwrap();
+        let repo = self.repository.config().git.repository.as_deref().unwrap();
 
         tracing::debug!(messages = ?messages,
             "Creating pull request for {}/{} from branch {} onto {}",

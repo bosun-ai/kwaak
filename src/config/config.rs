@@ -110,8 +110,8 @@ impl Default for DockerConfiguration {
 pub struct GitConfiguration {
     // TODO: Repo and owner can probably be derived from the origin url
     // Personally would prefer an onboarding that prefils instead of inferring at runtime
-    pub repository: String,
-    pub owner: String,
+    pub repository: Option<String>,
+    pub owner: Option<String>,
     #[serde(default = "default_main_branch")]
     pub main_branch: String,
 }
@@ -206,6 +206,11 @@ impl Config {
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => 1,
         }
+    }
+
+    #[must_use]
+    pub fn is_github_enabled(&self) -> bool {
+        self.github_api_key.is_some() && self.git.owner.is_some() && self.git.repository.is_some()
     }
 }
 

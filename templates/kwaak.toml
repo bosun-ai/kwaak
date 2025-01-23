@@ -44,8 +44,12 @@ github_api_key = "{{ github_api_key }}"
 ## If you leave the token empty, kwaak will not create PRs.
 [git]
 main_branch = "{{ git.main_branch }}"
+{% if git.owner -%}
 owner = "{{ git.owner }}"
+{% endif -%}
+{% if git.repository -%}
 repository = "{{ git.repository }}"
+{% endif -%}
 
 ## Kwaak uses different LLMs for different tasks. As a rule of thumb, tasks that happen often (like indexing, summarizing) require a small, fast model
 ## and tasks that happen less often (like completion) can use a larger, more accurate model.
