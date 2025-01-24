@@ -26,7 +26,6 @@ jobs:
         with:
           fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
@@ -51,7 +50,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
