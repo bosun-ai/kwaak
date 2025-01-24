@@ -67,6 +67,17 @@ pub fn on_key(app: &mut App, key: &KeyEvent) {
         KeyCode::PageUp => {
             app.send_ui_event(UIEvent::ScrollUp);
         }
+        KeyCode::Up | KeyCode::Down | KeyCode::Left | KeyCode::Right => {
+            if current_input.is_empty() {
+                match key.code {
+                    KeyCode::Up => app.send_ui_event(UIEvent::ScrollUp),
+                    KeyCode::Down => app.send_ui_event(UIEvent::ScrollDown),
+                    _ => {} // Handle other arrow keys if needed
+                }
+            } else {
+                app.text_input.input(*key);
+            }
+        }
         _ => {
             app.text_input.input(*key);
         }
