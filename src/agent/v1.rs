@@ -56,7 +56,7 @@ pub fn available_tools(
     }
 
     if let Some(tavily_api_key) = &repository.config().tavily_api_key {
-        let tavily = Tavily::new(tavily_api_key.expose_secret());
+        let tavily = Tavily::builder(tavily_api_key.expose_secret()).build()?;
         tools.push(tools::SearchWeb::new(tavily, tavily_api_key.clone()).boxed());
     };
 

@@ -358,8 +358,7 @@ impl SearchWeb {
         _context: &dyn AgentContext,
         query: &str,
     ) -> Result<ToolOutput, ToolError> {
-        let api_key = self.api_key.expose_secret();
-        let request = tavily::SearchRequest::new(api_key, query)
+        let request = tavily::SearchRequest::new(self.api_key.expose_secret(), query)
             .search_depth("advanced")
             .include_answer(true)
             .include_images(false)
