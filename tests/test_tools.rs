@@ -171,6 +171,35 @@ async fn test_replace_block() {
         "actual: {}",
         &tool_response.to_string()
     );
+
+    std::fs::write(
+        tempdir.path().join("test-add.txt"),
+        "line1\nline2\nline3\nline4\nline5",
+    )
+    .unwrap();
+
+    // Appending a block with end_line zero
+    let tool_response = invoke!(
+        &tool,
+        &context,
+        json!({
+            "file_name": tempdir.path().join("test-add.txt").to_str().unwrap(),
+            "start_line": "2",
+            "end_line": "0",
+            "replacement": "added\nblock"
+        })
+    );
+
+    assert!(
+        tool_response.contains("Successfully replaced block"),
+        "{}",
+        &tool_response
+    );
+
+    assert_eq!(
+        std::fs::read_to_string(tempdir.path().join("test-add.txt")).unwrap(),
+        "line1\nadded\nblock\nline2\nline3\nline4\nline5"
+    );
 }
 
 #[test_log::test(tokio::test)]

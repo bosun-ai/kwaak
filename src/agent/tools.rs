@@ -468,7 +468,7 @@ pub async fn fetch_url(_context: &dyn AgentContext, url: &str) -> Result<ToolOut
 }
 
 #[tool(
-    description = "Replace a block of text in a file, starting at start_line up to and including end_line. Prefer this over writing the full file content if you only need to change a small part of the file. This avoids unnecessary conflicts. You MUST read the file with line numbers first to know the start and end line numbers of the block you want to replace. Line numbers start at 1. You cannot call this tool more than once on a file, without reading the line numbers again.",
+    description = "Replace a block of text in a file, starting at start_line up to and including end_line. Prefer this over writing the full file content if you only need to change a small part of the file. This avoids unnecessary conflicts. You MUST read the file with line numbers first to know the start and end line numbers of the block you want to replace. Line numbers start at 1. You cannot call this tool more than once on a file, without reading the line numbers again. To add text without replacing, set the `end_line` to 0. The content will be added **before** that line.",
     param(name = "file_name", description = "Full path of the file"),
     param(
         name = "start_line",
@@ -501,11 +501,11 @@ pub async fn replace_block(
     let mut lines = file_content.lines().collect::<Vec<_>>();
 
     let Ok(start_line) = start_line.parse::<usize>() else {
-        return Ok("Invalid start line number, must be a valid number".into());
+        return Ok("Invalid start line number, must be a valid number greater than 0".into());
     };
 
     let Ok(end_line) = end_line.parse::<usize>() else {
-        return Ok("Invalid end line number, must be a valid number".into());
+        return Ok("Invalid end line number, must be a valid number 0 or greater".into());
     };
 
     let lines_len = lines.len();
@@ -514,21 +514,23 @@ pub async fn replace_block(
         return Ok("Start or end line number is out of bounds".into());
     }
 
-    if start_line > end_line {
+    if end_line > 0 && start_line > end_line {
         return Ok("Start line number must be less than or equal to end line number".into());
     }
 
-    if start_line == 0 || end_line == 0 {
-        return Ok("Start and end line numbers must be greater than 0".into());
+    if start_line == 0 {
+        return Ok("Start line number must be greater than 0".into());
     }
 
-    // TODO: Out of bounds etc handling
-
     // Input is 1 indexed, lines are 0 indexed
-    lines.splice(
-        start_line.saturating_sub(1)..=end_line.saturating_sub(1),
-        replacement.lines(),
-    );
+    if end_line == 0 {
+        lines.insert(start_line.saturating_sub(1), replacement);
+    } else {
+        lines.splice(
+            start_line.saturating_sub(1)..=end_line.saturating_sub(1),
+            replacement.lines(),
+        );
+    }
 
     let write_cmd = Command::WriteFile(file_name.into(), lines.join("\n"));
     context.exec_cmd(&write_cmd).await?;
