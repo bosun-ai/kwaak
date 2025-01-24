@@ -1,7 +1,6 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use anyhow::Result;
-use swiftide_core::Tool;
 use tokio::{
     sync::{mpsc, RwLock},
     task::{self},

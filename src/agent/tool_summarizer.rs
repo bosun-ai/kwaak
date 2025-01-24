@@ -9,7 +9,7 @@ use swiftide::{
 };
 use tracing::Instrument as _;
 
-use crate::{git, util::accept_non_zero_exit};
+use crate::util::accept_non_zero_exit;
 
 #[derive(Clone)]
 pub struct ToolSummarizer<'a> {
@@ -107,10 +107,7 @@ fn prompt(
         .join("\n");
 
     let additional_instructions = if tool_call.name() == "run_tests"
-        && available_tools
-            .iter()
-            .find(|t| t.name() == "run_coverage")
-            .is_some()
+        && available_tools.iter().any(|t| t.name() == "run_coverage")
     {
         indoc::formatdoc! {"
                 ## Additional instructions
