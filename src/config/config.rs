@@ -1,33 +1,14 @@
-use std::path::{Path, PathBuf};
-use std::str::FromStr;
-use config::{Config as ConfigRs, File, Environment};
-use anyhow::{Context as _, Result};
-use serde::{Deserialize, Serialize};
-use swiftide::integrations::treesitter::SupportedLanguages;
+impl Config {
+    pub fn load() -> Result<Self> {
+        let mut builder = ConfigRs::builder()
+            .add_source(File::with_name("config"))
+            .add_source(
+                Environment::with_prefix("KWA").separator("__"), // Optional: supports nested structures
+            );
 
-use num_cpus;
-            #[cfg(debug_assertions)]
-            LLMConfiguration::Testing => num_cpus::get(),
-        }
-    }
+        let config = builder.build()?;
 
-    #[must_use]
-    pub fn indexing_batch_size(&self) -> usize {
-        if let Some(batch_size) = self.indexing_batch_size {
-            return batch_size;
-        };
-
-        match self.indexing_provider() {
-            LLMConfiguration::OpenAI { .. } => 12,
-            LLMConfiguration::Ollama { .. } => 256,
-            #[cfg(debug_assertions)]
-            LLMConfiguration::Testing => 1,
-        }
-    }
-
-    #[must_use]
-    pub fn is_github_enabled(&self) -> bool {
-        self.github_api_key.is_some() && self.git.owner.is_some() && self.git.repository.is_some()
+        config.try_deserialize() // Here using serde to deserialize into Self
     }
 }
 
