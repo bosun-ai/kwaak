@@ -28,8 +28,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: llvm-tools-preview
-      - uses: Swatinem/rust-cache@v2
-
       - name: Install deps
         run: sudo apt install libxcb1-dev libxcb-shape0-dev libxcb-xfixes0-dev ripgrep fd-find
       # Temporary fix until docker runs properly in ci

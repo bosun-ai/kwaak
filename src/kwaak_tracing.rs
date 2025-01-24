@@ -100,7 +100,7 @@ fn init_otel() -> TracerProvider {
     use opentelemetry_sdk::trace::TracerProvider;
 
     let exporter = opentelemetry_otlp::SpanExporter::builder()
-        .with_tonic()
+        .with_http()
         .build()
         .expect("failed to create otlp exporter");
 

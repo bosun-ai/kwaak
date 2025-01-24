@@ -136,7 +136,7 @@ async fn test_tool(
     Ok(())
 }
 
-#[instrument]
+#[instrument(skip_all)]
 async fn start_agent(mut repository: repository::Repository, initial_message: &str) -> Result<()> {
     repository.config_mut().endless_mode = true;
 
@@ -171,7 +171,7 @@ async fn start_agent(mut repository: repository::Repository, initial_message: &s
     Ok(())
 }
 
-#[instrument]
+#[instrument(skip_all)]
 async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Result<()> {
     ::tracing::info!("Loaded configuration: {:?}", repository.config());
 
