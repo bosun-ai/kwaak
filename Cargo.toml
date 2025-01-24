@@ -78,7 +78,7 @@ redb = { version = "2.3.0" }
 lancedb = { version = "0.15.0", default-features = false, features = [
   "rustls-tls",
 ] }
-num_cpus = "1.16.0"
+tavily = "1.0.1"
 htmd = "0.1.6"
 ansi-to-tui = "7.0.0"
 tempfile = { version = "3.15.0" }
