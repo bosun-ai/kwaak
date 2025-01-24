@@ -93,6 +93,7 @@ tempfile = { version = "3.15.0" }
 copypasta = "0.10.1"
 strip-ansi-escapes = "0.2.1"
 inquire = "0.7.5"
+config = { version = "0.15.6", features = ["toml", "convert-case"] }
 
 # Something is still pulling in libssl, this is a quickfix and should be investigated
 [target.'cfg(linux)'.dependencies]

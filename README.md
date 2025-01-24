@@ -325,6 +325,10 @@ These configurations allow you to leverage the strengths of each model effective
 
 **A**: The github token is used to create pull requests, search code, and push code to a remote repository. It is not used for anything else.
 
+**Q**: In my project, different contributors have different setups. How can I make sure kwaak works for everyone?
+
+**A**: You can use a `kwaak.local.toml` and add it to your `.gitignore`. Alternatively, all configuration can be overridden by environment variables, prefixed with `KWAAK_` and separated by underscores. For instance, `KWAAK_COMMAND_TEST=cargo nextest run`. Overwriting via environment currently does not work for the `llm` configuration.
+
 ## Community
 
 If you want to get more involved with `kwaak`, have questions or want to chat, you can find us on [discord](https://discord.gg/3jjXYen9UY).
