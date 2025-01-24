@@ -1,4 +1,4 @@
-use config::{Config as ConfigRs, Environment, File, FileSourceFile};
+use config::{Config as ConfigRs, Environment, File};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
