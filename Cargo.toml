@@ -144,3 +144,6 @@ lto = "thin"
 [profile.profiling]
 inherits = "release"
 debug = true
+
+
+num_cpus = "1.15.0"
