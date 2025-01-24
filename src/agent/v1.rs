@@ -154,8 +154,12 @@ pub async fn start_agent(
     let tx_3 = command_responder.clone();
     let tx_4 = command_responder.clone();
 
-    let tool_summarizer =
-        ToolSummarizer::new(fast_query_provider, &["run_tests", "run_coverage"], &tools);
+    let tool_summarizer = ToolSummarizer::new(
+        fast_query_provider,
+        &["run_tests", "run_coverage"],
+        &tools,
+        &agent_env.start_ref,
+    );
     let conversation_summarizer =
         ConversationSummarizer::new(query_provider.clone(), &tools, &agent_env.start_ref);
     let maybe_lint_fix_command = repository.config().commands.lint_and_fix.clone();

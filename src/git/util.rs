@@ -6,8 +6,9 @@ use swiftide_core::{Command, ToolExecutor};
 use crate::util::accept_non_zero_exit;
 
 /// Get the diff from a tool executor
-pub async fn diff(executor: &dyn ToolExecutor, base_sha: &str) -> Result<String> {
-    let cmd = Command::shell(format!("git diff --color=always {base_sha}",));
+pub async fn diff(executor: &dyn ToolExecutor, base_sha: &str, color: bool) -> Result<String> {
+    let color = if color { "--color=always" } else { "" };
+    let cmd = Command::shell(format!("git diff {color} {base_sha}",));
 
     let mut output = accept_non_zero_exit(executor.exec_cmd(&cmd).await)?.output;
 

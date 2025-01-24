@@ -133,7 +133,7 @@ impl ConversationSummarizer {
         * If the goal is not yet achieved, reflect on why and provide a clear path forward
 
         {{% if diff -%}}
-        # Current changes made
+        ## Current changes made
         ````
         {{{{ diff }}}}
         ````
