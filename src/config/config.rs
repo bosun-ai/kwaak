@@ -5,8 +5,6 @@ use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
 use swiftide::integrations::treesitter::SupportedLanguages;
 
-extern crate num_cpus;
-
 use num_cpus;
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => num_cpus::get(),
