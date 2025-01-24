@@ -216,6 +216,8 @@ All of these are inferred from the project directory and can be overridden in th
 
 #### Command Configuration
 
+Kwaak uses tests, coverages, and lints as an additional oppertunity to steer the agent. Configuring these will (significantly) improve the agents' performance.
+
 - **`test`**: Command to run tests, e.g., `cargo test`.
 - **`coverage`**: Command for running coverage checks, e.g., `cargo llvm-cov --summary-only`. Expects coverage results as output. Currently handled unparsed via an LLM call. A friendly output is preferred
 - **`lint_and_fix`**: Optional command to lint and fix project issues, e.g., `cargo clippy --fix --allow-dirty; cargo fmt` in Rust.
