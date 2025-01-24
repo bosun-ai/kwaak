@@ -126,14 +126,19 @@ impl FromStr for Config {
     }
 }
 
+use config::{Config as ConfigLoader, Environment, File};
+
 impl Config {
     /// Loads the configuration file from the current path
     pub async fn load(path: impl AsRef<Path>) -> Result<Config> {
-        let file = tokio::fs::read(path)
-            .await
-            .context("Could not find `kwaak.toml` in current directory")?;
+        let settings = ConfigLoader::builder()
+            .add_source(File::with_name(path.as_ref().to_str().unwrap()))
+            .add_source(Environment::with_prefix("KWAAK"))
+            .build()?;
 
-        Self::from_str(std::str::from_utf8(&file)?)
+        let config: Config = settings.try_deserialize()?;
+
+        config.fill_llm_api_keys()
     }
 
     // Seeds the api keys into the LLM configurations
