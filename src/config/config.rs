@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-
+use config::{Config as ConfigRs, File, Environment};
 use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
 use swiftide::integrations::treesitter::SupportedLanguages;
