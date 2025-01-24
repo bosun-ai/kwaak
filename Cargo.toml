@@ -60,7 +60,7 @@ ignore = "0.4.23"
 async-trait = "0.1.84"
 url = "2.5.4"
 octocrab = "0.43.0"
-indoc = "2.0.5"
+config = "0.13"
 tavily = "2.0.3"
 regex = "1.11.1"
 clap = { version = "4.5.26", features = ["derive"] }
