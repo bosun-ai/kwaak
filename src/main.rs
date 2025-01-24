@@ -24,6 +24,7 @@ use ratatui::{
 
 use ::tracing::instrument;
 use crossterm::{
+    event::{KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -136,7 +137,7 @@ async fn test_tool(
     Ok(())
 }
 
-#[instrument]
+#[instrument(skip_all)]
 async fn start_agent(mut repository: repository::Repository, initial_message: &str) -> Result<()> {
     repository.config_mut().endless_mode = true;
 
@@ -171,7 +172,7 @@ async fn start_agent(mut repository: repository::Repository, initial_message: &s
     Ok(())
 }
 
-#[instrument]
+#[instrument(skip_all)]
 async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Result<()> {
     ::tracing::info!("Loaded configuration: {:?}", repository.config());
 
@@ -239,6 +240,10 @@ pub fn init_panic_hook() {
 pub fn init_tui() -> io::Result<Terminal<impl Backend>> {
     enable_raw_mode()?;
     execute!(stdout(), EnterAlternateScreen)?;
+    execute!(
+        stdout(),
+        PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::all())
+    )?;
     Terminal::new(CrosstermBackend::new(stdout()))
 }
 
@@ -250,5 +255,6 @@ pub fn init_tui() -> io::Result<Terminal<impl Backend>> {
 pub fn restore_tui() -> io::Result<()> {
     disable_raw_mode()?;
     execute!(stdout(), LeaveAlternateScreen)?;
+    execute!(stdout(), PopKeyboardEnhancementFlags)?;
     Ok(())
 }

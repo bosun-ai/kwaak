@@ -32,16 +32,17 @@ pub fn init(repository: &Repository) -> Result<Guard> {
         format!("{}.log", repository.config().project_name),
     );
 
-    let fmt_layer = fmt::layer().with_writer(file_appender);
+    let fmt_layer = fmt::layer().compact().with_writer(file_appender);
 
     // Logs the file layer will capture
     let mut env_filter_layer = EnvFilter::builder()
         .with_default_directive(LevelFilter::ERROR.into())
         .from_env_lossy();
 
-    if cfg!(feature = "otel") {
+    if cfg!(feature = "otel") && repository.config().otel_enabled {
         env_filter_layer = env_filter_layer
             .add_directive("swiftide=debug".parse().unwrap())
+            .add_directive("swiftide_docker_executor=info".parse().unwrap())
             .add_directive("swiftide_indexing=debug".parse().unwrap())
             .add_directive("swiftide_integrations=debug".parse().unwrap())
             .add_directive("swiftide_query=debug".parse().unwrap())
@@ -59,11 +60,7 @@ pub fn init(repository: &Repository) -> Result<Guard> {
     let tui_layer = tui_logger::tracing_subscriber_layer();
     tui_logger::init_logger(default_level)?;
 
-    let mut layers = vec![
-        // env_filter_layer.boxed(),
-        tui_layer.boxed(),
-        fmt_layer.boxed(),
-    ];
+    let mut layers = vec![tui_layer.boxed(), fmt_layer.boxed()];
 
     let mut provider_for_guard = None;
     if cfg!(feature = "otel") && repository.config().otel_enabled {
