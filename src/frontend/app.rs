@@ -80,6 +80,9 @@ pub struct App<'a> {
 
     /// Override the working directory if it is not "."
     pub workdir: PathBuf,
+
+    /// Hack to get line wrapping on input into the textarea
+    pub input_width: Option<u16>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -156,6 +159,7 @@ impl Default for App<'_> {
                 .set_level_for_target("swiftide", log::LevelFilter::Info),
             selected_tab: 0,
             boot_uuid: Uuid::new_v4(),
+            input_width: None,
         }
     }
 }
