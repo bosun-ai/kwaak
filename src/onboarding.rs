@@ -254,7 +254,7 @@ fn openai_questions(context: &mut tera::Context) {
             "indexing_model": indexing_model,
             "query_model": query_model,
             "embedding_model": embedding_model,
-            "base_url": None,
+            "base_url": None::<String>,
         }),
     );
 }

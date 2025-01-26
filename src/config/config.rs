@@ -126,7 +126,7 @@ pub struct GitConfiguration {
     #[serde(default = "default_main_branch")]
     pub main_branch: String,
 
-    /// Automatically push to the remote after every commpletion (if changes were made)
+    /// Automatically push to the remote after every completion (if changes were made)
     #[serde(default = "default_auto_push_remote")]
     pub auto_push_remote: bool,
 }
