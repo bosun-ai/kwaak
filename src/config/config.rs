@@ -26,6 +26,10 @@ pub struct Config {
     #[serde(default = "default_log_dir")]
     pub log_dir: PathBuf,
 
+    /// The agent model to use by default in chats
+    #[serde(default)]
+    pub agent: SupportedAgents,
+
     #[serde(default)]
     /// Concurrency for indexing
     /// By default for IO-bound LLMs, we assume 4x the number of CPUs
@@ -80,6 +84,12 @@ pub struct Config {
 
 fn default_otel_enabled() -> bool {
     false
+}
+
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize, Default)]
+pub enum SupportedAgents {
+    #[default]
+    V1,
 }
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize, Default)]
