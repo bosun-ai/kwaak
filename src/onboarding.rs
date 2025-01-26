@@ -30,6 +30,7 @@ pub fn run(dry_run: bool) -> Result<()> {
     project_questions(&mut context);
     git_questions(&mut context);
     llm_questions(&mut context);
+    command_questions(&mut context);
 
     let config =
         Templates::render("kwaak.toml", &context).context("Failed to render default config")?;
@@ -42,13 +43,33 @@ pub fn run(dry_run: bool) -> Result<()> {
 
     // Since we want the template annotated with comments, just return the template
     if dry_run {
-        println!("Dry run, would have written the following to kwaak.toml:\n\n{config}");
+        println!("\nDry run, would have written the following to kwaak.toml:\n\n{config}");
     } else {
         std::fs::write("kwaak.toml", &config)?;
-        println!("Initialized kwaak project in current directory, please review and customize the created `kwaak.toml` file.\n Kwaak also needs a `Dockerfile` to execute your code in, with `ripgrep` and `fd` installed. Refer to https://github.com/bosun-ai/kwaak for an up to date list.");
+        println!("\nInitialized kwaak project in current directory, please review and customize the created `kwaak.toml` file.\n Kwaak also needs a `Dockerfile` to execute your code in, with `ripgrep` and `fd` installed. Refer to https://github.com/bosun-ai/kwaak for an up to date list.");
     }
 
     Ok(())
+}
+
+fn command_questions(context: &mut tera::Context) {
+    println!("\nKwaak agents can run tests and use code coverage when coding. Kwaak uses tests as an extra feedback moment for agents");
+
+    let test_command = prompt_text("Test command (optional, <esc> to skip)", None)
+        .prompt_skippable()
+        .unwrap();
+
+    let coverage_command = prompt_text("Coverage command (optional, <esc> to skip)", None)
+        .prompt_skippable()
+        .unwrap();
+
+    context.insert(
+        "commands",
+        &json!({
+            "test": test_command,
+            "coverage": coverage_command,
+        }),
+    );
 }
 
 fn prompt_text<'a>(prompt: &'a str, default: Option<&'a str>) -> inquire::Text<'a> {
@@ -130,7 +151,7 @@ fn git_questions(context: &mut tera::Context) {
         .prompt()
         .unwrap();
 
-    println!("With a github token, Kwaak can create pull requests, search github code, and automatically push to the remote.");
+    println!("\nWith a github token, Kwaak can create pull requests, search github code, and automatically push to the remote.");
     let github_api_key = prompt_api_key(
         "GitHub api key (optional, <esc> to skip)",
         Some("env:GITHUB_TOKEN"),
