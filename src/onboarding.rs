@@ -236,15 +236,15 @@ fn openai_questions(context: &mut tera::Context) {
         Some("text-embedding-3-large"),
     );
 
-    let base_url = inquire::Text::new("Custom base url (optional, <esc> to skip)")
-        .with_validator(|input: &str| match url::Url::parse(input) {
-            Ok(_) => Ok(inquire::validator::Validation::Valid),
-            Err(_) => Ok(inquire::validator::Validation::Invalid(
-                "Invalid URL".into(),
-            )),
-        })
-        .prompt_skippable()
-        .unwrap();
+    // let base_url = inquire::Text::new("Custom base url (optional, <esc> to skip)")
+    //     .with_validator(|input: &str| match url::Url::parse(input) {
+    //         Ok(_) => Ok(inquire::validator::Validation::Valid),
+    //         Err(_) => Ok(inquire::validator::Validation::Invalid(
+    //             "Invalid URL".into(),
+    //         )),
+    //     })
+    //     .prompt_skippable()
+    //     .unwrap();
 
     context.insert("openai_api_key", &api_key);
     context.insert(
@@ -254,7 +254,7 @@ fn openai_questions(context: &mut tera::Context) {
             "indexing_model": indexing_model,
             "query_model": query_model,
             "embedding_model": embedding_model,
-            "base_url": base_url,
+            "base_url": None,
         }),
     );
 }
