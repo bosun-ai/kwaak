@@ -58,6 +58,9 @@ pub struct Config {
     #[serde(default)]
     pub tool_executor: SupportedToolExecutors,
 
+    #[serde(default)]
+    pub disabled_tools: DisabledTools,
+
     /// By default the agent stops if the last message was its own and there are no new
     /// completions.
     ///
@@ -80,6 +83,13 @@ pub struct Config {
 
 fn default_otel_enabled() -> bool {
     false
+}
+
+/// Opt out of certain tools an agent can use
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct DisabledTools {
+    #[serde(default)]
+    pub pull_request: bool,
 }
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize, Default)]

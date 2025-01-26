@@ -50,7 +50,7 @@ owner = "{{ git.owner }}"
 {% if git.repository -%}
 repository = "{{ git.repository }}"
 {% endif -%}
-auto_push_remote = {{ auto_push_remote }}
+auto_push_remote = {{ git.auto_push_remote }}
 
 ## Kwaak uses different LLMs for different tasks. As a rule of thumb, tasks that happen often (like indexing, summarizing) require a small, fast model
 ## and tasks that happen less often (like completion) can use a larger, more accurate model.

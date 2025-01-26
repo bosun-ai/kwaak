@@ -51,7 +51,9 @@ pub fn available_tools(
     ];
 
     if let Some(github_session) = github_session {
-        tools.push(tools::CreateOrUpdatePullRequest::new(github_session).boxed());
+        if !repository.config().disabled_tools.pull_request {
+            tools.push(tools::CreateOrUpdatePullRequest::new(github_session).boxed());
+        }
         tools.push(tools::GithubSearchCode::new(github_session).boxed());
     }
 
