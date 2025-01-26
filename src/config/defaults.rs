@@ -54,6 +54,11 @@ pub fn default_main_branch() -> String {
     git::util::main_branch(".")
 }
 
+#[must_use]
+pub fn default_auto_push_remote() -> bool {
+    true
+}
+
 /// Extracts the owner and repo from the git remote url
 ///
 /// # Panics

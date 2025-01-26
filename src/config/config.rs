@@ -8,8 +8,8 @@ use swiftide::integrations::treesitter::SupportedLanguages;
 
 use super::api_key::ApiKey;
 use super::defaults::{
-    default_cache_dir, default_docker_context, default_dockerfile, default_log_dir,
-    default_main_branch, default_project_name,
+    default_auto_push_remote, default_cache_dir, default_docker_context, default_dockerfile,
+    default_log_dir, default_main_branch, default_project_name,
 };
 use super::{CommandConfiguration, LLMConfiguration, LLMConfigurations};
 
@@ -115,6 +115,10 @@ pub struct GitConfiguration {
     pub owner: Option<String>,
     #[serde(default = "default_main_branch")]
     pub main_branch: String,
+
+    /// Automatically push to the remote after every commpletion (if changes were made)
+    #[serde(default = "default_auto_push_remote")]
+    pub auto_push_remote: bool,
 }
 
 impl FromStr for Config {

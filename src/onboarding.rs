@@ -137,6 +137,13 @@ fn git_questions(context: &mut tera::Context) {
     )
     .prompt_skippable()
     .unwrap();
+
+    let auto_push_remote =
+        inquire::Confirm::new("Push to git remote after changes? (requires github token)")
+            .with_default(github_api_key.is_some())
+            .prompt()
+            .unwrap();
+
     let owner_input = prompt_text(
         "Git owner (optional, <esc> to skip)",
         default_owner.as_deref(),
@@ -157,6 +164,7 @@ fn git_questions(context: &mut tera::Context) {
             "owner": owner_input,
             "repository": repository_input,
             "main_branch": branch_input,
+            "auto_push_remote": auto_push_remote,
 
         }),
     );
