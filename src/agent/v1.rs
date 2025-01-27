@@ -260,7 +260,7 @@ pub async fn start_agent(
         .build()
 }
 
-fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
+pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
     let mut constraints = vec![
         // General
         "Research your solution before providing it",
@@ -317,6 +317,18 @@ fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
         .constraints(constraints).build()?.into();
 
     Ok(prompt)
+}
+
+pub fn get_evaluation_tools() -> Result<Vec<Box<dyn Tool>>> {
+    let tools: Vec<Box<dyn Tool>> = vec![
+        Box::new(tools::read_file()),
+        Box::new(tools::write_file()),
+        Box::new(tools::read_file_with_line_numbers()),
+        Box::new(tools::search_file()),
+        Box::new(tools::replace_block()),
+    ];
+
+    Ok(tools)
 }
 
 async fn rename_chat(

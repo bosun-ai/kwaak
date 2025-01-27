@@ -133,6 +133,36 @@ impl Responder for Arc<dyn Responder> {
     }
 }
 
+// Debug responder that logs all messages to stderr
+#[derive(Debug)]
+pub struct DebugResponder;
+
+impl Responder for DebugResponder {
+    fn send(&self, response: CommandResponse) {
+        eprintln!("DEBUG: Response: {:?}", response);
+    }
+
+    fn agent_message(&self, message: chat_completion::ChatMessage) {
+        eprintln!("DEBUG: Agent message: {:?}", message);
+    }
+
+    fn system_message(&self, message: &str) {
+        eprintln!("DEBUG: System message: {}", message);
+    }
+
+    fn update(&self, state: &str) {
+        eprintln!("DEBUG: State update: {}", state);
+    }
+
+    fn rename_chat(&self, name: &str) {
+        eprintln!("DEBUG: Chat renamed to: {}", name);
+    }
+
+    fn rename_branch(&self, name: &str) {
+        eprintln!("DEBUG: Branch renamed to: {}", name);
+    }
+}
+
 // noop responder
 impl Responder for () {
     fn send(&self, _response: CommandResponse) {}

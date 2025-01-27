@@ -5,7 +5,7 @@ use std::{
     sync::Arc,
 };
 
-use agent::available_tools;
+use agent::v1::available_tools;
 use anyhow::{Context as _, Result};
 use clap::Parser;
 use commands::CommandResponse;

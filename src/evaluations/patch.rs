@@ -1,8 +1,9 @@
 use std::process::Command;
 use anyhow::Result;
-use crate::agent::{start_agent, RunningAgent};
 use crate::repository::Repository;
 use crate::config::Config;
+use crate::commands::DebugResponder;
+use crate::evaluations::start_evaluation_agent;
 use uuid::Uuid;
 use std::sync::Arc;
 
@@ -53,11 +54,24 @@ async fn compare_changes() -> Result<bool> {
     
     let diff = String::from_utf8(output.stdout)?;
     
+    // Print the actual changes
+    println!("\nActual changes:");
+    println!("{}", diff);
+    
+    // Print the expected changes
+    println!("\nExpected changes should contain:");
+    println!("1. except socket.error as e:");
+    println!("2. raise ConnectionError(e)");
+    println!("3. finally:");
+    println!("4. self._content_consumed = True");
+    
     // Check if the diff contains our expected changes
     let success = diff.contains("except socket.error as e:") 
         && diff.contains("raise ConnectionError(e)")
         && diff.contains("finally:")
         && diff.contains("self._content_consumed = True");
+    
+    println!("\nChange validation result: {}", if success { "SUCCESS" } else { "FAILED" });
     
     Ok(success)
 }
@@ -65,14 +79,18 @@ async fn compare_changes() -> Result<bool> {
 async fn run_single_evaluation() -> Result<bool> {
     // Create a new agent
     let uuid = Uuid::new_v4();
-    let config = Config::load("test-config.toml").await?;
+    let config = Config::load("test-config.toml").await?.fill_llm_api_keys()?;
     let repository = Repository::from_config(config);
-    let agent = start_agent(
+    let agent = start_evaluation_agent(
         uuid,
         &repository,
         &prompt(),
-        Arc::new(()),
+        Arc::new(DebugResponder),
     ).await?;
+    
+    // Send the query and wait for completion
+    agent.query(&prompt()).await?;
+    agent.run().await?;
     
     // Compare the changes
     compare_changes().await
