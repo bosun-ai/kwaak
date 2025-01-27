@@ -49,4 +49,19 @@ pub enum Commands {
     PrintConfig,
     /// Clear the index and cache for this project and exit
     ClearCache,
+    /// Run evaluations
+    Eval {
+        #[command(subcommand)]
+        eval_type: EvalCommands,
+    },
+}
+
+#[derive(Subcommand, Debug, Clone)]
+pub enum EvalCommands {
+    /// Run the patch evaluation
+    Patch {
+        /// Number of iterations to run
+        #[arg(short, long, default_value_t = 1)]
+        iterations: u32,
+    },
 }

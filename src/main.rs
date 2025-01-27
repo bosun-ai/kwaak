@@ -15,7 +15,7 @@ use git::github::GithubSession;
 use kwaak::{
     agent, cli, commands, config, frontend, git,
     indexing::{self, index_repository},
-    onboarding, repository, storage,
+    onboarding, repository, storage, evaluations,
 };
 use ratatui::{
     backend::{Backend, CrosstermBackend},
@@ -98,6 +98,13 @@ async fn main() -> Result<()> {
             cli::Commands::PrintConfig => {
                 println!("{}", toml::to_string_pretty(repository.config())?);
                 Ok(())
+            }
+            cli::Commands::Eval { eval_type } => {
+                match eval_type {
+                    cli::EvalCommands::Patch { iterations } => {
+                        evaluations::run_patch_evaluation(*iterations).await
+                    }
+                }
             }
             cli::Commands::Init { .. } => unreachable!(),
         }
