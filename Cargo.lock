@@ -3533,13 +3533,14 @@ dependencies = [
 
 [[package]]
 name = "insta"
-version = "1.42.0"
+version = "1.42.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6513e4067e16e69ed1db5ab56048ed65db32d10ba5fc1217f5393f8f17d8b5a5"
+checksum = "71c1b125e30d93896b365e156c33dadfffab45ee8400afcbba4752f59de08a86"
 dependencies = [
  "console",
  "linked-hash-map",
  "once_cell",
+ "pin-project",
  "similar",
 ]
 
@@ -6879,9 +6880,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "swiftide"
-version = "0.17.4"
+version = "0.17.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85554c1fd22fb137e6ed9583cd82198bb077c50b6d8944092bb4e165a8dd3b3c"
+checksum = "6d6aebd38f4802f8dc24ba45a3d01fbe87253f89c991048454019b1f4ac213bb"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6919,9 +6920,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-core"
-version = "0.17.4"
+version = "0.17.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c71d2d07cba275ed852accf0cbe307b2e21bdcb5ba3824285e91b3842d229be2"
+checksum = "fa9988019e32b8954e9377a9a2ef2875d5bbfb7f9d246fe6bdf9f86ebc50c9e8"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7033,9 +7034,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-macros"
-version = "0.17.4"
+version = "0.17.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85aa73792efdf26c4ffd8f9b954a52c4e5fdd9a752b9445eb5cf45b53e1f43d0"
+checksum = "f9515c469a1eeac6e4b570108716d9ca644b04fefaf1f7dbdc139b01387a8f66"
 dependencies = [
  "anyhow",
  "async-trait",
