@@ -73,6 +73,14 @@ async fn compare_changes() -> Result<bool> {
     
     println!("\nChange validation result: {}", if success { "SUCCESS" } else { "FAILED" });
     
+    // Reset changes after validation
+    Command::new("git")
+        .arg("checkout")
+        .arg("HEAD")
+        .arg("--")
+        .arg("src/evaluations/fixtures/swebench_2148/models.py")
+        .output()?;
+    
     Ok(success)
 }
 

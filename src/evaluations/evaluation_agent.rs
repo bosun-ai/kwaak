@@ -22,9 +22,9 @@ pub fn get_evaluation_tools() -> Result<Vec<Box<dyn Tool>>> {
 }
 
 pub async fn start_evaluation_agent(
-    uuid: Uuid,
+    _uuid: Uuid,
     repository: &Repository,
-    query: &str,
+    _query: &str,
     responder: Arc<dyn Responder>,
 ) -> Result<RunningAgent> {
     // Create agent with simplified tools
