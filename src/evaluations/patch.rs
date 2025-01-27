@@ -3,7 +3,7 @@ use anyhow::Result;
 use crate::repository::Repository;
 use crate::config::Config;
 use crate::commands::DebugResponder;
-use crate::evaluations::start_evaluation_agent;
+use crate::evaluations::evaluation_agent::start_evaluation_agent;
 use uuid::Uuid;
 use std::sync::Arc;
 

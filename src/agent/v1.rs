@@ -319,18 +319,6 @@ pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
     Ok(prompt)
 }
 
-pub fn get_evaluation_tools() -> Result<Vec<Box<dyn Tool>>> {
-    let tools: Vec<Box<dyn Tool>> = vec![
-        Box::new(tools::read_file()),
-        Box::new(tools::write_file()),
-        Box::new(tools::read_file_with_line_numbers()),
-        Box::new(tools::search_file()),
-        Box::new(tools::replace_block()),
-    ];
-
-    Ok(tools)
-}
-
 async fn rename_chat(
     query: &str,
     fast_query_provider: &dyn SimplePrompt,
