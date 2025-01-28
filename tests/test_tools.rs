@@ -74,12 +74,15 @@ async fn test_search_code() {
 
     let include_hidden = invoke!(&tool, &context, json!({"query": "first-line-heading"}));
 
+    dbg!(&include_hidden);
     assert!(include_hidden.contains(".markdownlint.yaml"));
 
     let case_insensitive = invoke!(&tool, &context, json!({"query": "First-Line-HEADING"}));
+    dbg!(&case_insensitive);
     assert!(case_insensitive.contains(".markdownlint.yaml"));
 
     let literal_search = invoke!(&tool, &context, json!({"query": "[test_search_code]"}));
+    dbg!(&literal_search);
     assert!(literal_search.lines().count() < 3);
     assert!(literal_search.contains("test_tools.rs"));
 }
