@@ -166,6 +166,7 @@ pub async fn start(
 
     let push_to_remote_enabled =
         agent_env.remote_enabled && repository.config().git.auto_push_remote;
+    let auto_commit_disabled = repository.config().git.auto_commit_disabled;
 
     let context = Arc::new(context);
     let agent = Agent::builder()
@@ -235,17 +236,19 @@ pub async fn start(
                         .context("Could not run lint and fix")?;
                 };
 
-                accept_non_zero_exit(context.exec_cmd(&Command::shell("git add .")).await)
-                    .context("Could not add files to git")?;
+                if !auto_commit_disabled {
+                    accept_non_zero_exit(context.exec_cmd(&Command::shell("git add .")).await)
+                        .context("Could not add files to git")?;
 
-                accept_non_zero_exit(
-                    context
-                        .exec_cmd(&Command::shell(
-                            "git commit -m \"[kwaak]: Committed changes after completion\"",
-                        ))
-                        .await,
-                )
-                .context("Could not commit files to git")?;
+                    accept_non_zero_exit(
+                        context
+                            .exec_cmd(&Command::shell(
+                                "git commit -m \"[kwaak]: Committed changes after completion\"",
+                            ))
+                            .await,
+                    )
+                    .context("Could not commit files to git")?;
+                }
 
                 if  push_to_remote_enabled {
                     accept_non_zero_exit(context.exec_cmd(&Command::shell("git push")).await)

@@ -139,6 +139,10 @@ pub struct GitConfiguration {
     /// Automatically push to the remote after every completion (if changes were made)
     #[serde(default = "default_auto_push_remote")]
     pub auto_push_remote: bool,
+
+    /// Opt out of automatically committing changes after each completion
+    #[serde(default)]
+    pub auto_commit_disabled: bool,
 }
 
 impl FromStr for Config {
