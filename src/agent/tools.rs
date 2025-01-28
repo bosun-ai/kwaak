@@ -625,5 +625,5 @@ pub async fn add_lines(
     let write_cmd = Command::WriteFile(file_name.into(), lines.join("\n"));
     context.exec_cmd(&write_cmd).await?;
 
-    Ok(format!("Successfully addded content to {file_name} at line {start_line}. Before making new edits, you MUST read the file again, as the line numbers WILL have changed.").into())
+    Ok(format!("Successfully added content to {file_name} at line {start_line}. Before making new edits, you MUST read the file again, as the line numbers WILL have changed.").into())
 }
