@@ -21,10 +21,7 @@ macro_rules! invoke {
 }
 
 fn setup_context() -> DefaultContext {
-    let executor = LocalExecutor::builder()
-        .workdir(env!("CARGO_MANIFEST_DIR"))
-        .build()
-        .unwrap();
+    let executor = LocalExecutor::builder().build().unwrap();
 
     DefaultContext::from_executor(Arc::new(executor) as Arc<dyn ToolExecutor>)
 }
