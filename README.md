@@ -283,6 +283,7 @@ These configurations allow you to leverage the strengths of each model effective
 - **`otel_enabled`**: Enables OpenTelemetry tracing if set and respects all the standard OpenTelemetry environment variables.
 - **`tool_executor`**: Defaults to `docker`. Can also be `local`. We **HIGHLY** recommend using `docker` for security reasons unless you are running in a secure environment.
 - **`tavily_api_key`**: Enables the agent to use [tavily](https://tavily.com) for web search. Their entry-level plan is free. (we are not affiliated)
+- `**agent_edit_mode**`: Defaults to `whole` (write full files at the time). If you experience issues with (very) large files, you can experiment with `line` edits.
 - **`git.auto_push_remote`**: Enabled by default if a github key is present. Automatically pushes to the remote repository after each chat completion. You can disable this by setting it to `false`.
 - **_`disabled_tools.pull_request`_**: Enables or disables the pull request tool. Defaults to `false`.
 
