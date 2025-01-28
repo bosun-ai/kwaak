@@ -118,7 +118,7 @@ async fn test_edit_file() {
     let new_file_content = std::fs::read_to_string(tempdir.path().join("test.txt")).unwrap();
 
     assert_eq!(new_file_content, "line1\none line\nline5");
-    assert!(tool_response.contains("Successfully replaced block"));
+    assert!(tool_response.contains("Successfully replaced content"));
 
     std::fs::write(
         tempdir.path().join("test.txt"),
@@ -137,7 +137,7 @@ async fn test_edit_file() {
         })
     );
 
-    assert!(tool_response.contains("Successfully replaced block"));
+    assert!(tool_response.contains("Successfully replaced content"));
     assert_eq!(
         std::fs::read_to_string(tempdir.path().join("test.txt")).unwrap(),
         "line1\none\nline\nline5"
@@ -187,6 +187,7 @@ async fn test_edit_file() {
     .unwrap();
 
     // Appending a block with end_line zero
+    // NOTE: Current state of LLMs uses a different tool when line editing
     let tool_response = invoke!(
         &tool,
         &context,
@@ -198,12 +199,7 @@ async fn test_edit_file() {
         })
     );
 
-    assert!(
-        tool_response.contains("Successfully replaced block"),
-        "{}",
-        &tool_response
-    );
-
+    assert!(tool_response.contains("Successfully replaced content"));
     assert_eq!(
         std::fs::read_to_string(tempdir.path().join("test-add.txt")).unwrap(),
         "line1\nline2\nadded\nblock\nline3\nline4\nline5"
