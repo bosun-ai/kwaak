@@ -298,7 +298,6 @@ fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
 
         // Tool usage
         "When writing files, ensure you write and implement everything, everytime. Do NOT leave anything out. Writing a file overwrites the entire file, so it MUST include the full, completed contents of the file. Do not make changes other than the ones requested.",
-        "If you intend to edit multiple files or multiple edits in a single file, outline your plan first, then call the first tool immediately. Every single edit MUST be preceded by a `read_file_with_line_numbers`",
         "If you create a pull request, you must ensure the tests pass",
         "If you just want to run the tests, prefer running the tests over running coverage, as running tests is faster",
         "NEVER write or edit a file before having read it",
