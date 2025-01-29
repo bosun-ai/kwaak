@@ -71,6 +71,11 @@ async fn main() -> Result<()> {
 
         let command = args.command.as_ref().unwrap_or(&cli::Commands::Tui);
 
+        if git::util::is_dirty(repository.workdir()).await && !args.allow_dirty {
+            eprintln!("Error: The repository has uncommitted changes. Use --allow-dirty to override.");
+            std::process::exit(1);
+        }
+
         match command {
             cli::Commands::RunAgent { initial_message } => {
                 start_agent(repository, initial_message).await
