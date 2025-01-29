@@ -33,6 +33,10 @@ pub fn ui(f: &mut ratatui::Frame, area: Rect, app: &mut App) {
         .spacing(0)
         .areas(chat_area);
 
+    // Record the current line height of the chat messages
+    // so that we can effectively scrolll to the end
+    app.chat_messages_max_lines = chat_messages.height;
+
     // Render chat messages
     ChatMessagesWidget::render(f, app, chat_messages);
 

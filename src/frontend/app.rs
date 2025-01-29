@@ -83,6 +83,9 @@ pub struct App<'a> {
 
     /// Hack to get line wrapping on input into the textarea
     pub input_width: Option<u16>,
+
+    /// Max lines we can render in the chat messages
+    pub chat_messages_max_lines: u16,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -160,6 +163,7 @@ impl Default for App<'_> {
             selected_tab: 0,
             boot_uuid: Uuid::new_v4(),
             input_width: None,
+            chat_messages_max_lines: 0,
         }
     }
 }
@@ -318,6 +322,7 @@ impl App<'_> {
     /// # Panics
     ///
     /// Panics if after boot completed, it cannot find the initial chat
+    #[allow(clippy::too_many_lines)]
     pub async fn handle_single_event(&mut self, event: &UIEvent) {
         if !matches!(event, UIEvent::Tick | UIEvent::Input(_)) {
             tracing::debug!("Received ui event: {:?}", event);
@@ -348,6 +353,12 @@ impl App<'_> {
             }
             UIEvent::ChatMessage(uuid, message) => {
                 self.add_chat_message(*uuid, message.clone());
+
+                if let Some(chat) = self.find_chat_mut(*uuid) {
+                    if chat.auto_tail {
+                        self.send_ui_event(UIEvent::ScrollEnd);
+                    }
+                }
             }
             UIEvent::NewChat => {
                 self.add_chat(Chat::default());
@@ -389,39 +400,9 @@ impl App<'_> {
                     );
                 }
             }
-            UIEvent::ScrollUp => {
-                let Some(current_chat) = self.current_chat_mut() else {
-                    return;
-                };
-                current_chat.vertical_scroll = current_chat.vertical_scroll.saturating_sub(2);
-                current_chat.vertical_scroll_state = current_chat
-                    .vertical_scroll_state
-                    .position(current_chat.vertical_scroll);
-                current_chat.auto_tail = false;
-            }
-            UIEvent::ScrollDown => {
-                let Some(current_chat) = self.current_chat_mut() else {
-                    return;
-                };
-                current_chat.vertical_scroll = current_chat.vertical_scroll.saturating_add(2);
-                current_chat.vertical_scroll_state = current_chat
-                    .vertical_scroll_state
-                    .position(current_chat.vertical_scroll);
-                // Optional: only disable auto_tail when actually scrolling up
-                current_chat.auto_tail = current_chat.vertical_scroll < current_chat.num_lines.saturating_sub(10);
-            }
-            UIEvent::ScrollEnd => {
-                let Some(current_chat) = self.current_chat_mut() else {
-                    return;
-                };
-                // Keep the last 10 lines in view
-                let scroll_position = current_chat.num_lines.saturating_sub(10);
-
-                current_chat.vertical_scroll = scroll_position;
-                current_chat.vertical_scroll_state =
-                    current_chat.vertical_scroll_state.position(scroll_position);
-                current_chat.auto_tail = true;
-            }
+            UIEvent::ScrollUp => actions::scroll_up(self),
+            UIEvent::ScrollDown => actions::scroll_down(self),
+            UIEvent::ScrollEnd => actions::scroll_end(self),
             UIEvent::Help => actions::help(self),
         }
     }

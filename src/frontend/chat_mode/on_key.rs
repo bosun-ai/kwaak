@@ -64,26 +64,6 @@ pub fn on_key(app: &mut App, key: &KeyEvent) {
         return;
     }
 
-    let mut update_auto_tail = None;
-
-    if let Some(current_chat) = app.current_chat_mut() {
-        match key.code {
-            KeyCode::End => {
-                update_auto_tail = Some(true);
-            }
-            KeyCode::PageDown | KeyCode::Down => {
-                // Disable auto-tail if user scrolls down manually, but keep enabled if at end
-                if current_chat.vertical_scroll < current_chat.num_lines.saturating_sub(1) {
-                    update_auto_tail = Some(false);
-                }
-            }
-            KeyCode::PageUp | KeyCode::Up => {
-                update_auto_tail = Some(false);
-            }
-            _ => {}
-        }
-    }
-
     match key.code {
         KeyCode::End => app.send_ui_event(UIEvent::ScrollEnd),
         KeyCode::PageDown | KeyCode::Down => app.send_ui_event(UIEvent::ScrollDown),
@@ -101,10 +81,6 @@ pub fn on_key(app: &mut App, key: &KeyEvent) {
             }
             app.text_input.input(*key);
         }
-    }
-
-    if let (Some(current_chat), Some(auto_tail)) = (app.current_chat_mut(), update_auto_tail) {
-        current_chat.auto_tail = auto_tail;
     }
 }
 
