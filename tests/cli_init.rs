@@ -4,6 +4,7 @@ use predicates::prelude::*;
 use rexpect::{process::wait::WaitStatus, spawn};
 use std::process::Command;
 use tempfile::TempDir;
+
 struct Context {
     dir: TempDir,
 }
@@ -55,6 +56,21 @@ impl Context {
         // Copies over kwaak.toml to the tempdir
         Command::new("cp")
             .args(["kwaak.toml", self.dir.path().to_str().unwrap()])
+            .assert()
+            .success();
+
+        self
+    }
+
+    fn commit_changes(self) -> Self {
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(&self.dir)
+            .assert()
+            .success();
+        Command::new("git")
+            .args(["commit", "-m", "Test commit"])
+            .current_dir(&self.dir)
             .assert()
             .success();
 
@@ -113,14 +129,14 @@ async fn test_fails_config_present() {
 
 #[test_log::test(tokio::test)]
 async fn test_print_config() {
-    let mut context = setup().with_git().with_config();
+    let mut context = setup().with_git().with_config().commit_changes();
 
     context.cmd().arg("print-config").assert().success();
 }
 
 #[test_log::test(tokio::test)]
 async fn test_self_fixing_after_clear_cache() {
-    let mut context = setup().with_git().with_config();
+    let mut context = setup().with_git().with_config().commit_changes();
 
     context.cmd().arg("clear-cache").assert().success();
     context.cmd().arg("print-config").assert().success();
