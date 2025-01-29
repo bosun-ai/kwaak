@@ -1,9 +1,8 @@
 //! The patch module is meant to reveal problems in agents when making modifications to the source code. Specifically
 //! in large files and/or files with semantic whitespace.
 
-use crate::commands::DebugResponder;
 use crate::config::Config;
-use crate::evaluations::evaluation_agent::start_evaluation_agent;
+use crate::evaluations::{evaluation_agent::start_evaluation_agent, output::EvalOutput, logging_responder::LoggingResponder};
 use crate::repository::Repository;
 use anyhow::Result;
 use std::path::Path;
@@ -51,7 +50,7 @@ async fn reset_file() -> Result<()> {
     Ok(())
 }
 
-async fn compare_changes() -> Result<bool> {
+async fn compare_changes(eval_output: &EvalOutput) -> Result<bool> {
     // Get the diff of the current changes
     let output = Command::new("git")
         .args(&[
@@ -67,9 +66,8 @@ async fn compare_changes() -> Result<bool> {
 
     let diff = String::from_utf8(output.stdout)?;
 
-    // Print the actual changes
-    println!("\nActual changes:");
-    println!("{}", diff);
+    // Save the diff
+    eval_output.write_diff(&diff)?;
 
     let changes_diff = diff
         .split_once("+++ b/src/evaluations/fixtures/swebench_2148/models.py")
@@ -119,26 +117,28 @@ async fn compare_changes() -> Result<bool> {
         .arg("src/evaluations/fixtures/swebench_2148/models.py")
         .output()?;
 
-    Ok(true)
+    Ok(success)
 }
 
-async fn run_single_evaluation() -> Result<bool> {
+async fn run_single_evaluation(iteration: u32) -> Result<bool> {
+    let eval_output = EvalOutput::new("patch", iteration)?;
+    let responder = Arc::new(LoggingResponder::new());
+
     // Create a new agent
     let uuid = Uuid::new_v4();
     let config_path = Path::new("test-config.toml");
-    let config = Config::load(&config_path)
-        .expect("Failed to load config")
-        .fill_llm_api_keys()?;
-    let repository = Repository::from_config(config);
-    let agent =
-        start_evaluation_agent(uuid, &repository, &prompt(), Arc::new(DebugResponder)).await?;
+    let repository = Repository::from_config(Config::load(&config_path).expect("Failed to load config").fill_llm_api_keys()?);
+    let agent = start_evaluation_agent(uuid, &repository, &prompt(), responder.clone()).await?;
 
     // Send the query and wait for completion
     agent.query(&prompt()).await?;
     agent.run().await?;
 
+    // Save agent log
+    eval_output.write_agent_log(&responder.get_log())?;
+
     // Compare the changes
-    compare_changes().await
+    compare_changes(&eval_output).await
 }
 
 pub async fn evaluate(iterations: u32) -> Result<()> {
@@ -150,7 +150,7 @@ pub async fn evaluate(iterations: u32) -> Result<()> {
         // Reset the file to its original state before each iteration
         reset_file().await?;
 
-        match run_single_evaluation().await {
+        match run_single_evaluation(i + 1).await {
             Ok(true) => {
                 println!("Iteration {} succeeded", i + 1);
                 successes += 1;
