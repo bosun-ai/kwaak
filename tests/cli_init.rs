@@ -63,6 +63,26 @@ impl Context {
     }
 
     fn commit_changes(self) -> Self {
+        // set the git author
+        let user_email = std::process::Command::new("git")
+            .arg("config")
+            .arg("user.email")
+            .arg("\"kwaak@bosun.ai\"")
+            .current_dir(&self.dir)
+            .output()
+            .unwrap();
+
+        assert!(user_email.status.success(), "failed to set git user email");
+
+        let user_name = std::process::Command::new("git")
+            .arg("config")
+            .arg("user.name")
+            .arg("\"kwaak\"")
+            .current_dir(&self.dir)
+            .output()
+            .unwrap();
+
+        assert!(user_name.status.success(), "failed to set git user name");
         Command::new("git")
             .args(["add", "."])
             .current_dir(&self.dir)

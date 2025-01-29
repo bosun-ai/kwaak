@@ -72,7 +72,9 @@ async fn main() -> Result<()> {
         let command = args.command.as_ref().unwrap_or(&cli::Commands::Tui);
 
         if git::util::is_dirty(repository.path()).await && !args.allow_dirty {
-            eprintln!("Error: The repository has uncommitted changes. Use --allow-dirty to override.");
+            eprintln!(
+                "Error: The repository has uncommitted changes. Use --allow-dirty to override."
+            );
             std::process::exit(1);
         }
 
