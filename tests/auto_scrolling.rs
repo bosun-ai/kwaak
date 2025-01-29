@@ -1,8 +1,6 @@
 use kwaak::chat_message::ChatMessage;
-use kwaak::commands::Command;
-use kwaak::frontend::{ui, UIEvent, UserInputCommand};
-use kwaak::test_utils::{setup_integration, IntegrationContext};
-use kwaak::{assert_agent_responded, assert_command_done};
+use kwaak::frontend::UIEvent;
+use kwaak::test_utils::setup_integration;
 
 #[test_log::test(tokio::test(flavor = "multi_thread"))]
 async fn auto_scrolling() {
