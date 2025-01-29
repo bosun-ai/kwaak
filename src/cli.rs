@@ -13,6 +13,10 @@ pub struct Args {
     #[arg(short, long, default_value_t = false)]
     pub skip_indexing: bool,
 
+    /// Allow running with a dirty git directory
+    #[arg(long, default_value_t = false)]
+    pub allow_dirty: bool,
+
     /// Subcommands corresponding to each mode
     #[clap(subcommand)]
     pub command: Option<Commands>,
