@@ -5,31 +5,18 @@ use swiftide::chat_completion::{ChatCompletion, Tool};
 use swiftide::traits::AgentContext;
 use uuid::Uuid;
 
-use crate::agent::{tools, v1, RunningAgent};
+use crate::agent::{v1, RunningAgent};
 use crate::commands::Responder;
 use crate::repository::Repository;
 
-pub fn get_evaluation_tools() -> Result<Vec<Box<dyn Tool>>> {
-    let tools: Vec<Box<dyn Tool>> = vec![
-        Box::new(tools::read_file()),
-        Box::new(tools::write_file()),
-        Box::new(tools::read_file_with_line_numbers()),
-        Box::new(tools::search_file()),
-        Box::new(tools::replace_lines()),
-        Box::new(tools::add_lines()),
-    ];
-
-    Ok(tools)
-}
-
-pub async fn start_evaluation_agent(
+pub async fn start_tool_evaluation_agent(
     _uuid: Uuid,
     repository: &Repository,
     _query: &str,
     responder: Arc<dyn Responder>,
+    tools: Vec<Box<dyn Tool>>,
 ) -> Result<RunningAgent> {
     // Create agent with simplified tools
-    let tools = get_evaluation_tools()?;
     let system_prompt = v1::build_system_prompt(repository)?;
     let agent_context: Arc<dyn AgentContext> = Arc::new(DefaultContext::default());
     let executor = Arc::new(swiftide::agents::tools::local_executor::LocalExecutor::default());

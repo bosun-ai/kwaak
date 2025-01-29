@@ -1,8 +1,10 @@
 //! The patch module is meant to reveal problems in agents when making modifications to the source code. Specifically
 //! in large files and/or files with semantic whitespace.
 
+use crate::agent::tools;
 use crate::config::Config;
-use crate::evaluations::{evaluation_agent::start_evaluation_agent, output::EvalOutput, logging_responder::LoggingResponder};
+use swiftide::chat_completion::Tool;
+use crate::evaluations::{start_tool_evaluation_agent, output::EvalOutput, logging_responder::LoggingResponder};
 use crate::repository::Repository;
 use anyhow::Result;
 use std::path::Path;
@@ -10,11 +12,26 @@ use std::process::Command;
 use std::sync::Arc;
 use uuid::Uuid;
 
+const EXPECTED_REMOVALS: &[&str] = &[
+    "            self._content_consumed = True",
+];
+
+const EXPECTED_ADDITIONS: &[&str] = &[
+    "                except socket.error as e:",
+    "                    raise ConnectionError(e)",
+    "            finally:",
+    "                self._content_consumed = True",
+];
+
+/// The prompt to give to the agent when making the changes
+/// 
+/// The goal of the prompt is to get the agent to use its tools to patch the file without spending too much tokens
+/// on exploring the context.
 fn prompt() -> String {
     indoc::indoc! {"
         There is a bug in the `src/evaluations/fixtures/swebench_2148/models.py` file in the `iter_content` method.
 
-        The fix is to add an additional exception handler to the nested try block that looks like this (but adjusted for indentation):
+        To fix it add an additional exception handler to the nested try block that looks like this (but adjusted for indentation):
 
         ```
         except socket.error as e:
@@ -28,8 +45,8 @@ fn prompt() -> String {
             self._content_consumed = True
         ```
 
-        Apply only these fixes, do not make any other changes to the code. Use the provided tooling for making small
-        changes to larger files to read the file and replace the blocks of code.
+        Apply only these fixes, do not make any other changes to the code. The file is long and the modifications
+        are small.
     "}.to_string()
 }
 
@@ -93,18 +110,28 @@ async fn compare_changes(eval_output: &EvalOutput) -> Result<bool> {
         .filter(|s| !s.trim().is_empty())
         .collect::<Vec<_>>();
 
-    if !removals.contains(&"            self._content_consumed = True") {
-        println!("Removals: [{removals:?}] do not contain self._content_consumed = True");
+    let missing_removals: Vec<_> = EXPECTED_REMOVALS
+        .iter()
+        .filter(|r| !removals.contains(r))
+        .collect();
+
+    let missing_additions: Vec<_> = EXPECTED_ADDITIONS
+        .iter()
+        .filter(|a| !additions.contains(a))
+        .collect();
+
+    if !missing_removals.is_empty() {
+        println!("Removals: [{removals:?}] do not contain expected removals");
         success = false;
     }
 
-    if !additions.contains(&"                except socket.error as e:")
-        || !additions.contains(&"                    raise ConnectionError(e)")
-        || !additions.contains(&"            finally:")
-        || !additions.contains(&"                self._content_consumed = True")
-    {
-        println!("Additions: [{additions:?}] do not contain the expected changes");
+    if !missing_additions.is_empty() {
+        println!("Additions: [{additions:?}] do not contain expected additions");
         success = false;
+    }
+
+    if !success {
+        write_failure_info(eval_output, &missing_removals, &missing_additions, &removals, &additions)?;
     }
 
     println!("\nChange validation result: {success}");
@@ -120,6 +147,56 @@ async fn compare_changes(eval_output: &EvalOutput) -> Result<bool> {
     Ok(success)
 }
 
+fn write_failure_info(
+    eval_output: &EvalOutput,
+    missing_removals: &[&&str],
+    missing_additions: &[&&str],
+    found_removals: &[&str],
+    found_additions: &[&str],
+) -> Result<()> {
+    let mut content = String::new();
+    content.push_str("Expected changes were not found in the patch.\n\n");
+    
+    content.push_str("Missing removals:\n");
+    for removal in missing_removals {
+        content.push_str(&format!("{}\n", removal));
+    }
+    content.push('\n');
+    
+    content.push_str("Missing additions:\n");
+    for addition in missing_additions {
+        content.push_str(&format!("{}\n", addition));
+    }
+    content.push('\n');
+    
+    content.push_str("Found removals:\n");
+    for removal in found_removals {
+        content.push_str(&format!("{}\n", removal));
+    }
+    content.push('\n');
+    
+    content.push_str("Found additions:\n");
+    for addition in found_additions {
+        content.push_str(&format!("{}\n", addition));
+    }
+
+    eval_output.write_file("failed", &content)?;
+    Ok(())
+}
+
+pub fn get_evaluation_tools() -> Result<Vec<Box<dyn Tool>>> {
+    let tools: Vec<Box<dyn Tool>> = vec![
+        Box::new(tools::read_file()),
+        Box::new(tools::write_file()),
+        Box::new(tools::read_file_with_line_numbers()),
+        Box::new(tools::search_file()),
+        Box::new(tools::replace_lines()),
+        Box::new(tools::add_lines()),
+    ];
+
+    Ok(tools)
+}
+
 async fn run_single_evaluation(iteration: u32) -> Result<bool> {
     let eval_output = EvalOutput::new("patch", iteration)?;
     let responder = Arc::new(LoggingResponder::new());
@@ -128,7 +205,9 @@ async fn run_single_evaluation(iteration: u32) -> Result<bool> {
     let uuid = Uuid::new_v4();
     let config_path = Path::new("test-config.toml");
     let repository = Repository::from_config(Config::load(&config_path).expect("Failed to load config").fill_llm_api_keys()?);
-    let agent = start_evaluation_agent(uuid, &repository, &prompt(), responder.clone()).await?;
+    
+    let tools = get_evaluation_tools()?;
+    let agent = start_tool_evaluation_agent(uuid, &repository, &prompt(), responder.clone(), tools).await?;
 
     // Send the query and wait for completion
     agent.query(&prompt()).await?;
