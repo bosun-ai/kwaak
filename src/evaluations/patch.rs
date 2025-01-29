@@ -50,10 +50,10 @@ fn prompt() -> String {
     "}.to_string()
 }
 
-async fn reset_file() -> Result<()> {
+fn reset_file() -> Result<()> {
     // Run git checkout to reset the file
     let status = Command::new("git")
-        .args(&[
+        .args([
             "checkout",
             "HEAD",
             "--",
@@ -67,10 +67,10 @@ async fn reset_file() -> Result<()> {
     Ok(())
 }
 
-async fn compare_changes(eval_output: &EvalOutput) -> Result<bool> {
+fn compare_changes(eval_output: &EvalOutput) -> Result<bool> {
     // Get the diff of the current changes
     let output = Command::new("git")
-        .args(&[
+        .args([
             "diff",
             "--",
             "src/evaluations/fixtures/swebench_2148/models.py",
@@ -138,10 +138,12 @@ async fn compare_changes(eval_output: &EvalOutput) -> Result<bool> {
 
     // Reset changes after validation
     Command::new("git")
-        .arg("checkout")
-        .arg("HEAD")
-        .arg("--")
-        .arg("src/evaluations/fixtures/swebench_2148/models.py")
+        .args([
+            "checkout",
+            "HEAD",
+            "--",
+            "src/evaluations/fixtures/swebench_2148/models.py",
+        ])
         .output()?;
 
     Ok(success)
@@ -159,25 +161,25 @@ fn write_failure_info(
     
     content.push_str("Missing removals:\n");
     for removal in missing_removals {
-        content.push_str(&format!("{}\n", removal));
+        content.push_str(&format!("{removal}\n"));
     }
     content.push('\n');
     
     content.push_str("Missing additions:\n");
     for addition in missing_additions {
-        content.push_str(&format!("{}\n", addition));
+        content.push_str(&format!("{addition}\n"));
     }
     content.push('\n');
     
     content.push_str("Found removals:\n");
     for removal in found_removals {
-        content.push_str(&format!("{}\n", removal));
+        content.push_str(&format!("{removal}\n"));
     }
     content.push('\n');
     
     content.push_str("Found additions:\n");
     for addition in found_additions {
-        content.push_str(&format!("{}\n", addition));
+        content.push_str(&format!("{addition}\n"));
     }
 
     eval_output.write_file("failed", &content)?;
@@ -217,7 +219,7 @@ async fn run_single_evaluation(iteration: u32) -> Result<bool> {
     eval_output.write_agent_log(&responder.get_log())?;
 
     // Compare the changes
-    compare_changes(&eval_output).await
+    compare_changes(&eval_output)
 }
 
 pub async fn evaluate(iterations: u32) -> Result<()> {
@@ -227,7 +229,7 @@ pub async fn evaluate(iterations: u32) -> Result<()> {
         println!("Running patch evaluation iteration {}", i + 1);
 
         // Reset the file to its original state before each iteration
-        reset_file().await?;
+        reset_file()?;
 
         match run_single_evaluation(i + 1).await {
             Ok(true) => {
@@ -243,8 +245,7 @@ pub async fn evaluate(iterations: u32) -> Result<()> {
     }
 
     println!(
-        "Evaluation complete: {}/{} iterations succeeded",
-        successes, iterations
+        "Evaluation complete: {successes}/{iterations} iterations succeeded"
     );
     Ok(())
 }

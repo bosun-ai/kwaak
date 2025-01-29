@@ -9,9 +9,9 @@ pub struct EvalOutput {
 
 impl EvalOutput {
     pub fn new(eval_type: &str, iteration: u32) -> Result<Self> {
-        let evals_dir = Path::new("evals");
-        let eval_dir = evals_dir.join(eval_type);
-        let iteration_dir = eval_dir.join(format!("iteration_{}", iteration));
+        let output_dir = Path::new("evals");
+        let eval_dir = output_dir.join(eval_type);
+        let iteration_dir = eval_dir.join(format!("iteration_{iteration}"));
         fs::create_dir_all(&iteration_dir)?;
 
         Ok(Self {

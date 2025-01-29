@@ -5,7 +5,7 @@ use swiftide::chat_completion::{ChatCompletion, Tool};
 use swiftide::traits::AgentContext;
 use uuid::Uuid;
 
-use crate::agent::{v1, RunningAgent};
+use crate::agent::{v1, RunningAgent, env_setup::AgentEnvironment};
 use crate::commands::Responder;
 use crate::repository::Repository;
 
@@ -53,7 +53,7 @@ pub async fn start_tool_evaluation_agent(
         .agent(agent)
         .executor(executor)
         .agent_context(agent_context)
-        .agent_environment(Arc::new(Default::default()))
+        .agent_environment(Arc::new(AgentEnvironment::default()))
         .build()?;
 
     Ok(agent)
