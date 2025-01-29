@@ -1,11 +1,11 @@
 use anyhow::Result;
-use uuid::Uuid;
 use std::sync::Arc;
 use swiftide::agents::{Agent, DefaultContext};
 use swiftide::chat_completion::{ChatCompletion, Tool};
 use swiftide::traits::AgentContext;
+use uuid::Uuid;
 
-use crate::agent::{RunningAgent, tools, v1};
+use crate::agent::{tools, v1, RunningAgent};
 use crate::commands::Responder;
 use crate::repository::Repository;
 
@@ -15,7 +15,8 @@ pub fn get_evaluation_tools() -> Result<Vec<Box<dyn Tool>>> {
         Box::new(tools::write_file()),
         Box::new(tools::read_file_with_line_numbers()),
         Box::new(tools::search_file()),
-        Box::new(tools::replace_block()),
+        Box::new(tools::replace_lines()),
+        Box::new(tools::add_lines()),
     ];
 
     Ok(tools)
@@ -32,11 +33,12 @@ pub async fn start_evaluation_agent(
     let system_prompt = v1::build_system_prompt(repository)?;
     let agent_context: Arc<dyn AgentContext> = Arc::new(DefaultContext::default());
     let executor = Arc::new(swiftide::agents::tools::local_executor::LocalExecutor::default());
-    let query_provider: Box<dyn ChatCompletion> = repository.config().query_provider().try_into()?;
-    
+    let query_provider: Box<dyn ChatCompletion> =
+        repository.config().query_provider().try_into()?;
+
     let responder_for_messages = responder.clone();
     let responder_for_tools = responder.clone();
-    
+
     let agent = Agent::builder()
         .tools(tools)
         .system_prompt(system_prompt)

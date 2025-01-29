@@ -1,7 +1,7 @@
 use anyhow::Result;
 
-pub mod patch;
 mod evaluation_agent;
+pub mod patch;
 
 pub use evaluation_agent::{get_evaluation_tools, start_evaluation_agent};
 

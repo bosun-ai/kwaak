@@ -9,12 +9,20 @@ use crate::{
 pub fn on_key(app: &mut App, key: &KeyEvent) {
     let current_input = app.text_input.lines().join("\n");
 
-    // `Ctrl-s` to send the message in the text input
-    if key.code == KeyCode::Char('s')
+    // `Ctrl-Enter` or `Shift-Enter` or `Ctrl-s` to send the message in the text input
+    if ((key.code == KeyCode::Char('s')
         && key
             .modifiers
-            .contains(crossterm::event::KeyModifiers::CONTROL)
-        && !current_input.is_empty()
+            .contains(crossterm::event::KeyModifiers::CONTROL))
+        || (key.code == KeyCode::Enter
+            && key
+                .modifiers
+                .contains(crossterm::event::KeyModifiers::CONTROL))
+        || (key.code == KeyCode::Enter
+            && key
+                .modifiers
+                .contains(crossterm::event::KeyModifiers::SHIFT)))
+        && !current_input.trim().is_empty()
     {
         let message = if current_input.starts_with('/') {
             handle_input_command(app)
@@ -57,17 +65,31 @@ pub fn on_key(app: &mut App, key: &KeyEvent) {
     }
 
     match key.code {
+        KeyCode::End => app.send_ui_event(UIEvent::ScrollEnd),
+        KeyCode::PageDown => app.send_ui_event(UIEvent::ScrollDown),
+        KeyCode::PageUp => app.send_ui_event(UIEvent::ScrollUp),
         KeyCode::Tab => app.send_ui_event(UIEvent::NextChat),
-        KeyCode::End => {
-            app.send_ui_event(UIEvent::ScrollEnd);
-        }
-        KeyCode::PageDown => {
-            app.send_ui_event(UIEvent::ScrollDown);
-        }
-        KeyCode::PageUp => {
-            app.send_ui_event(UIEvent::ScrollUp);
+        KeyCode::Up | KeyCode::Down | KeyCode::Left | KeyCode::Right => {
+            if current_input.is_empty() {
+                match key.code {
+                    KeyCode::Up => app.send_ui_event(UIEvent::ScrollUp),
+                    KeyCode::Down => app.send_ui_event(UIEvent::ScrollDown),
+                    _ => {} // Handle other arrow keys if needed
+                }
+            } else {
+                app.text_input.input(*key);
+            }
         }
         _ => {
+            // Hack to get linewrapping to work with tui_textarea
+            if let Some(last_line) = app.text_input.lines().last() {
+                if let Some(input_width) = app.input_width {
+                    if last_line.len() >= input_width as usize && key.code == KeyCode::Char(' ') {
+                        app.text_input.insert_newline();
+                        return;
+                    }
+                }
+            }
             app.text_input.input(*key);
         }
     }

@@ -185,8 +185,12 @@ fn pretty_format_tool(tool_call: &swiftide::chat_completion::ToolCall) -> Option
             "searching github for code matching `{}`",
             get_value(parsed_args, "query")?
         ),
-        "replace_block" => format!(
+        "replace_lines" => format!(
             "replacing lines in file `{}`",
+            get_value(parsed_args, "file_name")?
+        ),
+        "add_lines" => format!(
+            "adding lines to file `{}`",
             get_value(parsed_args, "file_name")?
         ),
         "read_file_with_line_numbers" => format!(

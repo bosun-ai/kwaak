@@ -33,6 +33,10 @@ pub fn ui(f: &mut ratatui::Frame, area: Rect, app: &mut App) {
         .spacing(0)
         .areas(chat_area);
 
+    // Record the current line height of the chat messages
+    // so that we can effectively scroll to the end
+    app.chat_messages_max_lines = chat_messages.height;
+
     // Render chat messages
     ChatMessagesWidget::render(f, app, chat_messages);
 
@@ -43,6 +47,10 @@ pub fn ui(f: &mut ratatui::Frame, area: Rect, app: &mut App) {
     ChatListWidget::render(f, app, chat_list);
 
     // Render user input bar
+    // Hack to get linewrapping to work with tui_textarea
+    if app.input_width.is_none() {
+        app.input_width = Some(input_area.width);
+    }
     InputBarWidget::render(f, app, input_area);
 
     // Render help section

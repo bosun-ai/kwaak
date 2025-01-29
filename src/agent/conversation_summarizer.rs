@@ -109,7 +109,18 @@ impl ConversationSummarizer {
         let available_tools = self
             .available_tools
             .iter()
-            .map(|tool| format!("- **{}**: {}", tool.name(), tool.tool_spec().description))
+            .map(|tool| {
+                format!(
+                    "- **{}**: {}",
+                    tool.name(),
+                    // Some tools have large descriptions, only take the first line
+                    tool.tool_spec()
+                        .description
+                        .lines()
+                        .take(1)
+                        .collect::<String>()
+                )
+            })
             .collect::<Vec<String>>()
             .join("\n");
 
@@ -133,7 +144,7 @@ impl ConversationSummarizer {
         * If the goal is not yet achieved, reflect on why and provide a clear path forward
 
         {{% if diff -%}}
-        # Current changes made
+        ## Current changes made
         ````
         {{{{ diff }}}}
         ````
