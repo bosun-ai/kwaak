@@ -89,6 +89,7 @@ pub async fn write_file(
     file_name: &str,
     content: &str,
 ) -> Result<ToolOutput, ToolError> {
+    println!("Writing file {file_name} with {content_len} characters", content_len = content.len());
     let cmd = Command::WriteFile(file_name.into(), content.into());
 
     context.exec_cmd(&cmd).await?;
@@ -472,38 +473,48 @@ const REPLACE_LINES_DESCRIPTION: &str = "Replace lines in a file.
 You MUST read the file with line numbers first BEFORE EVERY EDIT, to know the start and end line numbers of the block you want to replace.
 After editing, you MUST read the file again to get the new line numbers.
 
-You MUST use the correct amount of whitespace.
+Prefix the content with some of context before the lines you want to edit and add some lines of context after the lines you want to edit.
 
-If you want to add lines, use `add_lines` instead
+Do not include the line numbers in the content.
+
+If you want to add lines, use `add_lines` instead.
 
 Example:
 
 Given a file `test.txt`:
 ```
-1|Line 1
-2|Line 2
-3|Line 3
-4|Line 4
+1|A
+2|B
+3|C
+4|D
+5|E
+6|F
+7|G
+8|H
 ```
 
-To replace line 2 and 3 with:
+To replace line 4 and 5 with:
 ```
-New line 2
-New line 3
-New line 4
+XD
+XX
+XE
 ```
 
 Call the tool with:
 
-start_line=2,end_line=3,content=New line 2\nNew line 3\nNew line 4
+start_line=2,end_line=7,content=B\nC\nXD\nXX\nXE\nF\nG
 
 Then the result will be:
 ```
-1|Line 1
-2|New Line 2
-3|New Line 3
-4|New Line 4
-5|Line 4
+1|A
+2|B
+3|C
+4|XD
+5|X^
+6|XE
+7|F
+8|G
+9|H
 ```
 ";
 #[tool(
@@ -517,7 +528,7 @@ Then the result will be:
         name = "end_line",
         description = "Last line number of the block to replace."
     ),
-    param(name = "content", description = "Replacement content")
+    param(name = "content", description = "Replacement content including context before and after")
 )]
 pub async fn replace_lines(
     context: &dyn AgentContext,
@@ -561,9 +572,20 @@ pub async fn replace_lines(
         return Ok("Start line number must be greater than 0".into());
     }
 
+    println!("Going to replace lines {start_line}-{end_line} with content: {content}");
+
+    // LLM often messes up the first line, so assume it included at least one line of context, and drop it
+    let content = content
+        .lines()
+        .skip(1)
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let start_line = start_line + 1;
+
     // Input is 1 indexed, lines are 0 indexed
     if end_line == 0 {
-        lines.insert(start_line, content);
+        lines.insert(start_line, &content);
     } else {
         lines.splice(
             start_line.saturating_sub(1)..=end_line.saturating_sub(1),
