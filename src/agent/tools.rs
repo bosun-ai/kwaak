@@ -561,7 +561,7 @@ pub async fn replace_lines(
     let lines_len = lines.len();
 
     if start_line > lines_len || end_line > lines_len {
-        return Ok("Start or end line number is out of bounds".into());
+        return Ok(format!("Start or end line number ({start_line} - {end_line}, max: {lines_len}) is out of bounds").into());
     }
 
     if end_line > 0 && start_line > end_line {
@@ -572,23 +572,67 @@ pub async fn replace_lines(
         return Ok("Start line number must be greater than 0".into());
     }
 
-    println!("Going to replace lines {start_line}-{end_line} with content: {content}");
+    println!("Asking to replace lines {start_line}-{end_line} with content: {content}");
 
-    // LLM often messes up the first line, so assume it included at least one line of context, and drop it
+    let mut content = content.lines();
+
+    // TODO as a little trick to improve reliability, we could start our search for the anchors at some position
+    // relative to the start line. This way if there's a large file that has repetition, we are less likely to match
+    // an identical anchor.
+
+    // TODO a complete solution, that is more complex than anchoring on just the first line, would be to determine
+    // the entire context of the content by scanning the file using the content and for each match determine for how
+    // many characters the match extends. And then the same in reverse for the end context. We could then select the
+    // longest match.
+
+    // We're going to use the first line as an anchor
+    let anchor = content.next().expect("We should have at least one line");
+
+    // We'll search for the anchor in the file content
+    let anchor_idx = lines
+        .iter()
+        .position(|l| l.contains(anchor));
+
+    if anchor_idx.is_none() {
+        return Ok("Include at least one line of context before the lines you want to edit".into());
+    }
+
+    let content_start_idx = anchor_idx.unwrap() + 1;
+
+    // We'll use the last line as an anchor
+    let anchor = lines
+        .iter()
+        .rev()
+        .next()
+        .expect("We should have at least one line");
+
+    // We'll search for the anchor in the file content
+    let anchor_idx = lines
+        .iter()
+        .position(|l| l.contains(anchor));
+
+    if anchor_idx.is_none() {
+        return Ok("Include at least one line of context after the lines you want to edit".into());
+    }
+
+    let content_end_idx = anchor_idx.unwrap() - 1;
+
     let content = content
-        .lines()
-        .skip(1)
-        .collect::<Vec<_>>()
+        .skip(content_start_idx)
+        .take(content_end_idx - content_start_idx)
+        .collect::<Vec<&str>>()
         .join("\n");
 
-    let start_line = start_line + 1;
+    println!("Really going to replace lines {content_start_idx}-{content_end_idx} with content: {content}");
+
+    // let start_line = start_line + 1;
 
     // Input is 1 indexed, lines are 0 indexed
     if end_line == 0 {
-        lines.insert(start_line, &content);
+        lines.insert(content_start_idx, &content);
     } else {
         lines.splice(
-            start_line.saturating_sub(1)..=end_line.saturating_sub(1),
+            content_start_idx..content_end_idx,
             content.lines(),
         );
     }
