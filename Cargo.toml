@@ -58,7 +58,7 @@ opentelemetry-otlp = { version = "0.27.0", optional = true, features = [
 tui-markdown = "0.3.1"
 uuid = { version = "1.11.0", features = ["v4"] }
 derive_builder = "0.20.2"
-tui-logger = { features = ["tracing-support"], version = "0.14.1" }
+tui-logger = { features = ["tracing-support"], version = "0.14.4" }
 # Only needed for tui-logger filtering
 log = "0.4.22"
 throbber-widgets-tui = "0.8.0"
@@ -92,7 +92,7 @@ tempfile = { version = "3.16.0" }
 copypasta = "0.10.1"
 strip-ansi-escapes = "0.2.1"
 inquire = "0.7.5"
-config = { version = "0.15.6", features = ["toml", "convert-case"] }
+config = { version = "0.15.7", features = ["toml", "convert-case"] }
 
 # Something is still pulling in libssl, this is a quickfix and should be investigated
 [target.'cfg(linux)'.dependencies]
