@@ -4,15 +4,17 @@
 use crate::agent::tools;
 use crate::config::Config;
 use crate::evaluations::{
-    logging_responder::LoggingResponder, output::EvalOutput, start_tool_evaluation_agent,
+    logging_responder::LoggingResponder,
+    output::{EvalMetrics, EvalOutput},
+    start_tool_evaluation_agent,
 };
 use crate::repository::Repository;
 use anyhow::Result;
 use std::path::Path;
 use std::process::Command;
 use std::sync::Arc;
+use std::time::Duration;
 use swiftide::chat_completion::Tool;
-use uuid::Uuid;
 
 const EXPECTED_REMOVALS: &[&str] = &["            self._content_consumed = True"];
 
@@ -25,11 +27,8 @@ const EXPECTED_ADDITIONS: &[&str] = &[
 
 /// The goal of the prompt is to get the agent to use its tools to patch the file without spending too much tokens
 /// on exploring the context.
-fn prompt(iteration: u32) -> String {
-
+fn prompt() -> String {
     indoc::formatdoc! {"
-        This is iteration {iteration}.
-
         There is a bug in the `src/evaluations/fixtures/swebench_2148/models.py` file in the `iter_content` method.
 
         To fix it add an additional exception handler to the nested try block that looks like this (but adjusted for indentation):
@@ -46,8 +45,7 @@ fn prompt(iteration: u32) -> String {
             self._content_consumed = True
         ```
 
-        Apply only these fixes, do not make any other changes to the code. The file is long and the modifications
-        are small.
+        Apply only these fixes, do not make any other changes to the code. The file is long and the modifications are small.
     "}.to_string()
 }
 
@@ -184,7 +182,7 @@ fn write_failure_info(
     Ok(())
 }
 
-pub fn get_evaluation_tools() -> Result<Vec<Box<dyn Tool>>> {
+fn get_evaluation_tools() -> Vec<Box<dyn Tool>> {
     let tools: Vec<Box<dyn Tool>> = vec![
         Box::new(tools::search_file()),
         Box::new(tools::read_file()),
@@ -193,10 +191,10 @@ pub fn get_evaluation_tools() -> Result<Vec<Box<dyn Tool>>> {
         Box::new(tools::replace_lines()),
     ];
 
-    Ok(tools)
+    tools
 }
 
-async fn run_single_evaluation(iteration: u32) -> Result<bool> {
+async fn run_single_evaluation(iteration: u32) -> Result<(bool, EvalMetrics)> {
     let eval_output = EvalOutput::new("patch", iteration)?;
     let responder = Arc::new(LoggingResponder::new());
 
@@ -207,40 +205,63 @@ async fn run_single_evaluation(iteration: u32) -> Result<bool> {
             .fill_llm_api_keys()?,
     );
 
-    let tools = get_evaluation_tools()?;
-    let agent =
-        start_tool_evaluation_agent(&repository, responder.clone(), tools).await?;
+    let tools = get_evaluation_tools();
+    let agent = start_tool_evaluation_agent(&repository, responder.clone(), tools).await?;
 
-    agent.query(&prompt(iteration)).await?;
+    agent.query(&prompt()).await?;
     agent.run().await?;
 
     eval_output.write_agent_log(&responder.get_log())?;
 
-    compare_changes(&eval_output)
+    // Compare the changes
+    let success = compare_changes(&eval_output)?;
+
+    let metrics = EvalMetrics::new(eval_output.elapsed_time(), 0, 0);
+    eval_output.write_metrics(&metrics)?;
+
+    Ok((success, metrics))
 }
 
 pub async fn evaluate(iterations: u32) -> Result<()> {
     let mut successes = 0;
+    let mut total_time = Duration::new(0, 0);
 
     for i in 0..iterations {
         println!("Running patch evaluation iteration {}", i + 1);
 
-        // Reset the file to its original state before each iteration
         reset_file()?;
 
         match run_single_evaluation(i + 1).await {
-            Ok(true) => {
-                println!("Iteration {} succeeded", i + 1);
-                successes += 1;
+            Ok((success, metrics)) => {
+                if success {
+                    println!("Iteration {} succeeded", i + 1);
+                    successes += 1;
+                } else {
+                    println!(
+                        "Iteration {} failed - changes did not match expected patch",
+                        i + 1
+                    );
+                }
+
+                total_time += metrics.time_spent;
+
+                println!(
+                    "Iteration {} metrics:\n  Time: {:.2}s\n",
+                    i + 1,
+                    metrics.time_spent.as_secs_f64(),
+                );
             }
-            Ok(false) => println!(
-                "Iteration {} failed - changes did not match expected patch",
-                i + 1
-            ),
             Err(e) => println!("Iteration {} failed with error: {}", i + 1, e),
         }
     }
 
-    println!("Evaluation complete: {successes}/{iterations} iterations succeeded");
+    let avg_time = total_time.as_secs_f64() / f64::from(iterations);
+
+    println!("\nEvaluation summary:");
+    println!("Success rate: {successes}/{iterations} iterations");
+    println!("Total time: {:.2}s", total_time.as_secs_f64());
+    println!("\nAverages per iteration:");
+    println!("Time: {avg_time:.2}s");
+
     Ok(())
 }

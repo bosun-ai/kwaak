@@ -3,7 +3,6 @@ use std::sync::Arc;
 use swiftide::agents::{Agent, DefaultContext};
 use swiftide::chat_completion::{ChatCompletion, Tool};
 use swiftide::traits::AgentContext;
-use uuid::Uuid;
 
 use crate::agent::{env_setup::AgentEnvironment, v1, RunningAgent};
 use crate::commands::Responder;
