@@ -23,8 +23,6 @@ const EXPECTED_ADDITIONS: &[&str] = &[
     "                self._content_consumed = True",
 ];
 
-/// The prompt to give to the agent when making the changes
-/// 
 /// The goal of the prompt is to get the agent to use its tools to patch the file without spending too much tokens
 /// on exploring the context.
 fn prompt() -> String {
@@ -38,7 +36,7 @@ fn prompt() -> String {
             raise ConnectionError(e)
         ```
 
-        And also add a finally clause to the outer try block that looks like this (but adjusted for indentation):
+        And also move the content consumed setter to a new finally clause on the outer try block that looks like this (but adjusted for indentation):
 
         ```
         finally:
@@ -51,7 +49,6 @@ fn prompt() -> String {
 }
 
 fn reset_file() -> Result<()> {
-    // Run git checkout to reset the file
     let status = Command::new("git")
         .args([
             "checkout",
@@ -68,7 +65,6 @@ fn reset_file() -> Result<()> {
 }
 
 fn compare_changes(eval_output: &EvalOutput) -> Result<bool> {
-    // Get the diff of the current changes
     let output = Command::new("git")
         .args([
             "diff",
@@ -83,30 +79,26 @@ fn compare_changes(eval_output: &EvalOutput) -> Result<bool> {
 
     let diff = String::from_utf8(output.stdout)?;
 
-    // Save the diff
     eval_output.write_diff(&diff)?;
+
+    let mut success = true;
 
     let changes_diff = diff
         .split_once("+++ b/src/evaluations/fixtures/swebench_2148/models.py")
-        .expect("Could not split diff")
+        .ok_or(anyhow::anyhow!("Failed to split diff"))?
         .1;
-
-    let mut success = true;
+    
     let additions = changes_diff
         .lines()
         .filter(|s| s.starts_with('+'))
-        // remove + from the start of each line
         .map(|s| s.trim_start_matches('+'))
-        // remove additions that are empty or contain only whitespace
         .filter(|s| !s.trim().is_empty())
         .collect::<Vec<_>>();
 
     let removals = changes_diff
         .lines()
         .filter(|s| s.starts_with('-'))
-        // remove - from the start of each line
         .map(|s| s.trim_start_matches('-'))
-        // remove removals that are empty or contain only whitespace
         .filter(|s| !s.trim().is_empty())
         .collect::<Vec<_>>();
 
@@ -121,12 +113,10 @@ fn compare_changes(eval_output: &EvalOutput) -> Result<bool> {
         .collect();
 
     if !missing_removals.is_empty() {
-        println!("Removals: [{removals:?}] do not contain expected removals");
         success = false;
     }
 
     if !missing_additions.is_empty() {
-        println!("Additions: [{additions:?}] do not contain expected additions");
         success = false;
     }
 
@@ -136,7 +126,6 @@ fn compare_changes(eval_output: &EvalOutput) -> Result<bool> {
 
     println!("\nChange validation result: {success}");
 
-    // Reset changes after validation
     Command::new("git")
         .args([
             "checkout",
@@ -193,7 +182,6 @@ pub fn get_evaluation_tools() -> Result<Vec<Box<dyn Tool>>> {
         Box::new(tools::write_file()),
         Box::new(tools::read_file_with_line_numbers()),
         Box::new(tools::replace_lines()),
-        Box::new(tools::add_lines()),
     ];
 
     Ok(tools)
@@ -203,7 +191,6 @@ async fn run_single_evaluation(iteration: u32) -> Result<bool> {
     let eval_output = EvalOutput::new("patch", iteration)?;
     let responder = Arc::new(LoggingResponder::new());
 
-    // Create a new agent
     let uuid = Uuid::new_v4();
     let config_path = Path::new("test-config.toml");
     let repository = Repository::from_config(Config::load(&config_path).expect("Failed to load config").fill_llm_api_keys()?);
@@ -211,14 +198,11 @@ async fn run_single_evaluation(iteration: u32) -> Result<bool> {
     let tools = get_evaluation_tools()?;
     let agent = start_tool_evaluation_agent(uuid, &repository, &prompt(), responder.clone(), tools).await?;
 
-    // Send the query and wait for completion
     agent.query(&prompt()).await?;
     agent.run().await?;
 
-    // Save agent log
     eval_output.write_agent_log(&responder.get_log())?;
 
-    // Compare the changes
     compare_changes(&eval_output)
 }
 

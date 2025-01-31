@@ -89,7 +89,6 @@ pub async fn write_file(
     file_name: &str,
     content: &str,
 ) -> Result<ToolOutput, ToolError> {
-    println!("Writing file {file_name} with {content_len} characters", content_len = content.len());
     let cmd = Command::WriteFile(file_name.into(), content.into());
 
     context.exec_cmd(&cmd).await?;
@@ -473,50 +472,79 @@ const REPLACE_LINES_DESCRIPTION: &str = "Replace lines in a file.
 You MUST read the file with line numbers first BEFORE EVERY EDIT, to know the start and end line numbers of the block you want to replace.
 After editing, you MUST read the file again to get the new line numbers.
 
-Prefix the content with some of context before the lines you want to edit and add some lines of context after the lines you want to edit.
-
 Do not include the line numbers in the content.
 
-If you want to add lines, use `add_lines` instead.
+To make the tool function correctly, the patch should be given with these requirements:
 
-Example:
+1. The region you want to modify should include one or more unmodified lines after and before the edit
+2. Supply both the old content and the new content of the region you want to modify
 
-Given a file `test.txt`:
+For example when making a modification to the following file:
+
+2|def a:
+3|  pass
+4|
+5|def b:
+6|  pass
+
+And you want to change line 3 to return True. The region of modification could be lines 2-5.
+
+Valid value for old_content would be:
+
 ```
-1|A
-2|B
-3|C
-4|D
-5|E
-6|F
-7|G
-8|H
+def a:
+  pass
+
+def b:
 ```
 
-To replace line 4 and 5 with:
-```
-XD
-XX
-XE
-```
+Valid value for new_content would be:
 
-Call the tool with:
-
-start_line=2,end_line=7,content=B\nC\nXD\nXX\nXE\nF\nG
-
-Then the result will be:
 ```
-1|A
-2|B
-3|C
-4|XD
-5|X^
-6|XE
-7|F
-8|G
-9|H
-```
-";
+def a:
+  return True
+
+def b:
+```";
+
+// An invalid pair of values would be old_content:
+
+// ```
+//   pass
+
+// def b:
+// ```
+
+// and new_content:
+
+// ```
+//   return True
+
+// def b:
+// ```
+
+// because the region of modification was not expanded to include the line before the change.
+
+// Another invalid pair of values would be old_content:
+
+// ```
+// def a:
+//   pass
+ 
+// def b:
+// ```
+
+// and new_content:
+// ```
+// def a:
+//   return True
+
+// def b:
+//   pass
+// ```
+
+// because the region of modification in new_content includes line 6 where old_content goes only to line 5.
+// ";
 #[tool(
     description = REPLACE_LINES_DESCRIPTION,
     param(name = "file_name", description = "Full path of the file"),
@@ -528,14 +556,22 @@ Then the result will be:
         name = "end_line",
         description = "Last line number of the block to replace."
     ),
-    param(name = "content", description = "Replacement content including context before and after")
+    param(
+        name = "old_content",
+        description = "Content of the lines to replace including context before and after"
+    ),
+    param(
+        name = "new_content",
+        description = "Replacement content including context before and after"
+    )
 )]
 pub async fn replace_lines(
     context: &dyn AgentContext,
     file_name: &str,
     start_line: &str,
     end_line: &str,
-    content: &str,
+    old_content: &str,
+    new_content: &str,
 ) -> Result<ToolOutput, ToolError> {
     // Read the file content
     let cmd = Command::ReadFile(file_name.into());
@@ -548,7 +584,7 @@ pub async fn replace_lines(
         Err(e) => return Err(e.into()),
     };
 
-    let mut lines = file_content.lines().collect::<Vec<_>>();
+    let lines = file_content.lines().collect::<Vec<_>>();
 
     let Ok(start_line) = start_line.parse::<usize>() else {
         return Ok("Invalid start line number, must be a valid number greater than 0".into());
@@ -572,72 +608,29 @@ pub async fn replace_lines(
         return Ok("Start line number must be greater than 0".into());
     }
 
-    println!("Asking to replace lines {start_line}-{end_line} with content: {content}");
+    let maybe_split_file_content = file_content.split_once(&old_content);
 
-    let mut content = content.lines();
-
-    // TODO as a little trick to improve reliability, we could start our search for the anchors at some position
-    // relative to the start line. This way if there's a large file that has repetition, we are less likely to match
-    // an identical anchor.
-
-    // TODO a complete solution, that is more complex than anchoring on just the first line, would be to determine
-    // the entire context of the content by scanning the file using the content and for each match determine for how
-    // many characters the match extends. And then the same in reverse for the end context. We could then select the
-    // longest match.
-
-    // We're going to use the first line as an anchor
-    let anchor = content.next().expect("We should have at least one line");
-
-    // We'll search for the anchor in the file content
-    let anchor_idx = lines
-        .iter()
-        .position(|l| l.contains(anchor));
-
-    if anchor_idx.is_none() {
-        return Ok("Include at least one line of context before the lines you want to edit".into());
+    if maybe_split_file_content.is_none() {
+        return Ok("The value given for old_content does not match a region in the original file. Did you match the indentation exactly?".into());
     }
 
-    let content_start_idx = anchor_idx.unwrap() + 1;
-
-    // We'll use the last line as an anchor
-    let anchor = lines
-        .iter()
-        .rev()
-        .next()
-        .expect("We should have at least one line");
-
-    // We'll search for the anchor in the file content
-    let anchor_idx = lines
-        .iter()
-        .position(|l| l.contains(anchor));
-
-    if anchor_idx.is_none() {
-        return Ok("Include at least one line of context after the lines you want to edit".into());
+    if start_line > 1 {
+        if old_content
+            .lines().next() != new_content.lines().next() {
+               return Ok("The first line of new_content does not match the first line of the old_content.".into());
+            }
     }
 
-    let content_end_idx = anchor_idx.unwrap() - 1;
-
-    let content = content
-        .skip(content_start_idx)
-        .take(content_end_idx - content_start_idx)
-        .collect::<Vec<&str>>()
-        .join("\n");
-
-    println!("Really going to replace lines {content_start_idx}-{content_end_idx} with content: {content}");
-
-    // let start_line = start_line + 1;
-
-    // Input is 1 indexed, lines are 0 indexed
-    if end_line == 0 {
-        lines.insert(content_start_idx, &content);
-    } else {
-        lines.splice(
-            content_start_idx..content_end_idx,
-            content.lines(),
-        );
+    if end_line < lines_len {
+        if old_content
+            .lines().last() != new_content.lines().last() {
+               return Ok("The last line of new_content does not match the last line of old_content.".into());
+            }
     }
 
-    let write_cmd = Command::WriteFile(file_name.into(), lines.join("\n"));
+    let new_file = file_content.replace(&old_content, &new_content);
+
+    let write_cmd = Command::WriteFile(file_name.into(), new_file);
     context.exec_cmd(&write_cmd).await?;
 
     Ok(format!("Successfully replaced content in {file_name}. Before making new edits, you MUST read the file again, as the line numbers WILL have changed.").into())
