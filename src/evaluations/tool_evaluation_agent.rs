@@ -10,9 +10,7 @@ use crate::commands::Responder;
 use crate::repository::Repository;
 
 pub async fn start_tool_evaluation_agent(
-    _uuid: Uuid,
     repository: &Repository,
-    _query: &str,
     responder: Arc<dyn Responder>,
     tools: Vec<Box<dyn Tool>>,
 ) -> Result<RunningAgent> {

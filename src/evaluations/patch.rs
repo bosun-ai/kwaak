@@ -25,8 +25,11 @@ const EXPECTED_ADDITIONS: &[&str] = &[
 
 /// The goal of the prompt is to get the agent to use its tools to patch the file without spending too much tokens
 /// on exploring the context.
-fn prompt() -> String {
-    indoc::indoc! {"
+fn prompt(iteration: u32) -> String {
+
+    indoc::formatdoc! {"
+        This is iteration {iteration}.
+
         There is a bug in the `src/evaluations/fixtures/swebench_2148/models.py` file in the `iter_content` method.
 
         To fix it add an additional exception handler to the nested try block that looks like this (but adjusted for indentation):
@@ -197,7 +200,6 @@ async fn run_single_evaluation(iteration: u32) -> Result<bool> {
     let eval_output = EvalOutput::new("patch", iteration)?;
     let responder = Arc::new(LoggingResponder::new());
 
-    let uuid = Uuid::new_v4();
     let config_path = Path::new("test-config.toml");
     let repository = Repository::from_config(
         Config::load(&config_path)
@@ -207,9 +209,9 @@ async fn run_single_evaluation(iteration: u32) -> Result<bool> {
 
     let tools = get_evaluation_tools()?;
     let agent =
-        start_tool_evaluation_agent(uuid, &repository, &prompt(), responder.clone(), tools).await?;
+        start_tool_evaluation_agent(&repository, responder.clone(), tools).await?;
 
-    agent.query(&prompt()).await?;
+    agent.query(&prompt(iteration)).await?;
     agent.run().await?;
 
     eval_output.write_agent_log(&responder.get_log())?;
