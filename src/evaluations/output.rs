@@ -1,6 +1,6 @@
+use anyhow::Result;
 use std::fs;
 use std::path::{Path, PathBuf};
-use anyhow::Result;
 
 #[derive(Debug)]
 pub struct EvalOutput {
@@ -16,9 +16,7 @@ impl EvalOutput {
         fs::remove_dir_all(&iteration_dir)?;
         fs::create_dir_all(&iteration_dir)?;
 
-        Ok(Self {
-            iteration_dir,
-        })
+        Ok(Self { iteration_dir })
     }
 
     pub fn write_agent_log(&self, content: &str) -> Result<()> {

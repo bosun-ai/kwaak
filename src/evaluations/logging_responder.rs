@@ -1,6 +1,6 @@
+use crate::commands::{CommandResponse, Responder};
 use std::sync::Mutex;
 use swiftide::chat_completion::ChatMessage;
-use crate::commands::{CommandResponse, Responder};
 
 #[derive(Debug)]
 pub struct LoggingResponder {
@@ -20,9 +20,9 @@ impl LoggingResponder {
 
     fn format_string(s: &str) -> String {
         s.replace("\\\"", "\"")
-         .replace("\\n", "\n")
-         .replace("\\t", "\t")
-         .replace("\\r", "\r")
+            .replace("\\n", "\n")
+            .replace("\\t", "\t")
+            .replace("\\r", "\r")
     }
 }
 
@@ -30,23 +30,35 @@ impl Responder for LoggingResponder {
     fn agent_message(&self, message: ChatMessage) {
         let mut messages = self.messages.lock().unwrap();
         let formatted = format!("{message:?}").replace("\\\\", "\\");
-        messages.push(format!("DEBUG: Agent message: {}", Self::format_string(&formatted)));
+        messages.push(format!(
+            "DEBUG: Agent message: {}",
+            Self::format_string(&formatted)
+        ));
     }
 
     fn update(&self, message: &str) {
         let mut messages = self.messages.lock().unwrap();
-        messages.push(format!("DEBUG: State update: {}", Self::format_string(message)));
+        messages.push(format!(
+            "DEBUG: State update: {}",
+            Self::format_string(message)
+        ));
     }
 
     fn send(&self, response: CommandResponse) {
         let mut messages = self.messages.lock().unwrap();
         let formatted = format!("{response:?}").replace("\\\\", "\\");
-        messages.push(format!("DEBUG: Command response: {}", Self::format_string(&formatted)));
+        messages.push(format!(
+            "DEBUG: Command response: {}",
+            Self::format_string(&formatted)
+        ));
     }
 
     fn system_message(&self, message: &str) {
         let mut messages = self.messages.lock().unwrap();
-        messages.push(format!("DEBUG: System message: {}", Self::format_string(message)));
+        messages.push(format!(
+            "DEBUG: System message: {}",
+            Self::format_string(message)
+        ));
     }
 
     fn rename_chat(&self, _name: &str) {}

@@ -3,18 +3,18 @@
 
 use crate::agent::tools;
 use crate::config::Config;
-use swiftide::chat_completion::Tool;
-use crate::evaluations::{start_tool_evaluation_agent, output::EvalOutput, logging_responder::LoggingResponder};
+use crate::evaluations::{
+    logging_responder::LoggingResponder, output::EvalOutput, start_tool_evaluation_agent,
+};
 use crate::repository::Repository;
 use anyhow::Result;
 use std::path::Path;
 use std::process::Command;
 use std::sync::Arc;
+use swiftide::chat_completion::Tool;
 use uuid::Uuid;
 
-const EXPECTED_REMOVALS: &[&str] = &[
-    "            self._content_consumed = True",
-];
+const EXPECTED_REMOVALS: &[&str] = &["            self._content_consumed = True"];
 
 const EXPECTED_ADDITIONS: &[&str] = &[
     "                except socket.error as e:",
@@ -87,7 +87,7 @@ fn compare_changes(eval_output: &EvalOutput) -> Result<bool> {
         .split_once("+++ b/src/evaluations/fixtures/swebench_2148/models.py")
         .ok_or(anyhow::anyhow!("Failed to split diff"))?
         .1;
-    
+
     let additions = changes_diff
         .lines()
         .filter(|s| s.starts_with('+'))
@@ -121,7 +121,13 @@ fn compare_changes(eval_output: &EvalOutput) -> Result<bool> {
     }
 
     if !success {
-        write_failure_info(eval_output, &missing_removals, &missing_additions, &removals, &additions)?;
+        write_failure_info(
+            eval_output,
+            &missing_removals,
+            &missing_additions,
+            &removals,
+            &additions,
+        )?;
     }
 
     println!("\nChange validation result: {success}");
@@ -147,25 +153,25 @@ fn write_failure_info(
 ) -> Result<()> {
     let mut content = String::new();
     content.push_str("Expected changes were not found in the patch.\n\n");
-    
+
     content.push_str("Missing removals:\n");
     for removal in missing_removals {
         content.push_str(&format!("{removal}\n"));
     }
     content.push('\n');
-    
+
     content.push_str("Missing additions:\n");
     for addition in missing_additions {
         content.push_str(&format!("{addition}\n"));
     }
     content.push('\n');
-    
+
     content.push_str("Found removals:\n");
     for removal in found_removals {
         content.push_str(&format!("{removal}\n"));
     }
     content.push('\n');
-    
+
     content.push_str("Found additions:\n");
     for addition in found_additions {
         content.push_str(&format!("{addition}\n"));
@@ -193,10 +199,15 @@ async fn run_single_evaluation(iteration: u32) -> Result<bool> {
 
     let uuid = Uuid::new_v4();
     let config_path = Path::new("test-config.toml");
-    let repository = Repository::from_config(Config::load(&config_path).expect("Failed to load config").fill_llm_api_keys()?);
-    
+    let repository = Repository::from_config(
+        Config::load(&config_path)
+            .expect("Failed to load config")
+            .fill_llm_api_keys()?,
+    );
+
     let tools = get_evaluation_tools()?;
-    let agent = start_tool_evaluation_agent(uuid, &repository, &prompt(), responder.clone(), tools).await?;
+    let agent =
+        start_tool_evaluation_agent(uuid, &repository, &prompt(), responder.clone(), tools).await?;
 
     agent.query(&prompt()).await?;
     agent.run().await?;
@@ -228,8 +239,6 @@ pub async fn evaluate(iterations: u32) -> Result<()> {
         }
     }
 
-    println!(
-        "Evaluation complete: {successes}/{iterations} iterations succeeded"
-    );
+    println!("Evaluation complete: {successes}/{iterations} iterations succeeded");
     Ok(())
 }

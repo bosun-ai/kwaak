@@ -530,7 +530,7 @@ def b:
 // ```
 // def a:
 //   pass
- 
+
 // def b:
 // ```
 
@@ -608,27 +608,25 @@ pub async fn replace_lines(
         return Ok("Start line number must be greater than 0".into());
     }
 
-    let maybe_split_file_content = file_content.split_once(&old_content);
-
+    let maybe_split_file_content = file_content.split_once(old_content);
     if maybe_split_file_content.is_none() {
         return Ok("The value given for old_content does not match a region in the original file. Did you match the indentation exactly?".into());
     }
 
-    if start_line > 1 {
-        if old_content
-            .lines().next() != new_content.lines().next() {
-               return Ok("The first line of new_content does not match the first line of the old_content.".into());
-            }
+    if start_line > 1 && old_content.lines().next() != new_content.lines().next() {
+        return Ok(
+            "The first line of new_content does not match the first line of the old_content."
+                .into(),
+        );
     }
 
-    if end_line < lines_len {
-        if old_content
-            .lines().last() != new_content.lines().last() {
-               return Ok("The last line of new_content does not match the last line of old_content.".into());
-            }
+    if end_line < lines_len && old_content.lines().last() != new_content.lines().last() {
+        return Ok(
+            "The last line of new_content does not match the last line of old_content.".into(),
+        );
     }
 
-    let new_file = file_content.replace(&old_content, &new_content);
+    let new_file = file_content.replace(old_content, &new_content);
 
     let write_cmd = Command::WriteFile(file_name.into(), new_file);
     context.exec_cmd(&write_cmd).await?;

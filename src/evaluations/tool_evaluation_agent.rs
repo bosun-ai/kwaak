@@ -5,7 +5,7 @@ use swiftide::chat_completion::{ChatCompletion, Tool};
 use swiftide::traits::AgentContext;
 use uuid::Uuid;
 
-use crate::agent::{v1, RunningAgent, env_setup::AgentEnvironment};
+use crate::agent::{env_setup::AgentEnvironment, v1, RunningAgent};
 use crate::commands::Responder;
 use crate::repository::Repository;
 

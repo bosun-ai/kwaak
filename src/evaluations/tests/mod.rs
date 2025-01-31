@@ -6,10 +6,13 @@ use uuid::Uuid;
 #[test]
 fn test_logging_responder_formatting() {
     let responder = LoggingResponder::new();
-    
+
     // Test agent message with escaped characters
     let chat_message = ChatMessage::Assistant(
-        Some(r#"Here's a message with "quotes" and \n newlines and a JSON: {"key": "value"}"#.to_string()),
+        Some(
+            r#"Here's a message with "quotes" and \n newlines and a JSON: {"key": "value"}"#
+                .to_string(),
+        ),
         None,
     );
     responder.agent_message(chat_message);
@@ -31,7 +34,7 @@ fn test_logging_responder_formatting() {
     // Get the log and verify formatting
     let log = responder.get_log();
     println!("Log output:\n{}", log);
-    
+
     // The log should contain actual newlines and unescaped quotes
     assert!(log.contains(r#"Assistant(Some("Here's a message with "quotes" and "#));
     assert!(log.contains(r#"newlines and a JSON: {"key": "value"}")"#));

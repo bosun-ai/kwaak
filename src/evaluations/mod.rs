@@ -1,9 +1,9 @@
 use anyhow::Result;
 
-mod tool_evaluation_agent;
 mod logging_responder;
 mod output;
 pub mod patch;
+mod tool_evaluation_agent;
 
 #[cfg(test)]
 mod tests;
