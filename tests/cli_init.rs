@@ -2,7 +2,7 @@ use assert_cmd::{cargo::cargo_bin, prelude::*};
 use kwaak::test_utils::temp_env;
 use predicates::prelude::*;
 use rexpect::{process::wait::WaitStatus, spawn};
-use std::process::Command;
+use std::{process::Command, time::Duration};
 use tempfile::TempDir;
 
 struct Context {
@@ -106,16 +106,19 @@ async fn test_interactive_default_init() {
 
     let mut p = spawn(&format!("{cmd:?} init --dry-run"), Some(30_000)).unwrap();
 
+    let mut num_attempts = 0;
+    let mut set_github_token = false;
     while let Ok(line) = p.read_line() {
+        // tokio::time::sleep(Duration::from_millis(1)).await;
+
         println!("{line}");
-        // if line.contains("Dry run, would have written") {
-        //     break;
-        // }
-        if line.contains("base url") {
-            let _ = p.send_line("https://api.bosun.ai");
-        } else {
-            let _ = p.send_line("");
+        if line.contains("Github token (optional") && !set_github_token {
+            let _ = p.send_line("env:GITHUB_TOKEN");
+            set_github_token = true;
         }
+        let _ = p.send_line("");
+
+        num_attempts += 1;
     }
 
     println!("{}", p.exp_eof().unwrap());

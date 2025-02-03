@@ -13,7 +13,7 @@ pub fn git_questions(context: &mut tera::Context) -> Result<()> {
 
     println!("\nWith a github token, Kwaak can create pull requests, search github code, and automatically push to the remote. Kwaak will never push to the main branch.");
 
-    let github_api_key = prompt_api_key("GitHub token (optional, <esc> to skip)", None)
+    let github_api_key = prompt_api_key("Github token (optional, <esc> to skip)", None)
         .with_placeholder("env:GITHUB_token")
         .prompt_skippable()?;
 
