@@ -168,7 +168,7 @@ cargo install kwaak
 
 #### Setup
 
-Once installed, you can run `kwaak init` in the project you want to use Kwaak in. This will create a `kwaak.toml` configuration file in the root of your project.
+Once installed, you can run `kwaak init` in the project you want to use Kwaak in. This will guide you through the setup process and it will help you create a configuration file. See [Configuration](#configuration) for more customization options.
 
 Api keys can be prefixed by `env:`, `text:` and `file:` to read secrets from the environment, a text string, or a file respectively.
 
@@ -236,7 +236,14 @@ Kwaak uses tests, coverages, and lints as an additional opportunity to steer the
 
 Configure LLMs such as OpenAI and Ollama by specifying models for different tasks:
 
-- **OpenAI Configuration**:
+Supported providers:
+
+- OpenAI
+- Ollama
+- OpenRouter (no embeddings)
+- FastEmbed (embeddings only)
+
+**OpenAI Configuration**:
 
 ```toml
 [llm.indexing]
@@ -255,7 +262,7 @@ provider = "OpenAI"
 embedding_model = "text-embedding-3-large"
 ```
 
-- **Ollama Configuration**:
+**Ollama Configuration**:
 
 ```toml
 [llm.indexing]
@@ -273,7 +280,7 @@ embedding_model = { name = "bge-m3", vector_size = 1024 }
 
 For both you can provide a `base_url` to use a custom API endpoint.
 
-These configurations allow you to leverage the strengths of each model effectively for indexing, querying, and embedding processes.
+You can mix and match models from different providers for different tasks.
 
 #### Other configuration
 
