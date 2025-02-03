@@ -12,39 +12,28 @@ pub fn git_questions(context: &mut tera::Context) {
         .prompt()
         .unwrap();
 
-    println!("\nWith a github token, Kwaak can create pull requests, search github code, and automatically push to the remote.");
-    let github_api_key = prompt_api_key(
-        "GitHub api key (optional, <esc> to skip)",
-        Some("env:GITHUB_TOKEN"),
-    )
-    .prompt_skippable()
-    .unwrap();
+    println!("\nWith a github token, Kwaak can create pull requests, search github code, and automatically push to the remote. Kwaak will never push to the main branch.");
 
-    let auto_push_remote =
+    let github_api_key = prompt_api_key("GitHub token (optional, <esc> to skip)", None)
+        .with_placeholder("env:GITHUB_token")
+        .prompt_skippable()
+        .unwrap();
+
+    let auto_push_remote = if github_api_key.is_some() {
         inquire::Confirm::new("Push to git remote after changes? (requires github token)")
-            .with_default(github_api_key.is_some())
+            .with_default(false)
             .prompt()
-            .unwrap();
-
-    let owner_input = prompt_text(
-        "Git owner (optional, <esc> to skip)",
-        default_owner.as_deref(),
-    )
-    .prompt_skippable()
-    .unwrap();
-    let repository_input = prompt_text(
-        "Git repository (optional, <esc> to skip)",
-        default_repository.as_deref(),
-    )
-    .prompt_skippable()
-    .unwrap();
+            .unwrap()
+    } else {
+        false
+    };
 
     context.insert("github_api_key", &github_api_key);
     context.insert(
         "git",
         &json!({
-            "owner": owner_input,
-            "repository": repository_input,
+            "owner": default_owner,
+            "repository": default_repository,
             "main_branch": branch_input,
             "auto_push_remote": auto_push_remote,
 
