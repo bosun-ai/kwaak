@@ -2,7 +2,7 @@ use assert_cmd::{cargo::cargo_bin, prelude::*};
 use kwaak::test_utils::temp_env;
 use predicates::prelude::*;
 use rexpect::{process::wait::WaitStatus, spawn};
-use std::{process::Command, time::Duration};
+use std::process::Command;
 use tempfile::TempDir;
 
 struct Context {

@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
 
     // Handle the `init` command immediately after parsing args
     if let Some(cli::Commands::Init { dry_run, file }) = args.command {
-        if let Err(error) = onboarding::run(dry_run).await {
+        if let Err(error) = onboarding::run(file, dry_run).await {
             eprintln!("{error:#}");
             std::process::exit(1);
         }
