@@ -28,6 +28,9 @@ pub enum Commands {
     Init {
         #[arg(long, default_value_t = false)]
         dry_run: bool,
+        /// Output to a specific file
+        #[arg(long)]
+        file: Option<PathBuf>,
     },
     /// Start the TUI (default)
     #[default]
