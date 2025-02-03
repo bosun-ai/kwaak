@@ -222,7 +222,7 @@ fn ollama_questions(context: &mut tera::Context) {
     context.insert(
         "embed_llm",
         &json!({
-            "provider": "OpenAI",
+            "provider": "Ollama",
             "base_url": None::<String>,
             "embedding_model": embedding_model,
             "vector_size": vector_size,
