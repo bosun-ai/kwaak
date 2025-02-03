@@ -147,7 +147,7 @@ async fn open_router_questions(context: &mut tera::Context) {
     .unwrap();
     let query_model = prompt_text(
         "Model used for querying and code generation",
-        Some("anthropic/claude-3.5-sonnet:beta"),
+        Some("anthropic/claude-3.5-sonnet"),
     )
     .with_autocomplete(autocompletion.clone())
     .with_validator(validator.clone())
