@@ -1,3 +1,4 @@
+use anyhow::Result;
 use strum::IntoEnumIterator;
 use swiftide::integrations::treesitter::SupportedLanguages;
 
@@ -5,11 +6,9 @@ use crate::config::defaults::default_project_name;
 
 use super::util::{prompt_select, prompt_text};
 
-pub fn project_questions(context: &mut tera::Context) {
+pub fn project_questions(context: &mut tera::Context) -> Result<()> {
     let project_name = default_project_name();
-    let project_name_input = prompt_text("Project name", Some(&project_name))
-        .prompt()
-        .unwrap();
+    let project_name_input = prompt_text("Project name", Some(&project_name)).prompt()?;
     context.insert("project_name", &project_name_input);
 
     // Get user inputs with defaults
@@ -18,9 +17,11 @@ pub fn project_questions(context: &mut tera::Context) {
         .map(|l| l.to_string())
         .collect::<Vec<_>>();
 
-    let language_input = prompt_select("Programming language", options.clone(), detected);
+    let language_input = prompt_select("Programming language", options.clone(), detected)?;
 
     context.insert("language", &language_input);
+
+    Ok(())
 }
 
 fn naive_lang_detect() -> Option<String> {

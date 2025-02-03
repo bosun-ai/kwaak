@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::collections::HashMap;
 
 use serde_json::json;
@@ -10,7 +11,7 @@ use crate::{
 
 use super::util::{prompt_api_key, prompt_select};
 
-pub async fn llm_questions(context: &mut tera::Context) {
+pub async fn llm_questions(context: &mut tera::Context) -> Result<()> {
     println!("\nKwaak supports multiple LLM providers and uses multiple models for various tasks. What providers would you like to use?");
     let valid_llms = LLMConfiguration::VARIANTS
         .iter()
@@ -22,14 +23,13 @@ pub async fn llm_questions(context: &mut tera::Context) {
         "What LLM would you like to use?",
         valid_llms,
         Some("OpenAI"),
-    )
-    .parse()
-    .unwrap();
+    )?
+    .parse()?;
 
     match valid_llm {
-        LLMConfiguration::OpenAI { .. } => openai_questions(context),
-        LLMConfiguration::Ollama { .. } => ollama_questions(context),
-        LLMConfiguration::OpenRouter { .. } => open_router_questions(context).await,
+        LLMConfiguration::OpenAI { .. } => openai_questions(context)?,
+        LLMConfiguration::Ollama { .. } => ollama_questions(context)?,
+        LLMConfiguration::OpenRouter { .. } => open_router_questions(context).await?,
         LLMConfiguration::FastEmbed { .. } => {
             println!("{valid_llm} is not selectable yet, skipping configuration");
         }
@@ -38,31 +38,32 @@ pub async fn llm_questions(context: &mut tera::Context) {
             println!("{valid_llm} is not meant for production use, skipping configuration");
         }
     }
+
+    Ok(())
 }
 
-fn openai_questions(context: &mut tera::Context) {
+fn openai_questions(context: &mut tera::Context) -> Result<()> {
     let api_key = prompt_api_key(
         "Where can we find your OpenAI api key? (https://platform.openai.com/api-keys)",
         Some("env:OPENAI_API_KEY"),
     )
-    .prompt()
-    .unwrap();
+    .prompt()?;
     let indexing_model = prompt_select(
         "Model used for fast operations (like indexing)",
         OpenAIPromptModel::VARIANTS.to_vec(),
         Some("gpt-4o-mini"),
-    );
+    )?;
     let query_model = prompt_select(
         "Model used for querying and code generation",
         OpenAIPromptModel::VARIANTS.to_vec(),
         Some("gpt-4o"),
-    );
+    )?;
 
     let embedding_model = prompt_select(
         "Model used for embeddings",
         OpenAIEmbeddingModel::VARIANTS.to_vec(),
         Some("text-embedding-3-large"),
-    );
+    )?;
 
     context.insert("openai_api_key", &api_key);
     context.insert(
@@ -83,6 +84,8 @@ fn openai_questions(context: &mut tera::Context) {
             "base_url": None::<String>,
         }),
     );
+
+    Ok(())
 }
 
 async fn get_open_router_models() -> Option<Vec<HashMap<String, serde_json::Value>>> {
@@ -103,15 +106,14 @@ async fn get_open_router_models() -> Option<Vec<HashMap<String, serde_json::Valu
         response.json().await.ok()?;
     models.get("data").map(Vec::to_owned)
 }
-async fn open_router_questions(context: &mut tera::Context) {
+async fn open_router_questions(context: &mut tera::Context) -> Result<()> {
     println!("\nOpenRouter allows you to use a variety of managed models via a single api. You can find models at https://openrouter.ai/models.");
 
     let api_key = prompt_api_key(
         "Where can we find your OpenRouter api key? (https://openrouter.ai/settings/keys)",
         Some("env:OPEN_ROUTER_API_KEY"),
     )
-    .prompt()
-    .unwrap();
+    .prompt()?;
 
     let openrouter_models = get_open_router_models().await;
 
@@ -144,16 +146,14 @@ async fn open_router_questions(context: &mut tera::Context) {
     )
     .with_autocomplete(autocompletion.clone())
     .with_validator(validator.clone())
-    .prompt()
-    .unwrap();
+    .prompt()?;
     let query_model = prompt_text(
         "Model used for querying and code generation",
         Some("anthropic/claude-3.5-sonnet"),
     )
     .with_autocomplete(autocompletion.clone())
     .with_validator(validator.clone())
-    .prompt()
-    .unwrap();
+    .prompt()?;
 
     context.insert("open_router_api_key", &api_key);
 
@@ -168,28 +168,26 @@ async fn open_router_questions(context: &mut tera::Context) {
     );
 
     println!("\nOpenRouter does not support embeddings yet. Currently we suggest to use FastEmbed. If you want to use a different provider you can change it in your config later.");
-    fastembed_questions(context);
+    fastembed_questions(context)
 }
 
-fn ollama_questions(context: &mut tera::Context) {
+fn ollama_questions(context: &mut tera::Context) -> Result<()> {
     println!("Note that you need to have a running Ollama instance.");
 
     let indexing_model = prompt_text(
         "Model used for fast operations (like indexing). This model does not need to support tool calls.",
         None
 
-    ).prompt().unwrap();
+    ).prompt()?;
 
     let query_model = prompt_text(
         "Model used for querying and code generation. This model needs to support tool calls.",
         None,
     )
-    .prompt()
-    .unwrap();
+    .prompt()?;
 
-    let embedding_model = prompt_text("Model used for embeddings, bge-m3 is a solid choice", None)
-        .prompt()
-        .unwrap();
+    let embedding_model =
+        prompt_text("Model used for embeddings, bge-m3 is a solid choice", None).prompt()?;
 
     let vector_size = inquire::Text::new("Vector size for the embedding model")
         .with_validator(|input: &str| match input.parse::<usize>() {
@@ -198,8 +196,7 @@ fn ollama_questions(context: &mut tera::Context) {
                 "Invalid number".into(),
             )),
         })
-        .prompt()
-        .unwrap();
+        .prompt()?;
 
     let base_url = inquire::Text::new("Custom base url? (optional, <esc> to skip)")
         .with_validator(|input: &str| match url::Url::parse(input) {
@@ -208,8 +205,7 @@ fn ollama_questions(context: &mut tera::Context) {
                 "Invalid URL".into(),
             )),
         })
-        .prompt_skippable()
-        .unwrap();
+        .prompt_skippable()?;
 
     context.insert(
         "llm",
@@ -229,18 +225,19 @@ fn ollama_questions(context: &mut tera::Context) {
             "vector_size": vector_size,
         }),
     );
+
+    Ok(())
 }
 
-pub fn fastembed_questions(context: &mut tera::Context) {
+pub fn fastembed_questions(context: &mut tera::Context) -> Result<()> {
     println!("\nFastEmbed provides embeddings that are generated quickly locally. Unless you have a specific need for a different model, the default is a good choice.");
 
     let embedding_model: FastembedModel = prompt_select(
         "Embedding model",
         FastembedModel::list_supported_models(),
         Some(FastembedModel::default().to_string()),
-    )
-    .parse()
-    .unwrap();
+    )?
+    .parse()?;
 
     context.insert(
         "embed_llm",
@@ -250,6 +247,8 @@ pub fn fastembed_questions(context: &mut tera::Context) {
             "base_url": None::<String>,
         }),
     );
+
+    Ok(())
 }
 
 #[derive(Clone)]

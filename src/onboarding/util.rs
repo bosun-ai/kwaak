@@ -1,3 +1,5 @@
+use anyhow::Result;
+
 pub fn prompt_text<'a>(prompt: &'a str, default: Option<&'a str>) -> inquire::Text<'a> {
     let mut prompt = inquire::Text::new(prompt);
 
@@ -27,7 +29,7 @@ pub fn prompt_api_key<'a>(prompt: &'a str, default: Option<&'a str>) -> inquire:
 }
 
 #[allow(clippy::needless_pass_by_value)]
-pub fn prompt_select<T>(prompt: &str, options: Vec<T>, default: Option<T>) -> String
+pub fn prompt_select<T>(prompt: &str, options: Vec<T>, default: Option<T>) -> Result<String>
 where
     T: std::fmt::Display + std::cmp::PartialEq + Clone,
 {
@@ -49,5 +51,5 @@ where
         }
     }
 
-    prompt.prompt().unwrap().to_string()
+    Ok(prompt.prompt()?.to_string())
 }

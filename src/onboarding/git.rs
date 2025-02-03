@@ -1,3 +1,4 @@
+use anyhow::Result;
 use serde_json::json;
 
 use crate::{
@@ -5,25 +6,21 @@ use crate::{
     onboarding::util::{prompt_api_key, prompt_text},
 };
 
-pub fn git_questions(context: &mut tera::Context) {
+pub fn git_questions(context: &mut tera::Context) -> Result<()> {
     let (default_owner, default_repository) = default_owner_and_repo().unzip();
     let default_branch = default_main_branch();
-    let branch_input = prompt_text("Default git branch", Some(&default_branch))
-        .prompt()
-        .unwrap();
+    let branch_input = prompt_text("Default git branch", Some(&default_branch)).prompt()?;
 
     println!("\nWith a github token, Kwaak can create pull requests, search github code, and automatically push to the remote. Kwaak will never push to the main branch.");
 
     let github_api_key = prompt_api_key("GitHub token (optional, <esc> to skip)", None)
         .with_placeholder("env:GITHUB_token")
-        .prompt_skippable()
-        .unwrap();
+        .prompt_skippable()?;
 
     let auto_push_remote = if github_api_key.is_some() {
         inquire::Confirm::new("Push to git remote after changes? (requires github token)")
             .with_default(false)
-            .prompt()
-            .unwrap()
+            .prompt()?
     } else {
         false
     };
@@ -39,4 +36,6 @@ pub fn git_questions(context: &mut tera::Context) {
 
         }),
     );
+
+    Ok(())
 }
