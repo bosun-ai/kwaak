@@ -7,6 +7,11 @@
 //!
 //! Currently all values are inserted into a tera context, which is then rendered into the
 //! `kwaak.toml` template.
+//!
+//! In the future it would be much nicer if it builds an actual `Config` struct. Then this can also
+//! be used for
+use std::path::PathBuf;
+
 use crate::templates::Templates;
 use anyhow::{Context, Result};
 use commands::command_questions;
@@ -20,21 +25,23 @@ mod llm;
 mod project;
 mod util;
 
-pub async fn run(dry_run: bool) -> Result<()> {
+pub async fn run(file: Option<PathBuf>, dry_run: bool) -> Result<()> {
+    let file = file.unwrap_or_else(|| PathBuf::from("kwaak.toml"));
     if !dry_run {
         if std::fs::metadata(".git").is_err() {
             anyhow::bail!("Not a git repository, please run `git init` first");
         }
-        if std::fs::metadata("kwaak.toml").is_ok() {
+        if std::fs::metadata(&file).is_ok() {
             anyhow::bail!(
-                "kwaak.toml already exists in current directory, skipping initialization"
+                "{} already exists in current directory, skipping initialization",
+                file.display()
             );
         }
     }
 
     println!("Welcome to Kwaak! Let's get started by initializing a new configuration file.");
     println!("\n");
-    println!("We have a few questions to ask you to get started, you can always change these later in the `kwaak.toml` file.");
+    println!("We have a few questions to ask you to get started, you can always change these later in the `{}` file.", file.display());
 
     let mut context = tera::Context::new();
     project_questions(&mut context)?;
@@ -55,8 +62,8 @@ pub async fn run(dry_run: bool) -> Result<()> {
     if dry_run {
         println!("\nDry run, would have written the following to kwaak.toml:\n\n{config}");
     } else {
-        std::fs::write("kwaak.toml", &config)?;
-        println!("\nInitialized kwaak project in current directory, please review and customize the created `kwaak.toml` file.\n Kwaak also needs a `Dockerfile` to execute your code in, with `ripgrep` and `fd` installed. Refer to https://github.com/bosun-ai/kwaak for an up to date list.");
+        std::fs::write(&file, &config)?;
+        println!("\nInitialized kwaak project in current directory, please review and customize the created `{}` file.\n Kwaak also needs a `Dockerfile` to execute your code in, with `ripgrep` and `fd` installed. Refer to https://github.com/bosun-ai/kwaak for an up to date list.", file.display());
     }
 
     Ok(())
