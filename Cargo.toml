@@ -99,7 +99,7 @@ config = { version = "0.15.6", features = ["toml", "convert-case"] }
 
 # Something is still pulling in libssl, this is a quickfix and should be investigated
 [target.'cfg(linux)'.dependencies]
-openssl-sys = { version = "0.9.104", features = ["vendored"] }
+openssl-sys = { version = "0.9.105", features = ["vendored"] }
 
 [dev-dependencies]
 test-log = { version = "0.2.16", features = ["trace"] }
