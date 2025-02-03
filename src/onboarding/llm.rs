@@ -11,6 +11,7 @@ use crate::{
 use super::util::{prompt_api_key, prompt_select};
 
 pub async fn llm_questions(context: &mut tera::Context) {
+    println!("\nKwaak supports multiple LLM providers and uses multiple models for various tasks. What providers would you like to use?");
     let valid_llms = LLMConfiguration::VARIANTS
         .iter()
         .map(AsRef::as_ref) // Kinda weird that we need to do this
