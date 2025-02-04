@@ -31,6 +31,8 @@ impl EvalOutput {
         let output_dir = Path::new("evals");
         let eval_dir = output_dir.join(eval_type);
         let iteration_dir = eval_dir.join(format!("iteration_{iteration}"));
+        
+        fs::remove_dir_all(&iteration_dir)?;
         fs::create_dir_all(&iteration_dir)?;
 
         Ok(Self {
@@ -45,7 +47,7 @@ impl EvalOutput {
     }
 
     pub fn write_diff(&self, content: &str) -> Result<()> {
-        fs::write(self.iteration_dir.join("diff"), content)?;
+        fs::write(self.iteration_dir.join("changes.diff"), content)?;
         Ok(())
     }
 

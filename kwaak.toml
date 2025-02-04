@@ -1,8 +1,8 @@
 language = "rust"
 
 tavily_api_key = "env:TAVILY_API_KEY"
-github_api_key = "env:GITHUB_TOKEN"
-openai_api_key = "env:OPENAI_API_KEY"
+github_api_key = "env:KWAAK_GITHUB_TOKEN"
+openai_api_key = "env:KWAAK_OPENAI_API_KEY"
 
 tool_executor = "docker"
 otel_enabled = true
