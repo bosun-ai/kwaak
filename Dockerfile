@@ -8,6 +8,8 @@ RUN rustup toolchain install nightly
 # Install tool dependencies for app and git/ssh for the workspace
 RUN apt-get update && apt-get install -y --no-install-recommends \
   ripgrep fd-find git ssh curl  \
+  libstdc++6 \
+  build-essential \
   protobuf-compiler \
   libprotobuf-dev \
   pkg-config libssl-dev iputils-ping \
