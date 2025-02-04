@@ -26,7 +26,7 @@ pr-run-mode = "upload"
 # allow-dirty = ["ci"]
 
 [dist.github-custom-runners]
-global = "ubuntu-latest"
+x86_64-unknown-linux-gnu = "ubuntu-24.04"
 
 [dist.dependencies.apt]
 protobuf-compiler = "*"
