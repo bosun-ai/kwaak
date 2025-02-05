@@ -184,11 +184,11 @@ fn write_failure_info(
 
 fn get_evaluation_tools() -> Vec<Box<dyn Tool>> {
     let tools: Vec<Box<dyn Tool>> = vec![
-        Box::new(tools::search_file()),
-        Box::new(tools::read_file()),
-        Box::new(tools::write_file()),
-        Box::new(tools::read_file_with_line_numbers()),
-        Box::new(tools::replace_lines()),
+        tools::search_file(),
+        tools::read_file(),
+        tools::write_file(),
+        tools::read_file_with_line_numbers(),
+        tools::replace_lines(),
     ];
 
     tools
@@ -201,8 +201,7 @@ async fn run_single_evaluation(iteration: u32) -> Result<(bool, EvalMetrics)> {
     let config_path = Path::new("test-config.toml");
     let repository = Repository::from_config(
         Config::load(&config_path)
-            .expect("Failed to load config")
-            .fill_llm_api_keys()?,
+            .expect("Failed to load config")            
     );
 
     let tools = get_evaluation_tools();

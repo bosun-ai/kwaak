@@ -151,16 +151,17 @@ fn replace_content(
     content: &str,
 ) -> Result<String> {
     let lines = file_content.lines().collect::<Vec<_>>();
+    let content_lines = content.lines().collect::<Vec<_>>();
 
     let first_line = lines[start_line - 1];
-    let content_first_line = content.lines().next().unwrap();
+    let content_first_line = content_lines[0];
 
     if start_line > 1 && !first_line.contains(content_first_line) {
         anyhow::bail!("The line on line number {start_line} reads: `{first_line}`, which does not match the first line of the content: `{content_first_line}`.");
     }
 
     let last_line = lines[end_line - 1];
-    let content_last_line = content.lines().last().unwrap();
+    let content_last_line = content_lines[content_lines.len() - 1];
 
     if end_line < lines.len() && !last_line.contains(content_last_line) {
         anyhow::bail!("The line on line number {end_line} reads: `{last_line}`, which does not match the last line of the content: `{content_last_line}`.");
@@ -170,7 +171,7 @@ fn replace_content(
 
     let mut content = content.to_string();
     if first_line_indentation_mismatch > 0 {
-        let indentation_char = first_line.chars().next().unwrap().to_string();
+        let indentation_char = first_line.chars().next().unwrap_or(' ').to_string();
 
         content = content
             .lines()
