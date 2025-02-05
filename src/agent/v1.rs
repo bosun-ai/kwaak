@@ -188,16 +188,16 @@ pub async fn start(
         .context(Arc::clone(&context) as Arc<dyn AgentContext>)
         .system_prompt(system_prompt)
         .tools(tools)
-        .before_all(move |context| {
+        .before_all(move |agent| {
             let initial_context = initial_context.clone();
 
             Box::pin(async move {
-                context
+                agent.context()
                     .add_message(chat_completion::ChatMessage::new_user(initial_context))
                     .await;
 
-                let top_level_project_overview = context.exec_cmd(&Command::shell("fd -iH -d2 -E '.git/*'")).await?.output;
-                context.add_message(chat_completion::ChatMessage::new_user(format!("The following is a max depth 2, high level overview of the directory structure of the project: \n ```{top_level_project_overview}```"))).await;
+                let top_level_project_overview = agent.context().exec_cmd(&Command::shell("fd -iH -d2 -E '.git/*'")).await?.output;
+                agent.context().add_message(chat_completion::ChatMessage::new_user(format!("The following is a max depth 2, high level overview of the directory structure of the project: \n ```{top_level_project_overview}```"))).await;
 
                 Ok(())
             })
@@ -228,12 +228,12 @@ pub async fn start(
             })
         })
         .after_tool(tool_summarizer.summarize_hook())
-        .after_each(move |context| {
+        .after_each(move |agent| {
             let maybe_lint_fix_command = maybe_lint_fix_command.clone();
             let command_responder = command_responder.clone();
             Box::pin(async move {
                 if accept_non_zero_exit(
-                    context
+                    agent.context()
                         .exec_cmd(&Command::shell("git status --porcelain"))
                         .await,
                 )
@@ -247,16 +247,16 @@ pub async fn start(
 
                 if let Some(lint_fix_command) = &maybe_lint_fix_command {
                     command_responder.update("running lint and fix");
-                    accept_non_zero_exit(context.exec_cmd(&Command::shell(lint_fix_command)).await)
+                    accept_non_zero_exit(agent.context().exec_cmd(&Command::shell(lint_fix_command)).await)
                         .context("Could not run lint and fix")?;
                 };
 
                 if !auto_commit_disabled {
-                    accept_non_zero_exit(context.exec_cmd(&Command::shell("git add .")).await)
+                    accept_non_zero_exit(agent.context().exec_cmd(&Command::shell("git add .")).await)
                         .context("Could not add files to git")?;
 
                     accept_non_zero_exit(
-                        context
+                        agent.context()
                             .exec_cmd(&Command::shell(
                                 "git commit -m \"[kwaak]: Committed changes after completion\"",
                             ))
@@ -266,7 +266,7 @@ pub async fn start(
                 }
 
                 if  push_to_remote_enabled {
-                    accept_non_zero_exit(context.exec_cmd(&Command::shell("git push")).await)
+                    accept_non_zero_exit(agent.context().exec_cmd(&Command::shell("git push")).await)
                         .context("Could not push changes to git")?;
                 }
 

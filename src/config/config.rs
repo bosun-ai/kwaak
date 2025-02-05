@@ -59,6 +59,10 @@ pub struct Config {
     #[serde(default)]
     pub openai_api_key: Option<ApiKey>,
 
+    /// Required if using `Open Router`
+    #[serde(default)]
+    pub open_router_api_key: Option<ApiKey>,
+
     #[serde(default)]
     pub tool_executor: SupportedToolExecutors,
 
@@ -189,17 +193,28 @@ impl Config {
 
     // Seeds the api keys into the LLM configurations
     pub fn fill_llm_api_keys(mut self) -> Result<Self> {
+        let previous = self.clone();
+
         let LLMConfigurations {
             indexing,
             embedding,
             query,
         } = &mut *self.llm;
-        {
-            fill_llm(indexing, self.openai_api_key.as_ref())?;
-            fill_llm(embedding, self.openai_api_key.as_ref())?;
-            fill_llm(query, self.openai_api_key.as_ref())?;
+
+        for config in &mut [indexing, embedding, query] {
+            let maybe_root_key = previous.root_provider_api_key_for(config);
+            fill_llm(config, maybe_root_key)?;
         }
         Ok(self)
+    }
+
+    #[must_use]
+    pub fn root_provider_api_key_for(&self, provider: &LLMConfiguration) -> Option<&ApiKey> {
+        match provider {
+            LLMConfiguration::OpenAI { .. } => self.openai_api_key.as_ref(),
+            LLMConfiguration::OpenRouter { .. } => self.open_router_api_key.as_ref(),
+            _ => None,
+        }
     }
 
     #[must_use]
@@ -238,7 +253,9 @@ impl Config {
 
         match self.indexing_provider() {
             LLMConfiguration::OpenAI { .. } => num_cpus::get() * 4,
+            LLMConfiguration::OpenRouter { .. } => num_cpus::get() * 4,
             LLMConfiguration::Ollama { .. } => num_cpus::get(),
+            LLMConfiguration::FastEmbed { .. } => num_cpus::get(),
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => num_cpus::get(),
         }
@@ -253,6 +270,8 @@ impl Config {
         match self.indexing_provider() {
             LLMConfiguration::OpenAI { .. } => 12,
             LLMConfiguration::Ollama { .. } => 256,
+            LLMConfiguration::OpenRouter { .. } => 12,
+            LLMConfiguration::FastEmbed { .. } => 256,
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => 1,
         }
@@ -277,8 +296,18 @@ fn fill_llm(llm: &mut LLMConfiguration, root_key: Option<&ApiKey>) -> Result<()>
                 }
             }
         }
-        LLMConfiguration::Ollama { .. } => {
-            // Nothing to do for Ollama
+        LLMConfiguration::OpenRouter { api_key, .. } => {
+            if api_key.is_none() {
+                if let Some(root) = root_key {
+                    *api_key = Some(root.clone());
+                } else {
+                    anyhow::bail!("OpenRouter config requires an `api_key`, and none was provided or available in the root");
+                }
+            }
+            // Nothing to do for OpenRouter
+        }
+        LLMConfiguration::Ollama { .. } | LLMConfiguration::FastEmbed { .. } => {
+            // Nothing to do for Ollama / FastEmbed
         }
         #[cfg(debug_assertions)]
         LLMConfiguration::Testing => {}

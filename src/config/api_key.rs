@@ -93,6 +93,20 @@ impl Serialize for ApiKey {
     }
 }
 
+#[allow(clippy::from_over_into)]
+impl Into<SecretString> for ApiKey {
+    fn into(self) -> SecretString {
+        self.0
+    }
+}
+
+#[allow(clippy::from_over_into)]
+impl Into<SecretString> for &ApiKey {
+    fn into(self) -> SecretString {
+        self.clone().0
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -40,8 +40,8 @@ async fn main() -> Result<()> {
     let args = cli::Args::parse();
 
     // Handle the `init` command immediately after parsing args
-    if let Some(cli::Commands::Init { dry_run }) = args.command {
-        if let Err(error) = onboarding::run(dry_run) {
+    if let Some(cli::Commands::Init { dry_run, file }) = args.command {
+        if let Err(error) = onboarding::run(file, dry_run).await {
             eprintln!("{error:#}");
             std::process::exit(1);
         }
@@ -70,6 +70,13 @@ async fn main() -> Result<()> {
         let _root_span = tracing::info_span!("main", "otel.name" = "main").entered();
 
         let command = args.command.as_ref().unwrap_or(&cli::Commands::Tui);
+
+        if git::util::is_dirty(repository.path()).await && !args.allow_dirty {
+            eprintln!(
+                "Error: The repository has uncommitted changes. Use --allow-dirty to override."
+            );
+            std::process::exit(1);
+        }
 
         match command {
             cli::Commands::RunAgent { initial_message } => {

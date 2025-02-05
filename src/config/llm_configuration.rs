@@ -1,14 +1,19 @@
+use std::str::FromStr;
+
 #[cfg(debug_assertions)]
 use crate::test_utils::NoopLLM;
 
 use super::ApiKey;
 use anyhow::{Context as _, Result};
+use fastembed::{InitOptions, TextEmbedding};
 use serde::{Deserialize, Serialize};
 use swiftide::{
     chat_completion::ChatCompletion,
     integrations::{
         self,
+        fastembed::FastEmbed,
         ollama::{config::OllamaConfig, Ollama},
+        open_router::{config::OpenRouterConfig, OpenRouter},
     },
     traits::{EmbeddingModel, SimplePrompt},
 };
@@ -53,6 +58,17 @@ pub enum LLMConfiguration {
         #[serde(default)]
         base_url: Option<Url>,
     },
+    OpenRouter {
+        #[serde(default)]
+        api_key: Option<ApiKey>,
+        #[serde(default)]
+        prompt_model: String,
+    },
+    FastEmbed {
+        // TODO: Currently we only support the default. There is a PR open that adds
+        // serialize/deserialize to all models, making a proper setup a lot easier.
+        embedding_model: FastembedModel,
+    },
     #[cfg(debug_assertions)]
     Testing, // Groq {
              //     api_key: SecretString,
@@ -65,6 +81,108 @@ pub enum LLMConfiguration {
              //     embedding_model: String,
              //     vector_size: usize,
              // },
+}
+
+#[derive(Debug, Clone)]
+pub struct FastembedModel(fastembed::EmbeddingModel);
+
+impl FastembedModel {
+    /// Retrieves the vector size of the fastembed model
+    ///
+    /// # Panics
+    ///
+    /// Panics if it cannot get the model info from fastembed.
+    #[must_use]
+    pub fn vector_size(&self) -> i32 {
+        i32::try_from(
+            TextEmbedding::get_model_info(&self.0)
+                .expect("Could not get model info")
+                .dim,
+        )
+        .expect(
+            "Could not convert embedding dimensions to i32; this should never happen and is a bug",
+        )
+    }
+
+    pub fn inner_text_embedding(&self) -> Result<TextEmbedding> {
+        TextEmbedding::try_new(
+            InitOptions::new(self.0.clone())
+                .with_show_download_progress(false)
+                .with_cache_dir(dirs::cache_dir().unwrap_or_default()),
+        )
+    }
+
+    #[must_use]
+    pub fn list_supported_models() -> Vec<String> {
+        TextEmbedding::list_supported_models()
+            .iter()
+            .map(|model| model.model_code.to_string())
+            .collect()
+    }
+}
+
+impl Default for FastembedModel {
+    fn default() -> Self {
+        Self(fastembed::EmbeddingModel::BGESmallENV15)
+    }
+}
+
+impl std::fmt::Display for FastembedModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let model = TextEmbedding::get_model_info(&self.0)
+            .map_err(|_| std::fmt::Error)?
+            .model_code
+            .clone();
+
+        write!(f, "{model}")
+    }
+}
+
+/// Currently just does default, as soon as Fastembed has serialize/deserialize support we can do a
+/// proper lookup
+impl<'de> Deserialize<'de> for FastembedModel {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let string_name: String = Deserialize::deserialize(deserializer)?;
+        let models = TextEmbedding::list_supported_models();
+
+        let retrieved_model = models
+            .iter()
+            .find(|model| model.model_code.to_lowercase() == string_name.to_lowercase())
+            .ok_or(serde::de::Error::custom("Could not find model"))?;
+
+        Ok(FastembedModel(retrieved_model.model.clone()))
+    }
+}
+
+impl FromStr for FastembedModel {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        let models = TextEmbedding::list_supported_models();
+
+        let retrieved_model = models
+            .iter()
+            .find(|model| model.model_code.to_lowercase() == s.to_lowercase())
+            .ok_or_else(|| anyhow::anyhow!("Could not find model"))?;
+
+        Ok(FastembedModel(retrieved_model.model.clone()))
+    }
+}
+
+/// Currently just serializes to the default
+impl Serialize for FastembedModel {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let model = TextEmbedding::get_model_info(&self.0)
+            .map_err(|_| serde::ser::Error::custom("Could not find model"))?;
+
+        serializer.serialize_str(&model.model_code)
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -90,6 +208,11 @@ impl LLMConfiguration {
                     .expect("Expected an embedding model for ollama")
                     .vector_size
             }
+            LLMConfiguration::OpenRouter { .. } => {
+                panic!("OpenRouter does not have an embedding model")
+            }
+            LLMConfiguration::FastEmbed { embedding_model } => embedding_model.vector_size(),
+
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => 1,
         }
@@ -192,6 +315,30 @@ fn build_ollama(llm_config: &LLMConfiguration) -> Result<Ollama> {
     builder.build().context("Failed to build Ollama client")
 }
 
+fn build_open_router(llm_config: &LLMConfiguration) -> Result<OpenRouter> {
+    let LLMConfiguration::OpenRouter {
+        prompt_model,
+        api_key,
+    } = llm_config
+    else {
+        anyhow::bail!("Expected OpenRouter configuration")
+    };
+
+    let api_key = api_key.as_ref().context("Expected an api key")?;
+    let config = OpenRouterConfig::builder()
+        .api_key(api_key)
+        .site_url("https://github.com/bosun-ai/kwaak")
+        .site_name("Kwaak")
+        .build()?;
+
+    OpenRouter::builder()
+        .client(async_openai::Client::with_config(config))
+        .default_prompt_model(prompt_model)
+        .to_owned()
+        .build()
+        .context("Failed to build OpenRouter client")
+}
+
 impl TryInto<Box<dyn EmbeddingModel>> for &LLMConfiguration {
     type Error = anyhow::Error;
 
@@ -211,6 +358,16 @@ impl TryInto<Box<dyn EmbeddingModel>> for &LLMConfiguration {
             LLMConfiguration::Ollama { .. } => {
                 Box::new(build_ollama(self)?) as Box<dyn EmbeddingModel>
             }
+            LLMConfiguration::OpenRouter { .. } => {
+                panic!("OpenRouter does not have an embedding model")
+            }
+            LLMConfiguration::FastEmbed { embedding_model } => Box::new(
+                FastEmbed::builder()
+                    .embedding_model(embedding_model.inner_text_embedding()?)
+                    .build()?,
+            )
+                as Box<dyn EmbeddingModel>,
+
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => Box::new(NoopLLM) as Box<dyn EmbeddingModel>,
         };
@@ -237,6 +394,12 @@ impl TryInto<Box<dyn SimplePrompt>> for &LLMConfiguration {
             LLMConfiguration::Ollama { .. } => {
                 Box::new(build_ollama(self)?) as Box<dyn SimplePrompt>
             }
+            LLMConfiguration::OpenRouter { .. } => {
+                Box::new(build_open_router(self)?) as Box<dyn SimplePrompt>
+            }
+            LLMConfiguration::FastEmbed { .. } => {
+                panic!("FastEmbed does not have a prompt model")
+            }
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => Box::new(NoopLLM) as Box<dyn SimplePrompt>,
         };
@@ -262,6 +425,12 @@ impl TryInto<Box<dyn ChatCompletion>> for &LLMConfiguration {
             )?) as Box<dyn ChatCompletion>,
             LLMConfiguration::Ollama { .. } => {
                 Box::new(build_ollama(self)?) as Box<dyn ChatCompletion>
+            }
+            LLMConfiguration::OpenRouter { .. } => {
+                Box::new(build_open_router(self)?) as Box<dyn ChatCompletion>
+            }
+            LLMConfiguration::FastEmbed { .. } => {
+                panic!("FastEmbed does not have a prompt model")
             }
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => Box::new(NoopLLM) as Box<dyn ChatCompletion>,

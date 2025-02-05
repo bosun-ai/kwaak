@@ -40,7 +40,7 @@ impl<'a> ToolSummarizer<'a> {
     where
         'a: 'b,
     {
-        move |context, tool_call, tool_output| {
+        move |agent, tool_call, tool_output| {
             let llm = self.llm.clone();
 
             let Some(tool) = self
@@ -61,7 +61,7 @@ impl<'a> ToolSummarizer<'a> {
                 return Box::pin(
                     async move {
                         let current_diff = accept_non_zero_exit(
-                            context
+                            agent.context()
                                 .exec_cmd(&Command::shell(format!(
                                     "git diff {git_start_sha} --no-color"
                                 )))
