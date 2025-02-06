@@ -32,7 +32,7 @@ pub async fn llm_questions(context: &mut tera::Context) -> Result<()> {
         LLMConfiguration::OpenRouter { .. } => open_router_questions(context).await?,
         LLMConfiguration::AzureOpenAI { .. } => {
             println!("{valid_llm} is not selectable yet, skipping configuration");
-        },
+        }
         LLMConfiguration::FastEmbed { .. } => {
             println!("{valid_llm} is not selectable yet, skipping configuration");
         }

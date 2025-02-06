@@ -61,7 +61,7 @@ pub enum LLMConfiguration {
         #[serde(default)]
         api_version: Option<String>,
         #[serde(default)]
-        deployment_id: Option<String> 
+        deployment_id: Option<String>,
     },
     Ollama {
         #[serde(default)]
@@ -284,7 +284,7 @@ fn build_openai(
     api_key: Option<&ApiKey>,
     embedding_model: &OpenAIEmbeddingModel,
     prompt_model: &OpenAIPromptModel,
-    base_url: Option<&Url>
+    base_url: Option<&Url>,
 ) -> Result<integrations::openai::OpenAI> {
     let api_key = api_key.context("Expected an api key")?;
     let mut config =
@@ -302,7 +302,9 @@ fn build_openai(
         .context("Failed to build OpenAI client")
 }
 
-fn build_azure_openai(llm_config: &LLMConfiguration) -> Result<integrations::openai::OpenAI<async_openai::config::AzureConfig>> {
+fn build_azure_openai(
+    llm_config: &LLMConfiguration,
+) -> Result<integrations::openai::OpenAI<async_openai::config::AzureConfig>> {
     let LLMConfiguration::AzureOpenAI {
         api_key,
         embedding_model,
@@ -319,7 +321,7 @@ fn build_azure_openai(llm_config: &LLMConfiguration) -> Result<integrations::ope
     let base_url = base_url.as_ref().context("Expected a base url")?;
     let api_version = api_version.as_ref().context("Expected an api version")?;
     let deployment_id = deployment_id.as_ref().context("Expected a deployment id")?;
-    
+
     let config = async_openai::config::AzureConfig::default()
         .with_api_key(api_key.expose_secret())
         .with_api_base(base_url.to_string())
@@ -410,7 +412,7 @@ impl TryInto<Box<dyn EmbeddingModel>> for &LLMConfiguration {
             )?) as Box<dyn EmbeddingModel>,
             LLMConfiguration::AzureOpenAI { .. } => {
                 Box::new(build_azure_openai(self)?) as Box<dyn EmbeddingModel>
-            },
+            }
             LLMConfiguration::Ollama { .. } => {
                 Box::new(build_ollama(self)?) as Box<dyn EmbeddingModel>
             }
@@ -449,7 +451,7 @@ impl TryInto<Box<dyn SimplePrompt>> for &LLMConfiguration {
             )?) as Box<dyn SimplePrompt>,
             LLMConfiguration::AzureOpenAI { .. } => {
                 Box::new(build_azure_openai(self)?) as Box<dyn SimplePrompt>
-            },
+            }
             LLMConfiguration::Ollama { .. } => {
                 Box::new(build_ollama(self)?) as Box<dyn SimplePrompt>
             }
@@ -484,7 +486,7 @@ impl TryInto<Box<dyn ChatCompletion>> for &LLMConfiguration {
             )?) as Box<dyn ChatCompletion>,
             LLMConfiguration::AzureOpenAI { .. } => {
                 Box::new(build_azure_openai(self)?) as Box<dyn ChatCompletion>
-            },
+            }
             LLMConfiguration::Ollama { .. } => {
                 Box::new(build_ollama(self)?) as Box<dyn ChatCompletion>
             }
