@@ -298,6 +298,15 @@ fn fill_llm(llm: &mut LLMConfiguration, root_key: Option<&ApiKey>) -> Result<()>
                 }
             }
         }
+        LLMConfiguration::AzureOpenAI { api_key, .. } => {
+            if api_key.is_none() {
+                if let Some(root) = root_key {
+                    *api_key = Some(root.clone());
+                } else {
+                    anyhow::bail!("AzureOpenAI config requires an `api_key`, and none was provided or available in the root");
+                }
+            }
+        }
         LLMConfiguration::OpenRouter { api_key, .. } => {
             if api_key.is_none() {
                 if let Some(root) = root_key {
