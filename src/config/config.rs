@@ -253,6 +253,7 @@ impl Config {
 
         match self.indexing_provider() {
             LLMConfiguration::OpenAI { .. } => num_cpus::get() * 4,
+            LLMConfiguration::AzureOpenAI { .. } => num_cpus::get() * 4,
             LLMConfiguration::OpenRouter { .. } => num_cpus::get() * 4,
             LLMConfiguration::Ollama { .. } => num_cpus::get(),
             LLMConfiguration::FastEmbed { .. } => num_cpus::get(),
@@ -269,6 +270,7 @@ impl Config {
 
         match self.indexing_provider() {
             LLMConfiguration::OpenAI { .. } => 12,
+            LLMConfiguration::AzureOpenAI { .. } => 12,
             LLMConfiguration::Ollama { .. } => 256,
             LLMConfiguration::OpenRouter { .. } => 12,
             LLMConfiguration::FastEmbed { .. } => 256,
