@@ -1,3 +1,5 @@
+/// Replace lines in a file. This tool is in beta and only has a ~80% success rate.
+
 use swiftide::traits::CommandError;
 
 use anyhow::Result;

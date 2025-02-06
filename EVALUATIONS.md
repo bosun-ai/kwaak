@@ -12,6 +12,6 @@ An eval can be run as follows:
 cargo run -- -c test-config.toml eval patch -i 5
 ```
 
-The evals are analagous to unit tests, but statistical instead of deterministic. They should exercise a subset of
+The evals are analogous to unit tests, but statistical instead of deterministic. They should exercise a subset of
 the tools and/or agent behavior. By designing the evals this way, they are less expensive than running a full benchmark
 such as SWE-bench, but still protect the agent from regressing on intended behavior.
