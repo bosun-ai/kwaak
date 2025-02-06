@@ -50,6 +50,19 @@ pub enum LLMConfiguration {
         #[serde(default)]
         base_url: Option<Url>,
     },
+    AzureOpenAI {
+        api_key: Option<ApiKey>,
+        #[serde(default)]
+        prompt_model: OpenAIPromptModel,
+        #[serde(default)]
+        embedding_model: OpenAIEmbeddingModel,
+        #[serde(default)]
+        base_url: Url,
+        #[serde(default)]
+        api_version: String,
+        #[serde(default)]
+        deployment_id: String 
+    },
     Ollama {
         #[serde(default)]
         prompt_model: Option<String>,
@@ -200,6 +213,12 @@ impl LLMConfiguration {
                 OpenAIEmbeddingModel::TextEmbedding3Small => 1536,
                 OpenAIEmbeddingModel::TextEmbedding3Large => 3072,
             },
+            LLMConfiguration::AzureOpenAI {
+                embedding_model, ..
+            } => match embedding_model {
+                OpenAIEmbeddingModel::TextEmbedding3Small => 1536,
+                OpenAIEmbeddingModel::TextEmbedding3Large => 3072,
+            },
             LLMConfiguration::Ollama {
                 embedding_model, ..
             } => {
@@ -265,7 +284,7 @@ fn build_openai(
     api_key: Option<&ApiKey>,
     embedding_model: &OpenAIEmbeddingModel,
     prompt_model: &OpenAIPromptModel,
-    base_url: Option<&Url>,
+    base_url: Option<&Url>
 ) -> Result<integrations::openai::OpenAI> {
     let api_key = api_key.context("Expected an api key")?;
     let mut config =
@@ -274,6 +293,36 @@ fn build_openai(
     if let Some(base_url) = base_url {
         config = config.with_api_base(base_url.to_string());
     };
+
+    integrations::openai::OpenAI::builder()
+        .client(async_openai::Client::with_config(config))
+        .default_prompt_model(prompt_model.to_string())
+        .default_embed_model(embedding_model.to_string())
+        .build()
+        .context("Failed to build OpenAI client")
+}
+
+fn build_azure_openai(llm_config: &LLMConfiguration) -> Result<integrations::openai::OpenAI> {
+    let LLMConfiguration::AzureOpenAI {
+        api_key,
+        embedding_model,
+        prompt_model,
+        base_url,
+        api_version,
+        deployment_id,
+    } = llm_config
+    else {
+        anyhow::bail!("Expected AzureOpenAI configuration")
+    };
+
+    let api_key = api_key.context("Expected an api key")?;
+    
+    let mut config = async_openai::config::AzureConfig::default()
+        .with_api_key(api_key.expose_secret())
+        .with_api_base(base_url.to_string())
+        .with_api_version(api_version)
+        .with_deployment_id(deployment_id);
+
 
     integrations::openai::OpenAI::builder()
         .client(async_openai::Client::with_config(config))
@@ -355,6 +404,9 @@ impl TryInto<Box<dyn EmbeddingModel>> for &LLMConfiguration {
                 prompt_model,
                 base_url.as_ref(),
             )?) as Box<dyn EmbeddingModel>,
+            LLMConfiguration::AzureOpenAI { .. } => {
+                Box::new(build_azure_openai(self)?) as Box<dyn EmbeddingModel>
+            },
             LLMConfiguration::Ollama { .. } => {
                 Box::new(build_ollama(self)?) as Box<dyn EmbeddingModel>
             }
@@ -391,6 +443,9 @@ impl TryInto<Box<dyn SimplePrompt>> for &LLMConfiguration {
                 prompt_model,
                 base_url.as_ref(),
             )?) as Box<dyn SimplePrompt>,
+            LLMConfiguration::AzureOpenAI { .. } => {
+                Box::new(build_azure_openai(self)?) as Box<dyn EmbeddingModel>
+            },
             LLMConfiguration::Ollama { .. } => {
                 Box::new(build_ollama(self)?) as Box<dyn SimplePrompt>
             }
@@ -423,6 +478,9 @@ impl TryInto<Box<dyn ChatCompletion>> for &LLMConfiguration {
                 prompt_model,
                 base_url.as_ref(),
             )?) as Box<dyn ChatCompletion>,
+            LLMConfiguration::AzureOpenAI { .. } => {
+                Box::new(build_azure_openai(self)?) as Box<dyn ChatCompletion>
+            },
             LLMConfiguration::Ollama { .. } => {
                 Box::new(build_ollama(self)?) as Box<dyn ChatCompletion>
             }
