@@ -33,12 +33,12 @@ fn test_logging_responder_formatting() {
 
     // Get the log and verify formatting
     let log = responder.get_log();
-    println!("Log output:\n{}", log);
+    println!("Log output:\n{log}");
 
     // The log should contain actual newlines and unescaped quotes
     assert!(log.contains(r#"Assistant(Some("Here's a message with "quotes" and "#));
     assert!(log.contains(r#"newlines and a JSON: {"key": "value"}")"#));
-    assert!(log.contains(r#"BackendMessage("#));
+    assert!(log.contains(r"BackendMessage("));
     assert!(log.contains(r#", "Message with "quotes" and "#));
     assert!(log.contains("newlines"));
     assert!(log.contains(r#"System message with "quotes" and "#));
