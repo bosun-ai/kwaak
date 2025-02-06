@@ -57,11 +57,11 @@ pub enum LLMConfiguration {
         #[serde(default)]
         embedding_model: OpenAIEmbeddingModel,
         #[serde(default)]
-        base_url: Url,
+        base_url: Option<Url>,
         #[serde(default)]
-        api_version: String,
+        api_version: Option<String>,
         #[serde(default)]
-        deployment_id: String 
+        deployment_id: Option<String> 
     },
     Ollama {
         #[serde(default)]
@@ -302,7 +302,7 @@ fn build_openai(
         .context("Failed to build OpenAI client")
 }
 
-fn build_azure_openai(llm_config: &LLMConfiguration) -> Result<integrations::openai::OpenAI> {
+fn build_azure_openai(llm_config: &LLMConfiguration) -> Result<integrations::openai::OpenAI<async_openai::config::AzureConfig>> {
     let LLMConfiguration::AzureOpenAI {
         api_key,
         embedding_model,
@@ -315,17 +315,21 @@ fn build_azure_openai(llm_config: &LLMConfiguration) -> Result<integrations::ope
         anyhow::bail!("Expected AzureOpenAI configuration")
     };
 
-    let api_key = api_key.context("Expected an api key")?;
+    let api_key = api_key.as_ref().context("Expected an api key")?;
+    let base_url = base_url.as_ref().context("Expected a base url")?;
+    let api_version = api_version.as_ref().context("Expected an api version")?;
+    let deployment_id = deployment_id.as_ref().context("Expected a deployment id")?;
     
-    let mut config = async_openai::config::AzureConfig::default()
+    let config = async_openai::config::AzureConfig::default()
         .with_api_key(api_key.expose_secret())
         .with_api_base(base_url.to_string())
         .with_api_version(api_version)
         .with_deployment_id(deployment_id);
 
+    let client = async_openai::Client::with_config(config);
 
-    integrations::openai::OpenAI::builder()
-        .client(async_openai::Client::with_config(config))
+    integrations::openai::OpenAI::<async_openai::config::AzureConfig>::builder()
+        .client(client)
         .default_prompt_model(prompt_model.to_string())
         .default_embed_model(embedding_model.to_string())
         .build()
@@ -444,7 +448,7 @@ impl TryInto<Box<dyn SimplePrompt>> for &LLMConfiguration {
                 base_url.as_ref(),
             )?) as Box<dyn SimplePrompt>,
             LLMConfiguration::AzureOpenAI { .. } => {
-                Box::new(build_azure_openai(self)?) as Box<dyn EmbeddingModel>
+                Box::new(build_azure_openai(self)?) as Box<dyn SimplePrompt>
             },
             LLMConfiguration::Ollama { .. } => {
                 Box::new(build_ollama(self)?) as Box<dyn SimplePrompt>
