@@ -8,3 +8,10 @@ services:
       - "4318:4318"
     environment:
       - LOG_LEVEL=debug
+      - BADGER_EPHEMERAL=false
+      - BADGER_DIRECTORY_VALUE=/badger/data
+      - BADGER_DIRECTORY_KEY=/badger/key
+    volumes:
+      - kwaak-jaeger:/badger
+volumes:
+  kwaak-jaeger:

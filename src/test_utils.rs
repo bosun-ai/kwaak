@@ -2,11 +2,12 @@
 #![allow(clippy::missing_panics_doc)]
 use anyhow::Result;
 use ratatui::{backend::TestBackend, Terminal};
-use swiftide::chat_completion::ChatCompletionResponse;
-use swiftide_core::{ChatCompletion, EmbeddingModel, Persist as _, SimplePrompt};
+use swiftide::chat_completion::{ChatCompletion, ChatCompletionResponse};
+use swiftide::traits::{EmbeddingModel, Persist as _, SimplePrompt};
 use tokio_util::task::AbortOnDropHandle;
 use uuid::Uuid;
 
+use crate::frontend;
 use crate::{
     commands::CommandHandler, config::Config, frontend::App, git, repository::Repository, storage,
 };
@@ -202,6 +203,16 @@ pub struct IntegrationContext {
     pub handler_guard: AbortOnDropHandle<()>,
     // Guards the repository
     pub repository_guard: TestGuard,
+}
+
+impl IntegrationContext {
+    pub fn render_ui(&mut self) -> &TestBackend {
+        self.terminal
+            .draw(|f| frontend::ui(f, f.area(), &mut self.app))
+            .unwrap();
+
+        self.terminal.backend()
+    }
 }
 
 /// Sets up an app

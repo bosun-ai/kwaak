@@ -10,7 +10,7 @@ otel_enabled = true
 [commands]
 test = "RUST_LOG=kwaak=debug,swiftide=debug RUST_BACKTRACE=1 cargo nextest run --no-fail-fast --color=never"
 coverage = "cargo +nightly llvm-cov nextest --no-clean --summary-only"
-lint_and_fix = "cargo clippy --fix --allow-dirty --allow-staged; cargo fmt"
+# lint_and_fix = "cargo clippy --fix --allow-dirty --allow-staged; cargo fmt"
 
 [git]
 owner = "bosun-ai"

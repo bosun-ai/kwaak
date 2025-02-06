@@ -45,7 +45,7 @@ impl ChatMessagesWidget {
 
         // We need to consider the available area height to calculate how much can be shown
         //
-        // Because the paragraph waps the text, we need to calculate the number of lines
+        // Because the paragraph wraps the text, we need to calculate the number of lines
         // from the paragraph directly.
         current_chat.num_lines = chat_messages.line_count(area.width);
 

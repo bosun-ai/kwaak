@@ -14,7 +14,7 @@ async fn test_diff() {
         workdir,
 
         repository_guard: _repository_guard,
-        handler_guard: _handler_guard,
+        handler_guard,
     } = setup_integration().await.unwrap();
 
     // First, let's start a noop agent so an environment is running
@@ -109,4 +109,6 @@ async fn test_diff() {
 
     terminal.draw(|f| ui(f, f.area(), &mut app)).unwrap();
     insta::assert_snapshot!("diff pulled", terminal.backend());
+
+    drop(handler_guard);
 }

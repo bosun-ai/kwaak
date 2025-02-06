@@ -48,7 +48,7 @@ impl ConversationSummarizer {
     }
 
     pub fn summarize_hook(self) -> impl AfterEachFn {
-        move |context| {
+        move |agent| {
             let llm = self.llm.clone();
 
             let span = tracing::info_span!("summarize_conversation");
@@ -72,7 +72,8 @@ impl ConversationSummarizer {
             Box::pin(
                 async move {
                     let current_diff = accept_non_zero_exit(
-                        context
+                        agent
+                            .context()
                             .exec_cmd(&Command::shell(format!(
                                 "git diff {git_start_sha} --no-color"
                             )))
@@ -85,14 +86,18 @@ impl ConversationSummarizer {
                         .render()
                         .await?;
 
-                    let mut messages = filter_messages_since_summary(context.history().await);
+                    let mut messages =
+                        filter_messages_since_summary(agent.context().history().await);
                     messages.push(ChatMessage::new_user(prompt));
 
                     let summary = llm.complete(&messages.into()).await?;
 
                     if let Some(summary) = summary.message() {
                         tracing::debug!(summary = %summary, "Summarized tool output");
-                        context.add_message(ChatMessage::new_summary(summary)).await;
+                        agent
+                            .context()
+                            .add_message(ChatMessage::new_summary(summary))
+                            .await;
                     } else {
                         tracing::error!("No summary generated, this is a bug");
                     }
@@ -109,7 +114,18 @@ impl ConversationSummarizer {
         let available_tools = self
             .available_tools
             .iter()
-            .map(|tool| format!("- **{}**: {}", tool.name(), tool.tool_spec().description))
+            .map(|tool| {
+                format!(
+                    "- **{}**: {}",
+                    tool.name(),
+                    // Some tools have large descriptions, only take the first line
+                    tool.tool_spec()
+                        .description
+                        .lines()
+                        .take(1)
+                        .collect::<String>()
+                )
+            })
             .collect::<Vec<String>>()
             .join("\n");
 
@@ -133,7 +149,7 @@ impl ConversationSummarizer {
         * If the goal is not yet achieved, reflect on why and provide a clear path forward
 
         {{% if diff -%}}
-        # Current changes made
+        ## Current changes made
         ````
         {{{{ diff }}}}
         ````

@@ -1,3 +1,4 @@
+use config::{Config as ConfigRs, Environment, File};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -7,8 +8,8 @@ use swiftide::integrations::treesitter::SupportedLanguages;
 
 use super::api_key::ApiKey;
 use super::defaults::{
-    default_cache_dir, default_docker_context, default_dockerfile, default_log_dir,
-    default_main_branch, default_project_name,
+    default_auto_push_remote, default_cache_dir, default_docker_context, default_dockerfile,
+    default_log_dir, default_main_branch, default_project_name,
 };
 use super::{CommandConfiguration, LLMConfiguration, LLMConfigurations};
 
@@ -24,6 +25,10 @@ pub struct Config {
     pub cache_dir: PathBuf,
     #[serde(default = "default_log_dir")]
     pub log_dir: PathBuf,
+
+    /// The agent model to use by default in chats
+    #[serde(default)]
+    pub agent: SupportedAgents,
 
     #[serde(default)]
     /// Concurrency for indexing
@@ -54,8 +59,15 @@ pub struct Config {
     #[serde(default)]
     pub openai_api_key: Option<ApiKey>,
 
+    /// Required if using `Open Router`
+    #[serde(default)]
+    pub open_router_api_key: Option<ApiKey>,
+
     #[serde(default)]
     pub tool_executor: SupportedToolExecutors,
+
+    #[serde(default)]
+    pub disabled_tools: DisabledTools,
 
     /// By default the agent stops if the last message was its own and there are no new
     /// completions.
@@ -75,10 +87,27 @@ pub struct Config {
     /// OpenTelemetry tracing feature toggle
     #[serde(default = "default_otel_enabled")]
     pub otel_enabled: bool,
+
+    /// How the agent will edit files, defaults to whole
+    #[serde(default)]
+    pub agent_edit_mode: AgentEditMode,
 }
 
 fn default_otel_enabled() -> bool {
     false
+}
+
+/// Opt out of certain tools an agent can use
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct DisabledTools {
+    #[serde(default)]
+    pub pull_request: bool,
+}
+
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize, Default)]
+pub enum SupportedAgents {
+    #[default]
+    V1,
 }
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize, Default)]
@@ -87,6 +116,15 @@ pub enum SupportedToolExecutors {
     #[default]
     Docker,
     Local,
+}
+
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize, Default, strum_macros::EnumIs)]
+#[serde(rename_all = "kebab-case")]
+pub enum AgentEditMode {
+    #[default]
+    Whole,
+    Line,
+    // i.e. udiff, llm reviewed, etc
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -114,6 +152,14 @@ pub struct GitConfiguration {
     pub owner: Option<String>,
     #[serde(default = "default_main_branch")]
     pub main_branch: String,
+
+    /// Automatically push to the remote after every completion (if changes were made)
+    #[serde(default = "default_auto_push_remote")]
+    pub auto_push_remote: bool,
+
+    /// Opt out of automatically committing changes after each completion
+    #[serde(default)]
+    pub auto_commit_disabled: bool,
 }
 
 impl FromStr for Config {
@@ -127,29 +173,48 @@ impl FromStr for Config {
 }
 
 impl Config {
-    /// Loads the configuration file from the current path
-    pub async fn load(path: impl AsRef<Path>) -> Result<Config> {
-        let file = tokio::fs::read(path)
-            .await
-            .context("Could not find `kwaak.toml` in current directory")?;
+    pub fn load(path: &Path) -> Result<Self> {
+        let builder = ConfigRs::builder()
+            .add_source(File::from(path))
+            .add_source(File::with_name("kwaak.local").required(false))
+            .add_source(
+                Environment::with_prefix("KWAAK")
+                    .separator("_")
+                    .convert_case(config::Case::Lower),
+            );
 
-        Self::from_str(std::str::from_utf8(&file)?)
+        let config = builder.build()?;
+
+        config
+            .try_deserialize()
+            .map_err(Into::into)
+            .and_then(Config::fill_llm_api_keys) // Here using serde to deserialize into Self
     }
 
     // Seeds the api keys into the LLM configurations
-    //
     pub fn fill_llm_api_keys(mut self) -> Result<Self> {
+        let previous = self.clone();
+
         let LLMConfigurations {
             indexing,
             embedding,
             query,
         } = &mut *self.llm;
-        {
-            fill_llm(indexing, self.openai_api_key.as_ref())?;
-            fill_llm(embedding, self.openai_api_key.as_ref())?;
-            fill_llm(query, self.openai_api_key.as_ref())?;
+
+        for config in &mut [indexing, embedding, query] {
+            let maybe_root_key = previous.root_provider_api_key_for(config);
+            fill_llm(config, maybe_root_key)?;
         }
         Ok(self)
+    }
+
+    #[must_use]
+    pub fn root_provider_api_key_for(&self, provider: &LLMConfiguration) -> Option<&ApiKey> {
+        match provider {
+            LLMConfiguration::OpenAI { .. } => self.openai_api_key.as_ref(),
+            LLMConfiguration::OpenRouter { .. } => self.open_router_api_key.as_ref(),
+            _ => None,
+        }
     }
 
     #[must_use]
@@ -188,7 +253,9 @@ impl Config {
 
         match self.indexing_provider() {
             LLMConfiguration::OpenAI { .. } => num_cpus::get() * 4,
+            LLMConfiguration::OpenRouter { .. } => num_cpus::get() * 4,
             LLMConfiguration::Ollama { .. } => num_cpus::get(),
+            LLMConfiguration::FastEmbed { .. } => num_cpus::get(),
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => num_cpus::get(),
         }
@@ -203,6 +270,8 @@ impl Config {
         match self.indexing_provider() {
             LLMConfiguration::OpenAI { .. } => 12,
             LLMConfiguration::Ollama { .. } => 256,
+            LLMConfiguration::OpenRouter { .. } => 12,
+            LLMConfiguration::FastEmbed { .. } => 256,
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => 1,
         }
@@ -227,8 +296,18 @@ fn fill_llm(llm: &mut LLMConfiguration, root_key: Option<&ApiKey>) -> Result<()>
                 }
             }
         }
-        LLMConfiguration::Ollama { .. } => {
-            // Nothing to do for Ollama
+        LLMConfiguration::OpenRouter { api_key, .. } => {
+            if api_key.is_none() {
+                if let Some(root) = root_key {
+                    *api_key = Some(root.clone());
+                } else {
+                    anyhow::bail!("OpenRouter config requires an `api_key`, and none was provided or available in the root");
+                }
+            }
+            // Nothing to do for OpenRouter
+        }
+        LLMConfiguration::Ollama { .. } | LLMConfiguration::FastEmbed { .. } => {
+            // Nothing to do for Ollama / FastEmbed
         }
         #[cfg(debug_assertions)]
         LLMConfiguration::Testing => {}

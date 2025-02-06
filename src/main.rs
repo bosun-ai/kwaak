@@ -24,6 +24,7 @@ use ratatui::{
 
 use ::tracing::instrument;
 use crossterm::{
+    event::{KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -39,9 +40,9 @@ async fn main() -> Result<()> {
     let args = cli::Args::parse();
 
     // Handle the `init` command immediately after parsing args
-    if let Some(cli::Commands::Init { dry_run }) = args.command {
-        if let Err(error) = onboarding::run(dry_run) {
-            eprintln!("Error: {error}");
+    if let Some(cli::Commands::Init { dry_run, file }) = args.command {
+        if let Err(error) = onboarding::run(file, dry_run).await {
+            eprintln!("{error:#}");
             std::process::exit(1);
         }
         return Ok(());
@@ -50,7 +51,7 @@ async fn main() -> Result<()> {
     init_panic_hook();
 
     // Load configuration
-    let config = match Config::load(&args.config_path).await {
+    let config = match Config::load(&args.config_path) {
         Ok(config) => config,
         Err(error) => {
             eprintln!("Failed to load configuration: {error:#}");
@@ -69,6 +70,13 @@ async fn main() -> Result<()> {
         let _root_span = tracing::info_span!("main", "otel.name" = "main").entered();
 
         let command = args.command.as_ref().unwrap_or(&cli::Commands::Tui);
+
+        if git::util::is_dirty(repository.path()).await && !args.allow_dirty {
+            eprintln!(
+                "Error: The repository has uncommitted changes. Use --allow-dirty to override."
+            );
+            std::process::exit(1);
+        }
 
         match command {
             cli::Commands::RunAgent { initial_message } => {
@@ -239,6 +247,10 @@ pub fn init_panic_hook() {
 pub fn init_tui() -> io::Result<Terminal<impl Backend>> {
     enable_raw_mode()?;
     execute!(stdout(), EnterAlternateScreen)?;
+    execute!(
+        stdout(),
+        PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::all())
+    )?;
     Terminal::new(CrosstermBackend::new(stdout()))
 }
 
@@ -250,5 +262,6 @@ pub fn init_tui() -> io::Result<Terminal<impl Backend>> {
 pub fn restore_tui() -> io::Result<()> {
     disable_raw_mode()?;
     execute!(stdout(), LeaveAlternateScreen)?;
+    execute!(stdout(), PopKeyboardEnhancementFlags)?;
     Ok(())
 }

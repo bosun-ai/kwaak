@@ -11,8 +11,10 @@ use crate::{chat::Chat, chat_message::ChatMessage, commands::Command, templates:
 use super::{ui_input_command::UserInputCommand, App};
 
 mod diff;
+mod scroll;
 
 pub use diff::{diff_pull, diff_show};
+pub use scroll::{scroll_down, scroll_end, scroll_up};
 
 pub fn delete_chat(app: &mut App) {
     let uuid = app.current_chat_uuid;

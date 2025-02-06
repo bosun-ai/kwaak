@@ -19,8 +19,13 @@ use super::{
     tools, RunningAgent,
 };
 use crate::{
-    commands::Responder, config::SupportedToolExecutors, git::github::GithubSession, indexing,
-    repository::Repository, util::accept_non_zero_exit,
+    agent::util,
+    commands::Responder,
+    config::{AgentEditMode, SupportedToolExecutors},
+    git::github::GithubSession,
+    indexing,
+    repository::Repository,
+    util::accept_non_zero_exit,
 };
 use swiftide_docker_executor::DockerExecutor;
 
@@ -30,6 +35,7 @@ async fn generate_initial_context(repository: &Repository, query: &str) -> Resul
     Ok(formatted_context)
 }
 
+// Maybe extract this into a toolbox?
 pub fn available_tools(
     repository: &Repository,
     github_session: Option<&Arc<GithubSession>>,
@@ -38,20 +44,31 @@ pub fn available_tools(
     let query_pipeline = indexing::build_query_pipeline(repository)?;
 
     let mut tools = vec![
-        tools::read_file(),
-        tools::read_file_with_line_numbers(),
         tools::write_file(),
         tools::search_file(),
         tools::git(),
         tools::shell_command(),
         tools::search_code(),
         tools::fetch_url(),
-        tools::replace_block(),
         tools::ExplainCode::new(query_pipeline).boxed(),
     ];
 
+    match repository.config().agent_edit_mode {
+        AgentEditMode::Whole => {
+            tools.push(tools::write_file());
+            tools.push(tools::read_file());
+        }
+        AgentEditMode::Line => {
+            tools.push(tools::read_file_with_line_numbers());
+            tools.push(tools::replace_lines());
+            tools.push(tools::add_lines());
+        }
+    }
+
     if let Some(github_session) = github_session {
-        tools.push(tools::CreateOrUpdatePullRequest::new(github_session).boxed());
+        if !repository.config().disabled_tools.pull_request {
+            tools.push(tools::CreateOrUpdatePullRequest::new(github_session).boxed());
+        }
         tools.push(tools::GithubSearchCode::new(github_session).boxed());
     }
 
@@ -83,7 +100,6 @@ async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Arc<
 
             if std::fs::metadata(dockerfile).is_err() {
                 tracing::error!("Dockerfile not found at {}", dockerfile.display());
-                // TODO: Clean me up
                 panic!("Running in docker requires a Dockerfile");
             }
             let running_executor = executor
@@ -103,15 +119,12 @@ async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Arc<
     Ok(boxed)
 }
 
-#[tracing::instrument(skip(repository, command_responder))]
-pub async fn start_agent(
+pub async fn start(
+    query: &str,
     uuid: Uuid,
     repository: &Repository,
-    query: &str,
     command_responder: Arc<dyn Responder>,
 ) -> Result<RunningAgent> {
-    command_responder.update("starting up agent for the first time, this might take a while");
-
     let query_provider: Box<dyn ChatCompletion> =
         repository.config().query_provider().try_into()?;
     let fast_query_provider: Box<dyn SimplePrompt> =
@@ -122,18 +135,20 @@ pub async fn start_agent(
         None => None,
     };
 
-    let system_prompt = build_system_prompt(&repository)?;
+    // TODO: Feels a bit off to have EnvSetup return an Env, just to pass it to tool creation to
+    // get the ref/branch name
+    //
+    // Probably nicer to have a `ChatSession` or `AgentSession` that encapsulates all the
+    // complexity
     let ((), branch_name, executor, initial_context) = tokio::try_join!(
-        rename_chat(&query, &fast_query_provider, &command_responder),
-        create_branch_name(&query, &uuid, &fast_query_provider, &command_responder),
+        util::rename_chat(&query, &fast_query_provider, &command_responder),
+        util::create_branch_name(&query, &uuid, &fast_query_provider, &command_responder),
         start_tool_executor(uuid, &repository),
         generate_initial_context(&repository, query)
     )?;
-
     let env_setup = EnvSetup::new(&repository, github_session.as_deref(), &*executor);
-    // TODO: Feels a bit off to have EnvSetup return an Env, just to pass it to tool creation to
-    // get the ref/branch name
     let agent_env = env_setup.exec_setup_commands(branch_name).await?;
+    let system_prompt = build_system_prompt(&repository)?;
 
     let tools = available_tools(&repository, github_session.as_ref(), Some(&agent_env))?;
 
@@ -154,27 +169,35 @@ pub async fn start_agent(
     let tx_3 = command_responder.clone();
     let tx_4 = command_responder.clone();
 
-    let tool_summarizer =
-        ToolSummarizer::new(fast_query_provider, &["run_tests", "run_coverage"], &tools);
+    let tool_summarizer = ToolSummarizer::new(
+        fast_query_provider,
+        &["run_tests", "run_coverage"],
+        &tools,
+        &agent_env.start_ref,
+    );
     let conversation_summarizer =
         ConversationSummarizer::new(query_provider.clone(), &tools, &agent_env.start_ref);
     let maybe_lint_fix_command = repository.config().commands.lint_and_fix.clone();
+
+    let push_to_remote_enabled =
+        agent_env.remote_enabled && repository.config().git.auto_push_remote;
+    let auto_commit_disabled = repository.config().git.auto_commit_disabled;
 
     let context = Arc::new(context);
     let agent = Agent::builder()
         .context(Arc::clone(&context) as Arc<dyn AgentContext>)
         .system_prompt(system_prompt)
         .tools(tools)
-        .before_all(move |context| {
+        .before_all(move |agent| {
             let initial_context = initial_context.clone();
 
             Box::pin(async move {
-                context
+                agent.context()
                     .add_message(chat_completion::ChatMessage::new_user(initial_context))
                     .await;
 
-                let top_level_project_overview = context.exec_cmd(&Command::shell("fd -iH -d2 -E '.git/*'")).await?.output;
-                context.add_message(chat_completion::ChatMessage::new_user(format!("The following is a max depth 2, high level overview of the directory structure of the project: \n ```{top_level_project_overview}```"))).await;
+                let top_level_project_overview = agent.context().exec_cmd(&Command::shell("fd -iH -d2 -E '.git/*'")).await?.output;
+                agent.context().add_message(chat_completion::ChatMessage::new_user(format!("The following is a max depth 2, high level overview of the directory structure of the project: \n ```{top_level_project_overview}```"))).await;
 
                 Ok(())
             })
@@ -205,12 +228,12 @@ pub async fn start_agent(
             })
         })
         .after_tool(tool_summarizer.summarize_hook())
-        .after_each(move |context| {
+        .after_each(move |agent| {
             let maybe_lint_fix_command = maybe_lint_fix_command.clone();
             let command_responder = command_responder.clone();
             Box::pin(async move {
                 if accept_non_zero_exit(
-                    context
+                    agent.context()
                         .exec_cmd(&Command::shell("git status --porcelain"))
                         .await,
                 )
@@ -224,24 +247,26 @@ pub async fn start_agent(
 
                 if let Some(lint_fix_command) = &maybe_lint_fix_command {
                     command_responder.update("running lint and fix");
-                    accept_non_zero_exit(context.exec_cmd(&Command::shell(lint_fix_command)).await)
+                    accept_non_zero_exit(agent.context().exec_cmd(&Command::shell(lint_fix_command)).await)
                         .context("Could not run lint and fix")?;
                 };
 
-                accept_non_zero_exit(context.exec_cmd(&Command::shell("git add .")).await)
-                    .context("Could not add files to git")?;
+                if !auto_commit_disabled {
+                    accept_non_zero_exit(agent.context().exec_cmd(&Command::shell("git add .")).await)
+                        .context("Could not add files to git")?;
 
-                accept_non_zero_exit(
-                    context
-                        .exec_cmd(&Command::shell(
-                            "git commit -m \"[kwaak]: Committed changes after completion\"",
-                        ))
-                        .await,
-                )
-                .context("Could not commit files to git")?;
+                    accept_non_zero_exit(
+                        agent.context()
+                            .exec_cmd(&Command::shell(
+                                "git commit -m \"[kwaak]: Committed changes after completion\"",
+                            ))
+                            .await,
+                    )
+                    .context("Could not commit files to git")?;
+                }
 
-                if agent_env.remote_enabled {
-                    accept_non_zero_exit(context.exec_cmd(&Command::shell("git push")).await)
+                if  push_to_remote_enabled {
+                    accept_non_zero_exit(agent.context().exec_cmd(&Command::shell("git push")).await)
                         .context("Could not push changes to git")?;
                 }
 
@@ -277,15 +302,13 @@ fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
 
         // Tool usage
         "When writing files, ensure you write and implement everything, everytime. Do NOT leave anything out. Writing a file overwrites the entire file, so it MUST include the full, completed contents of the file. Do not make changes other than the ones requested.",
-        "Prefer using block replacements over writing files, if possible. This is faster and less error prone. You can only make ONE block replacement at the time. Otherwise you must retrieve the line numbers again.",
-        "Before replacing a block, you MUST read the file content with the line numbers. You are not allowed to count lines yourself.",
-        "If you intend to edit multiple files or multiple edits in a single file, outline your plan first, then call the first tool immediately",
         "If you create a pull request, you must ensure the tests pass",
         "If you just want to run the tests, prefer running the tests over running coverage, as running tests is faster",
-        "NEVER write a file before having read it",
+        "NEVER write or edit a file before having read it",
 
         // Code writing
         "When writing code or tests, make sure this is idiomatic for the language",
+        "When writing code, make sure you account for edge cases",
         "When writing tests, verify that test coverage has changed. If it hasn't, the tests are not doing anything. This means you _must_ run coverage after creating a new test.",
         "When writing tests, make sure you cover all edge cases",
         "When writing tests, if a specific test continues to be troublesome, think out of the box and try to solve the problem in a different way, or reset and focus on other tests first",
@@ -304,6 +327,15 @@ fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
         "Do not repeat your answers, if they are exactly the same you should probably stop",
     ];
 
+    if repository.config().agent_edit_mode.is_line() {
+        constraints = [constraints.as_slice(), &[
+        "Prefer editing files with `replace_lines` and `add_lines` over `write_file`, if possible. This is faster and less error prone. You can only make ONE `replace_lines` or `add_lines` call at the time. After each you MUST call `read_file_with_line_numbers` again, as the linenumbers WILL have changed.",
+        "If you are only adding NEW lines, you MUST use `add_lines`",
+        "Before every call to `replace_lines` or `add_lines`, you MUST read the file content with the line numbers. You are not allowed to count lines yourself.",
+
+        ]].concat();
+    }
+
     if repository.config().endless_mode {
         constraints.push("You cannot ask for feedback and have to try to complete the given task");
     } else {
@@ -317,177 +349,4 @@ fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
         .constraints(constraints).build()?.into();
 
     Ok(prompt)
-}
-
-async fn rename_chat(
-    query: &str,
-    fast_query_provider: &dyn SimplePrompt,
-    command_responder: &dyn Responder,
-) -> Result<()> {
-    let chat_name = fast_query_provider
-        .prompt(
-            format!("Give a good, short, max 60 chars title for the following query. Only respond with the title.:\n{query}")
-                .into(),
-        )
-        .await
-        .context("Could not get chat name")?
-        .trim_matches('"')
-        .chars()
-        .take(60)
-        .collect::<String>();
-
-    command_responder.rename_chat(&chat_name);
-
-    Ok(())
-}
-
-async fn create_branch_name(
-    query: &str,
-    uuid: &Uuid,
-    fast_query_provider: &dyn SimplePrompt,
-    command_responder: &dyn Responder,
-) -> Result<String> {
-    let name = fast_query_provider
-        .prompt(
-            format!("Give a good, short, max 30 chars git-branch-name for the following query. Only respond with the git-branch-name.:\n{query}")
-                .into(),
-        )
-        .await
-        .context("Could not get chat name")?
-        .trim_matches('"')
-        .chars()
-        .take(30)
-        .collect::<String>();
-
-    // only keep ascii characters
-    let name = name.chars().filter(char::is_ascii).collect::<String>();
-    let name = name.to_lowercase();
-
-    // replace all non-alphanumeric characters with dashes
-    let name = name
-        .chars()
-        .map(|c| if c.is_alphanumeric() { c } else { '-' })
-        .collect::<String>();
-
-    // get the first 8 characters of the uuid
-    let uuid_start = uuid.to_string().chars().take(8).collect::<String>();
-    let branch_name = format!("kwaak/{name}-{uuid_start}");
-
-    command_responder.rename_branch(&branch_name);
-
-    Ok(branch_name)
-}
-
-#[cfg(test)]
-mod tests {
-    use swiftide_core::MockSimplePrompt;
-
-    use crate::commands::MockResponder;
-    use mockall::{predicate, PredicateBooleanExt};
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_rename_chat() {
-        let query = "This is a query";
-        let mut llm_mock = MockSimplePrompt::new();
-        llm_mock
-            .expect_prompt()
-            .returning(|_| Ok("Excellent title".to_string()));
-
-        let mut mock_responder = MockResponder::default();
-
-        mock_responder
-            .expect_rename_chat()
-            .with(predicate::eq("Excellent title"))
-            .once()
-            .returning(|_| ());
-
-        rename_chat(&query, &llm_mock as &dyn SimplePrompt, &mock_responder)
-            .await
-            .unwrap();
-    }
-
-    #[tokio::test]
-    async fn test_rename_chat_limits_60() {
-        let query = "This is a query";
-        let mut llm_mock = MockSimplePrompt::new();
-        llm_mock
-            .expect_prompt()
-            .returning(|_| Ok("Excellent title".repeat(100).to_string()));
-
-        let mut mock_responder = MockResponder::default();
-
-        mock_responder
-            .expect_rename_chat()
-            .with(
-                predicate::str::starts_with("Excellent title")
-                    .and(predicate::function(|s: &str| s.len() == 60)),
-            )
-            .once()
-            .returning(|_| ());
-
-        rename_chat(&query, &llm_mock as &dyn SimplePrompt, &mock_responder)
-            .await
-            .unwrap();
-    }
-
-    #[tokio::test]
-    async fn test_rename_branch() {
-        let query = "This is a query";
-        let mut llm_mock = MockSimplePrompt::new();
-        llm_mock
-            .expect_prompt()
-            .returning(|_| Ok("excellent-name".to_string()));
-
-        let mut mock_responder = MockResponder::default();
-        let fixed_uuid = Uuid::parse_str("936DA01F9ADD4d9d80C702AF85C822A8").unwrap();
-
-        mock_responder
-            .expect_rename_branch()
-            .with(predicate::str::starts_with("kwaak/excellent-name"))
-            .once()
-            .returning(|_| ());
-
-        create_branch_name(
-            &query,
-            &fixed_uuid,
-            &llm_mock as &dyn SimplePrompt,
-            &mock_responder,
-        )
-        .await
-        .unwrap();
-    }
-
-    // NOTE the prompt is intended to be limited to 30 characters, but the branch name in total
-    // has 15 more characters (total 45): "kwaak/" + "-" + 8 characters from the uuid
-    #[tokio::test]
-    async fn test_rename_branch_limits_45() {
-        let query = "This is a query";
-        let mut llm_mock = MockSimplePrompt::new();
-        llm_mock
-            .expect_prompt()
-            .returning(|_| Ok("excellent-name".repeat(100).to_string()));
-
-        let mut mock_responder = MockResponder::default();
-        let fixed_uuid = Uuid::parse_str("936DA01F9ADD4d9d80C702AF85C822A8").unwrap();
-
-        mock_responder
-            .expect_rename_branch()
-            .with(
-                predicate::str::starts_with("kwaak/excellent-name")
-                    .and(predicate::function(|s: &str| s.len() == 45)),
-            )
-            .once()
-            .returning(|_| ());
-
-        create_branch_name(
-            &query,
-            &fixed_uuid,
-            &llm_mock as &dyn SimplePrompt,
-            &mock_responder,
-        )
-        .await
-        .unwrap();
-    }
 }

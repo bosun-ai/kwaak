@@ -108,6 +108,7 @@ Powered by [Swiftide](https://github.com/bosun-ai/swiftide)
 - Agents operate on code, use tools, and can be interacted with
 - View and pull code changes from an agent; or have it create a pull request
 - Sandboxed execution in docker
+- OpenAI, Ollama and many other models via [OpenRouter](https://openrouter.ai)
 - Python, TypeScript/Javascript, Go, Java, Ruby, and Rust
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -167,7 +168,7 @@ cargo install kwaak
 
 #### Setup
 
-Once installed, you can run `kwaak init` in the project you want to use Kwaak in. This will create a `kwaak.toml` configuration file in the root of your project.
+Once installed, you can run `kwaak init` in the project you want to use Kwaak in. This will guide you through the setup process and it will help you create a configuration file. See [Configuration](#configuration) for more customization options.
 
 Api keys can be prefixed by `env:`, `text:` and `file:` to read secrets from the environment, a text string, or a file respectively.
 
@@ -216,6 +217,8 @@ All of these are inferred from the project directory and can be overridden in th
 
 #### Command Configuration
 
+Kwaak uses tests, coverages, and lints as an additional opportunity to steer the agent. Configuring these will (significantly) improve the agents' performance.
+
 - **`test`**: Command to run tests, e.g., `cargo test`.
 - **`coverage`**: Command for running coverage checks, e.g., `cargo llvm-cov --summary-only`. Expects coverage results as output. Currently handled unparsed via an LLM call. A friendly output is preferred
 - **`lint_and_fix`**: Optional command to lint and fix project issues, e.g., `cargo clippy --fix --allow-dirty; cargo fmt` in Rust.
@@ -233,7 +236,14 @@ All of these are inferred from the project directory and can be overridden in th
 
 Configure LLMs such as OpenAI and Ollama by specifying models for different tasks:
 
-- **OpenAI Configuration**:
+Supported providers:
+
+- OpenAI
+- Ollama
+- OpenRouter (no embeddings)
+- FastEmbed (embeddings only)
+
+**OpenAI Configuration**:
 
 ```toml
 [llm.indexing]
@@ -252,7 +262,7 @@ provider = "OpenAI"
 embedding_model = "text-embedding-3-large"
 ```
 
-- **Ollama Configuration**:
+**Ollama Configuration**:
 
 ```toml
 [llm.indexing]
@@ -270,7 +280,7 @@ embedding_model = { name = "bge-m3", vector_size = 1024 }
 
 For both you can provide a `base_url` to use a custom API endpoint.
 
-These configurations allow you to leverage the strengths of each model effectively for indexing, querying, and embedding processes.
+You can mix and match models from different providers for different tasks.
 
 #### Other configuration
 
@@ -281,6 +291,10 @@ These configurations allow you to leverage the strengths of each model effective
 - **`otel_enabled`**: Enables OpenTelemetry tracing if set and respects all the standard OpenTelemetry environment variables.
 - **`tool_executor`**: Defaults to `docker`. Can also be `local`. We **HIGHLY** recommend using `docker` for security reasons unless you are running in a secure environment.
 - **`tavily_api_key`**: Enables the agent to use [tavily](https://tavily.com) for web search. Their entry-level plan is free. (we are not affiliated)
+- `**agent_edit_mode**`: Defaults to `whole` (write full files at the time). If you experience issues with (very) large files, you can experiment with `line` edits.
+- **`git.auto_push_remote`**: Enabled by default if a github key is present. Automatically pushes to the remote repository after each chat completion. You can disable this by setting it to `false`.
+- `**git.auto_commit_disabled`: Opt-out of automatic commits after each chat completion.
+- **_`disabled_tools.pull_request`_**: Enables or disables the pull request tool. Defaults to `false`.
 
 <!-- ROADMAP -->
 
@@ -324,6 +338,10 @@ These configurations allow you to leverage the strengths of each model effective
 **Q**: What is the github token used for?
 
 **A**: The github token is used to create pull requests, search code, and push code to a remote repository. It is not used for anything else.
+
+**Q**: In my project, different contributors have different setups. How can I make sure kwaak works for everyone?
+
+**A**: You can use a `kwaak.local.toml` and add it to your `.gitignore`. Alternatively, all configuration can be overridden by environment variables, prefixed with `KWAAK_` and separated by underscores. For instance, `KWAAK_COMMAND_TEST=cargo nextest run`. Overwriting via environment currently does not work for the `llm` configuration.
 
 ## Community
 

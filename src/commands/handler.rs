@@ -144,7 +144,7 @@ impl CommandHandler {
                 };
 
                 let base_sha = &agent.agent_environment.start_ref;
-                let diff = git::util::diff(agent.executor.as_ref(), &base_sha).await?;
+                let diff = git::util::diff(agent.executor.as_ref(), &base_sha, true).await?;
 
                 event.responder().system_message(&diff);
             }

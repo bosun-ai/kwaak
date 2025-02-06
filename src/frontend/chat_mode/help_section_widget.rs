@@ -27,14 +27,21 @@ impl HelpSectionWidget {
         supported_commands.retain(|c| !c.is_help());
         supported_commands.insert(0, UserInputCommand::Help);
 
-        Block::default()
-            .title("Chat commands".bold())
-            .title_alignment(Alignment::Center)
-            .borders(Borders::TOP | Borders::RIGHT)
-            .border_set(border_set)
-            .padding(Padding::uniform(2))
-            .render(top, f.buffer_mut());
-        // )
+        // Only show the chat commands help block if the screen is big enough
+        if top.height as usize > app.supported_commands().len() / 2 {
+            Block::default()
+                .title("Chat commands".bold())
+                .title_alignment(Alignment::Center)
+                .borders(Borders::TOP | Borders::RIGHT)
+                .border_set(border_set)
+                .padding(Padding::uniform(2))
+                .render(top, f.buffer_mut());
+        } else {
+            Block::default()
+                .borders(Borders::RIGHT)
+                .border_set(border_set)
+                .render(top, f.buffer_mut());
+        }
 
         let (left_commands, right_commands) =
             supported_commands.split_at(supported_commands.len() / 2);

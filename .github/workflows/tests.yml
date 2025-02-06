@@ -30,10 +30,6 @@ jobs:
         uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install nextest
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-nextest
       # Required for copypasta builds on linux
       - name: Install deps
         run: sudo apt install libxcb1-dev libxcb-shape0-dev libxcb-xfixes0-dev ripgrep fd-find
@@ -41,7 +37,7 @@ jobs:
       - name: copy fdfind
         run: sudo cp /usr/bin/fdfind /usr/bin/fd
       - name: "Test"
-        run: cargo nextest run -j 2
+        run: cargo test -j 2
 
   lint:
     name: Lint
