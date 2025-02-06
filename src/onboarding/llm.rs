@@ -16,7 +16,7 @@ pub async fn llm_questions(context: &mut tera::Context) -> Result<()> {
     let valid_llms = LLMConfiguration::VARIANTS
         .iter()
         .map(AsRef::as_ref) // Kinda weird that we need to do this
-        .filter(|v| *v != "FastEmbed")
+        .filter(|v| *v != "FastEmbed" && *v != "AzureOpenAI")
         .collect::<Vec<&str>>();
 
     let valid_llm: LLMConfiguration = prompt_select(
@@ -30,6 +30,9 @@ pub async fn llm_questions(context: &mut tera::Context) -> Result<()> {
         LLMConfiguration::OpenAI { .. } => openai_questions(context)?,
         LLMConfiguration::Ollama { .. } => ollama_questions(context)?,
         LLMConfiguration::OpenRouter { .. } => open_router_questions(context).await?,
+        LLMConfiguration::AzureOpenAI { .. } => {
+            println!("{valid_llm} is not selectable yet, skipping configuration");
+        },
         LLMConfiguration::FastEmbed { .. } => {
             println!("{valid_llm} is not selectable yet, skipping configuration");
         }
