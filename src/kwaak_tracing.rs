@@ -109,6 +109,7 @@ fn init_otel() -> TracerProvider {
         let resource_attributes = std::env::var("OTEL_RESOURCE_ATTRIBUTES")
             .unwrap_or_default()
             .split(',')
+            .filter(|s| !s.is_empty())
             .map(|s| s.split_once('=').expect("invalid OTEL_RESOURCE_ATTRIBUTES"))
             .map(|(key, value)| (key.to_string(), value.to_string()))
             .collect::<HashMap<String, String>>();
