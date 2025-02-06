@@ -1,5 +1,4 @@
 /// Replace lines in a file. This tool is in beta and only has a ~80% success rate.
-
 use swiftide::traits::CommandError;
 
 use anyhow::Result;
@@ -180,7 +179,8 @@ fn replace_content(
             .map(|line| {
                 let mut new_line = line.to_string();
                 if !new_line.is_empty() {
-                    new_line.insert_str(0, &indentation_char.repeat(first_line_indentation_mismatch));
+                    new_line
+                        .insert_str(0, &indentation_char.repeat(first_line_indentation_mismatch));
                 }
                 new_line
             })
@@ -188,10 +188,15 @@ fn replace_content(
             .join("\n");
     }
 
-    let prefix = file_content.split('\n').take(start_line - 1).collect::<Vec<_>>();
+    let prefix = file_content
+        .split('\n')
+        .take(start_line - 1)
+        .collect::<Vec<_>>();
     let suffix = file_content.split('\n').skip(end_line).collect::<Vec<_>>();
 
-    let new_file_content = [prefix, content.lines().collect::<Vec<_>>(), suffix].concat().join("\n");
+    let new_file_content = [prefix, content.lines().collect::<Vec<_>>(), suffix]
+        .concat()
+        .join("\n");
 
     Ok(new_file_content)
 }
