@@ -91,6 +91,14 @@ pub struct Config {
     /// How the agent will edit files, defaults to whole
     #[serde(default)]
     pub agent_edit_mode: AgentEditMode,
+
+    /// Additional constraints / instructions for the agent
+    ///
+    /// These are passes to the agent in the system prompt and are rendered in a list. If you
+    /// intend to use more complicated instructions, consider adding a file to read in the
+    /// repository instead.
+    #[serde(default)]
+    pub agent_custom_constraints: Option<Vec<String>>,
 }
 
 fn default_otel_enabled() -> bool {

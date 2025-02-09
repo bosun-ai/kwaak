@@ -286,7 +286,7 @@ pub async fn start(
 }
 
 fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
-    let mut constraints = vec![
+    let mut constraints: Vec<String> = vec![
         // General
         "Research your solution before providing it",
         "Tool calls are in parallel. You can run multiple tool calls at the same time, but they must not rely on each other",
@@ -325,23 +325,29 @@ fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
         "If you are stuck, consider using reset_file to undo your changes",
         "Focus on completing the task fully as requested by the user",
         "Do not repeat your answers, if they are exactly the same you should probably stop",
-    ];
+    ].into_iter().map(Into::into).collect();
 
     if repository.config().agent_edit_mode.is_line() {
-        constraints = [constraints.as_slice(), &[
+        constraints.extend( [
         "Prefer editing files with `replace_lines` and `add_lines` over `write_file`, if possible. This is faster and less error prone. You can only make ONE `replace_lines` or `add_lines` call at the time. After each you MUST call `read_file_with_line_numbers` again, as the linenumbers WILL have changed.",
         "If you are only adding NEW lines, you MUST use `add_lines`",
         "Before every call to `replace_lines` or `add_lines`, you MUST read the file content with the line numbers. You are not allowed to count lines yourself.",
 
-        ]].concat();
+        ].into_iter().map(Into::into));
     }
 
     if repository.config().endless_mode {
-        constraints.push("You cannot ask for feedback and have to try to complete the given task");
+        constraints
+            .push("You cannot ask for feedback and have to try to complete the given task".into());
     } else {
         constraints.push(
-            "Try to solve the problem yourself first, only if you cannot solve it, ask for help",
+            "Try to solve the problem yourself first, only if you cannot solve it, ask for help"
+                .into(),
         );
+    }
+
+    if let Some(agent_custom_constraints) = repository.config().agent_custom_constraints.as_ref() {
+        constraints.extend(agent_custom_constraints.iter().cloned());
     }
 
     let prompt = SystemPrompt::builder()
@@ -349,4 +355,42 @@ fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
         .constraints(constraints).build()?.into();
 
     Ok(prompt)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::test_repository;
+
+    #[tokio::test]
+    async fn test_build_system_prompt_endless_mode() {
+        let (mut repository, _guard) = test_repository();
+        repository.config_mut().endless_mode = true;
+        let prompt = build_system_prompt(&repository).unwrap();
+
+        assert!(prompt
+            .render()
+            .await
+            .unwrap()
+            .contains("You cannot ask for feedback and have to try to complete the given task"));
+    }
+
+    #[tokio::test]
+    async fn test_build_system_prompt_custom_constraints() {
+        let custom_constraints = vec![
+            "Custom constraint 1".to_string(),
+            "Custom constraint 2".to_string(),
+        ];
+
+        let (mut repository, _guard) = test_repository();
+        repository.config_mut().agent_custom_constraints = Some(custom_constraints);
+
+        let prompt = build_system_prompt(&repository)
+            .unwrap()
+            .render()
+            .await
+            .unwrap();
+        assert!(prompt.contains("Custom constraint 1"));
+        assert!(prompt.contains("Custom constraint 2"));
+    }
 }
