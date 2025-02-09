@@ -5,7 +5,7 @@ use std::{
     sync::Arc,
 };
 
-use agent::available_tools;
+use agent::v1::available_tools;
 use anyhow::{Context as _, Result};
 use clap::Parser;
 use commands::CommandResponse;
@@ -13,7 +13,7 @@ use config::Config;
 use frontend::App;
 use git::github::GithubSession;
 use kwaak::{
-    agent, cli, commands, config, frontend, git,
+    agent, cli, commands, config, evaluations, frontend, git,
     indexing::{self, index_repository},
     onboarding, repository, storage,
 };
@@ -107,6 +107,11 @@ async fn main() -> Result<()> {
                 println!("{}", toml::to_string_pretty(repository.config())?);
                 Ok(())
             }
+            cli::Commands::Eval { eval_type } => match eval_type {
+                cli::EvalCommands::Patch { iterations } => {
+                    evaluations::run_patch_evaluation(*iterations).await
+                }
+            },
             cli::Commands::Init { .. } => unreachable!(),
         }
     };

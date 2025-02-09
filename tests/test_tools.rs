@@ -110,14 +110,14 @@ async fn test_edit_file() {
         json!({
             "file_name": tempdir.path().join("test.txt").to_str().unwrap(),
             "start_line": "2",
-            "end_line": "4",
-            "content": "one line"
+            "end_line": "5",
+            "content": "line2\none line\nline5"
         })
     );
 
     let new_file_content = std::fs::read_to_string(tempdir.path().join("test.txt")).unwrap();
 
-    assert_eq!(new_file_content, "line1\none line\nline5");
+    assert_eq!(new_file_content, "line1\nline2\none line\nline5");
     assert!(tool_response.contains("Successfully replaced content"));
 
     std::fs::write(
@@ -131,16 +131,16 @@ async fn test_edit_file() {
         &context,
         json!({
             "file_name": tempdir.path().join("test.txt").to_str().unwrap(),
-            "start_line": "2",
+            "start_line": "1",
             "end_line": "4",
-            "content": "one\nline"
+            "content": "line1\none\nline\nline4"
         })
     );
 
     assert!(tool_response.contains("Successfully replaced content"));
     assert_eq!(
         std::fs::read_to_string(tempdir.path().join("test.txt")).unwrap(),
-        "line1\none\nline\nline5"
+        "line1\none\nline\nline4\nline5"
     );
 
     let tool_response = invoke!(
@@ -180,29 +180,53 @@ async fn test_edit_file() {
         &tool_response.to_string()
     );
 
+    // Test replacing with mismatched indentation
     std::fs::write(
-        tempdir.path().join("test-add.txt"),
-        "line1\nline2\nline3\nline4\nline5",
+        tempdir.path().join("test.txt"),
+        indoc::indoc! {"
+        def a:
+
+            def b:
+                return True
+
+            return True
+
+        def c:
+            return True
+        "},
     )
     .unwrap();
 
-    // Appending a block with end_line zero
-    // NOTE: Current state of LLMs uses a different tool when line editing
     let tool_response = invoke!(
         &tool,
         &context,
         json!({
-            "file_name": tempdir.path().join("test-add.txt").to_str().unwrap(),
-            "start_line": "2",
-            "end_line": "0",
-            "content": "added\nblock"
+            "file_name": tempdir.path().join("test.txt").to_str().unwrap(),
+            "start_line": "3",
+            "end_line": "6",
+            "content": indoc::indoc! {"
+                def b:
+                    return False
+
+                return True
+            "}
         })
     );
 
     assert!(tool_response.contains("Successfully replaced content"));
     assert_eq!(
-        std::fs::read_to_string(tempdir.path().join("test-add.txt")).unwrap(),
-        "line1\nline2\nadded\nblock\nline3\nline4\nline5"
+        std::fs::read_to_string(tempdir.path().join("test.txt")).unwrap(),
+        indoc::indoc! {"
+            def a:
+
+                def b:
+                    return False
+
+                return True
+
+            def c:
+                return True
+        "},
     );
 }
 

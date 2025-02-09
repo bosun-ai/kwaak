@@ -285,7 +285,7 @@ pub async fn start(
         .build()
 }
 
-fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
+pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
     let mut constraints: Vec<String> = vec![
         // General
         "Research your solution before providing it",

@@ -1,10 +1,10 @@
 mod conversation_summarizer;
-mod env_setup;
+pub mod env_setup;
 mod running_agent;
 mod tool_summarizer;
 pub mod tools;
 mod util;
-mod v1;
+pub mod v1;
 use std::sync::Arc;
 use swiftide::chat_completion::Tool;
 

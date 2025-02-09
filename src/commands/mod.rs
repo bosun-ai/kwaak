@@ -5,7 +5,7 @@ mod responder;
 
 pub use command::{Command, CommandEvent};
 pub use handler::CommandHandler;
-pub use responder::{CommandResponse, Responder};
+pub use responder::{CommandResponse, DebugResponder, Responder};
 
 #[cfg(test)]
 pub use responder::MockResponder;
