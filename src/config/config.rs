@@ -177,11 +177,7 @@ impl Config {
         let builder = ConfigRs::builder()
             .add_source(File::from(path))
             .add_source(File::with_name("kwaak.local").required(false))
-            .add_source(
-                Environment::with_prefix("KWAAK")
-                    .separator("_")
-                    .convert_case(config::Case::Lower),
-            );
+            .add_source(Environment::with_prefix("KWAAK").separator("__"));
 
         let config = builder.build()?;
 

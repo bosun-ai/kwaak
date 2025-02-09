@@ -341,7 +341,7 @@ You can mix and match models from different providers for different tasks.
 
 **Q**: In my project, different contributors have different setups. How can I make sure kwaak works for everyone?
 
-**A**: You can use a `kwaak.local.toml` and add it to your `.gitignore`. Alternatively, all configuration can be overridden by environment variables, prefixed with `KWAAK_` and separated by underscores. For instance, `KWAAK_COMMAND_TEST=cargo nextest run`. Overwriting via environment currently does not work for the `llm` configuration.
+**A**: You can use a `kwaak.local.toml` and add it to your `.gitignore`. Alternatively, all configuration can be overridden by environment variables, prefixed with `KWAAK` and separated by double underscores. For instance, `KWAAK__COMMAND_TEST=cargo nextest run`. Overwriting via environment currently does not work for the `llm` configuration.
 
 ## Community
 
