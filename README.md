@@ -284,6 +284,10 @@ You can mix and match models from different providers for different tasks.
 
 #### Other configuration
 
+- **`agent_custom_constraints`**: Additional constraints / instructions for the agent.
+  These are passes to the agent in the system prompt and are rendered in a list. If you
+  intend to use more complicated instructions, consider adding a file to read in the
+  repository instead.
 - **`cache_dir`, `log_dir`**: Directories for cache and logs. Defaults are within your system's cache directory.
 - **`indexing_concurrency`**: Adjust concurrency for indexing, defaults based on CPU count.
 - **`indexing_batch_size`**: Batch size setting for indexing. Defaults to a higher value for Ollama and a lower value for OpenAI.
