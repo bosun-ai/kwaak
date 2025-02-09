@@ -185,6 +185,7 @@ async fn start_agent(mut repository: repository::Repository, initial_message: &s
 }
 
 #[instrument(skip_all)]
+#[allow(clippy::field_reassign_with_default)]
 async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Result<()> {
     ::tracing::info!("Loaded configuration: {:?}", repository.config());
 
@@ -204,6 +205,10 @@ async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Res
 
     // Start the application
     let mut app = App::default();
+
+    // We don't want the frontend to be aware of any repository specifics
+    // However, the config does allow from some UI customization, so we copy it here
+    app.ui_config = repository.config().ui.clone();
 
     if args.skip_indexing {
         app.skip_indexing = true;

@@ -91,6 +91,15 @@ pub struct Config {
     /// How the agent will edit files, defaults to whole
     #[serde(default)]
     pub agent_edit_mode: AgentEditMode,
+
+    #[serde(default)]
+    pub ui: UIConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct UIConfig {
+    pub hide_header: bool,
 }
 
 fn default_otel_enabled() -> bool {

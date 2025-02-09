@@ -295,6 +295,7 @@ You can mix and match models from different providers for different tasks.
 - **`git.auto_push_remote`**: Enabled by default if a github key is present. Automatically pushes to the remote repository after each chat completion. You can disable this by setting it to `false`.
 - `**git.auto_commit_disabled`: Opt-out of automatic commits after each chat completion.
 - **_`disabled_tools.pull_request`_**: Enables or disables the pull request tool. Defaults to `false`.
+- **`ui.hide_header`**: Optionally hide the top header in the UI. Defaults to `false`.
 
 <!-- ROADMAP -->
 
