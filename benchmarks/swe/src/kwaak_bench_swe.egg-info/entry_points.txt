@@ -1,0 +1,2 @@
+[console_scripts]
+kwaak-bench-swe = kwaak_bench_swe.main:main

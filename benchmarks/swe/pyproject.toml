@@ -1,0 +1,21 @@
+[project]
+name = "kwaak-bench-swe"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.32.3",
+    "datasets>=2.16.1",
+]
+
+[project.scripts]
+kwaak-bench-swe = "kwaak_bench_swe.main:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["kwaak_bench_swe"]

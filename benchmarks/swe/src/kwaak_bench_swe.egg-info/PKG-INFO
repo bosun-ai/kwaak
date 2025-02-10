@@ -1,0 +1,8 @@
+Metadata-Version: 2.2
+Name: kwaak-bench-swe
+Version: 0.1.0
+Summary: Add your description here
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: requests>=2.32.3
+Requires-Dist: datasets>=2.16.1
