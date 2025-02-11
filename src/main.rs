@@ -5,11 +5,11 @@ use std::{
     sync::Arc,
 };
 
+use crate::config::Config;
 use agent::v1::available_tools;
 use anyhow::{Context as _, Result};
 use clap::Parser;
 use commands::CommandResponse;
-use config::Config;
 use frontend::App;
 use git::github::GithubSession;
 use kwaak::{

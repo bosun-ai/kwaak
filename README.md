@@ -109,7 +109,7 @@ Powered by [Swiftide](https://github.com/bosun-ai/swiftide)
 - View and pull code changes from an agent; or have it create a pull request
 - Sandboxed execution in docker
 - OpenAI, Ollama and many other models via [OpenRouter](https://openrouter.ai)
-- Python, TypeScript/Javascript, Go, Java, Ruby, and Rust
+- Python, TypeScript/Javascript, Go, Java, Ruby, Solidity, and Rust
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
