@@ -1,6 +1,7 @@
 from dataclasses import dataclass, asdict
 from typing import Any
 from .swe_bench_instance import SWEBenchInstance
+from .docker_instance import DockerInstance
 
 @dataclass
 class TrialResult:
@@ -24,11 +25,12 @@ class TrialResult:
 class Trial:
   item: SWEBenchInstance
   name: str
+  container: DockerInstance
 
   def __init__(self, item: SWEBenchInstance, name: str) -> None:
     self.item = item
     self.name = name
-    self.container = Docker(self.item)
+    self.container = DockerInstance(self.item)
 
   def run(self) -> TrialResult:
     logging.info(f"Running trial {self.name}")

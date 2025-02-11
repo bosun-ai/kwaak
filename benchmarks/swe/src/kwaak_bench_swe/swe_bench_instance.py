@@ -49,6 +49,11 @@ class SWEBenchInstance:
             )
         ].join("\n")
 
+    def get_instance_container_name(self, run_id=None):
+        if not run_id:
+            return f"sweb.eval.{self.instance_id}"
+        return f"sweb.eval.{self.instance_id.lower()}.{run_id}"
+
     @property
     def apply_test_patch_command(self):
         HEREDOC_DELIMITER = "EOF_114329324912"

@@ -7,6 +7,7 @@ Description-Content-Type: text/markdown
 Requires-Dist: requests>=2.32.3
 Requires-Dist: datasets>=2.16.1
 Requires-Dist: swebench>=3.0.6
+Requires-Dist: docker>=7.1.0
 
 # Kwaak SWE-Bench Runner
 
