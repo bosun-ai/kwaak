@@ -24,12 +24,27 @@ class TrialResult:
 class Trial:
   item: SWEBenchInstance
   name: str
-  
+
   def __init__(self, item: SWEBenchInstance, name: str) -> None:
     self.item = item
     self.name = name
+    self.container = Docker(self.item)
 
   def run(self) -> TrialResult:
+    logging.info(f"Running trial {self.name}")
+    # Run the docker image associated with the instance
+    # In the docker container, check out the base commit and throw away future commits
+    # In the docker container, apply the test patch
+    # In the docker container, run the test suite to validate the patch
+    # In the docker container, run the agent
+    # In the docker container, run git diff between the base commit and the current working tree to get the patch
+
+    self.container.run()
+
+
+
+    self.container.cleanup()
+
     """Run the trial."""
     return TrialResult(
       instance=self.item,
@@ -37,3 +52,6 @@ class Trial:
       validation_failed=False,
       error="Not Implemented"
     )
+
+  # The trial goes like this:
+  

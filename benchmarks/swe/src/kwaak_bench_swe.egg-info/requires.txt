@@ -1,2 +1,3 @@
 requests>=2.32.3
 datasets>=2.16.1
+swebench>=3.0.6

@@ -6,3 +6,54 @@ Requires-Python: >=3.11
 Description-Content-Type: text/markdown
 Requires-Dist: requests>=2.32.3
 Requires-Dist: datasets>=2.16.1
+Requires-Dist: swebench>=3.0.6
+
+# Kwaak SWE-Bench Runner
+
+A Python package for running and evaluating models against the SWE-bench dataset, a benchmark for evaluating LLMs on real-world software engineering tasks.
+
+## Overview
+
+This package provides tooling to:
+- Load and process the SWE-bench dataset
+- Run trials against model implementations
+- Track and serialize results
+- Generate predictions in the format required by SWE-bench
+
+## Usage
+
+Requires Python 3.11 or higher.
+
+Run the benchmark using uv:
+```bash
+uv run kwaak-bench-swe
+```
+
+This will:
+1. Load the SWE-bench test dataset
+2. Take the first 10 items from each repository
+3. Run trials for each instance
+4. Save results to the `results` directory
+5. Generate predictions in `predictions.jsonl`
+
+## Project Structure
+
+- `src/kwaak_bench_swe/`
+  - `main.py` - Entry point and benchmark orchestration
+  - `benchmark.py` - Benchmark runner and result management
+  - `trial.py` - Individual trial execution and result tracking
+  - `swe_bench_instance.py` - SWE-bench dataset item representation
+
+## Output
+
+The benchmark generates two main outputs:
+1. `results/{benchmark-name}/{trial-name}.json` - Detailed results for each trial
+2. `predictions.jsonl` - Predictions in SWE-bench submission format
+
+## Development
+
+
+### Contributing
+1. Ensure all code is properly typed
+2. Maintain JSON serialization support for result objects
+3. Follow the existing pattern of using dataclasses for data structures

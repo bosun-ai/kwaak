@@ -8,6 +8,11 @@ import logging
 from .benchmark import Benchmark
 from .swe_bench_instance import SWEBenchInstance
 
+from swebench.harness.prepare_images import main as prepare_images
+
+DATASET_NAME = "princeton-nlp/SWE-bench_Verified"
+SPLIT = "test"
+
 def cleanup_processes():
     """Kill any existing LLM proxy and workspace provider processes."""
     try:
@@ -27,7 +32,7 @@ def main():
     cleanup_processes()
     
     # Load the dataset
-    dataset = load_dataset('princeton-nlp/SWE-bench_Verified', split='test')
+    dataset = load_dataset(DATASET_NAME, split=SPLIT)
     logging.info(f"Total items in test split: {len(dataset)}\n")
     predictions = []
 
@@ -44,6 +49,16 @@ def main():
         raw_dataset_items.extend(repo_items[:10])
 
     dataset_items = SWEBenchInstance.from_dataset(raw_dataset_items)
+    instance_ids = [item.instance_id for item in dataset_items]
+
+    prepare_images(
+        DATASET_NAME,
+        SPLIT,
+        instance_ids,
+        4, # max workers
+        False, # force rebuild
+        8192, # open file limit
+    )
 
     output_path = os.path.join(os.getcwd(), "results")
     os.makedirs(output_path, exist_ok=True)
