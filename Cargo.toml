@@ -19,8 +19,8 @@ tokio = { version = "1.42.0", features = ["full"] }
 tokio-util = { version = "0.7.13", features = ["rt"] }
 strum = "0.26.3"
 strum_macros = "0.26.4"
-swiftide-docker-executor = "0.4.2"
 swiftide = { version = "0.18.2", features = [
+swiftide-docker-executor = "0.5.0"
   "lancedb",
   "openai",
   "tree-sitter",

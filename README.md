@@ -123,22 +123,34 @@ Powered by [Swiftide](https://github.com/bosun-ai/swiftide)
 
 Before you can run Kwaak, make sure you have Docker installed on your machine.
 
+#### Docker
+
 Kwaak expects a Dockerfile in the root of your project. If you already have a Dockerfile, you can just name it differently and configure it in the configuration file. This Dockerfile should contain all the dependencies required to test and run your code.
 
 > [!NOTE]
 > Docker is used to provide a safe execution environment for the agents. It does not affect the performance of the LLMs. The LLMs are running either locally or in the cloud, and the docker container is only used to run the code. This is done to ensure that the agents cannot access your local system. Kwaak itself runs locally.
 
-Additionally, it expects the following to be present:
+Additionally, the Dockerfile expects `git` and should be `ubuntu` based.
 
-- **git**: Required for git operations
-- **fd** [github](https://github.com/sharkdp/fd): Required for searching files. Note that it should be available as `fd`, some systems have it as `fdfind`.
-- **ripgrep** [github](https://github.com/BurntSushi/ripgrep): Required for searching _in_ files. Note that it should be available as `rg`.
+A simple example for Rust:
+
+```Dockerfile
+FROM rust:latest
+
+RUN apt-get update && apt install git -y --no-install-recommends
+
+COPY . /app
+
+WORKDIR /app
+```
 
 If you already have a Dockerfile for other purposes, you can either extend it or provide a new one and override the dockerfile path in the configuration.
 
 _For an example Dockerfile in Rust, see [this project's Dockerfile](/Dockerfile)_
 
-Additionally, you will need an OpenAI API key (if OpenAI is your LLM provider).
+#### Api keys
+
+Additionally, you will need an API key for your LLM of choice.
 
 If you'd like kwaak to be able to make pull requests, search github code, and automatically push to a remote, a [github token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
 
