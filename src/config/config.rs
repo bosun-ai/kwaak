@@ -91,6 +91,23 @@ pub struct Config {
     /// How the agent will edit files, defaults to whole
     #[serde(default)]
     pub agent_edit_mode: AgentEditMode,
+
+    /// Additional constraints / instructions for the agent
+    ///
+    /// These are passes to the agent in the system prompt and are rendered in a list. If you
+    /// intend to use more complicated instructions, consider adding a file to read in the
+    /// repository instead.
+    #[serde(default)]
+    pub agent_custom_constraints: Option<Vec<String>>,
+
+    #[serde(default)]
+    pub ui: UIConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct UIConfig {
+    pub hide_header: bool,
 }
 
 fn default_otel_enabled() -> bool {
@@ -169,6 +186,7 @@ impl FromStr for Config {
         toml::from_str(s)
             .context("Failed to parse configuration")
             .and_then(Config::fill_llm_api_keys)
+            .map(Config::add_project_name_to_paths)
     }
 }
 
@@ -177,22 +195,19 @@ impl Config {
         let builder = ConfigRs::builder()
             .add_source(File::from(path))
             .add_source(File::with_name("kwaak.local").required(false))
-            .add_source(
-                Environment::with_prefix("KWAAK")
-                    .separator("_")
-                    .convert_case(config::Case::Lower),
-            );
+            .add_source(Environment::with_prefix("KWAAK").separator("__"));
 
         let config = builder.build()?;
 
         config
             .try_deserialize()
             .map_err(Into::into)
-            .and_then(Config::fill_llm_api_keys) // Here using serde to deserialize into Self
+            .and_then(Config::fill_llm_api_keys)
+            .map(Config::add_project_name_to_paths)
     }
 
     // Seeds the api keys into the LLM configurations
-    pub fn fill_llm_api_keys(mut self) -> Result<Self> {
+    fn fill_llm_api_keys(mut self) -> Result<Self> {
         let previous = self.clone();
 
         let LLMConfigurations {
@@ -208,8 +223,19 @@ impl Config {
         Ok(self)
     }
 
+    fn add_project_name_to_paths(mut self) -> Self {
+        if self.cache_dir.ends_with("kwaak") {
+            self.cache_dir.push(&self.project_name);
+        }
+        if self.log_dir.ends_with("kwaak/logs") {
+            self.log_dir.push(&self.project_name);
+        }
+
+        self
+    }
+
     #[must_use]
-    pub fn root_provider_api_key_for(&self, provider: &LLMConfiguration) -> Option<&ApiKey> {
+    fn root_provider_api_key_for(&self, provider: &LLMConfiguration) -> Option<&ApiKey> {
         match provider {
             LLMConfiguration::OpenAI { .. } => self.openai_api_key.as_ref(),
             LLMConfiguration::OpenRouter { .. } => self.open_router_api_key.as_ref(),
@@ -458,5 +484,41 @@ mod tests {
         };
 
         assert_eq!(api_key.as_ref().unwrap().expose_secret(), "child-api-key");
+    }
+
+    #[test]
+    fn test_add_project_name_to_paths() {
+        let toml = r#"
+            language = "rust"
+            project_name = "test"
+
+            [commands]
+            test = "cargo test"
+            coverage = "cargo tarpaulin"
+
+            [git]
+            owner = "bosun-ai"
+            repository = "kwaak"
+
+            [llm.indexing]
+            provider = "OpenAI"
+            api_key = "text:test-key"
+            prompt_model = "gpt-4o-mini"
+
+            [llm.query]
+            provider = "OpenAI"
+            api_key = "text:other-test-key"
+            prompt_model = "gpt-4o-mini"
+
+            [llm.embedding]
+            provider = "OpenAI"
+            api_key = "text:other-test-key"
+            embedding_model = "text-embedding-3-small"
+            "#;
+
+        let config: Config = Config::from_str(toml).unwrap();
+
+        assert!(config.cache_dir.ends_with("kwaak/test"));
+        assert!(config.log_dir().ends_with("kwaak/logs/test"));
     }
 }

@@ -1,4 +1,7 @@
-#![allow(dead_code)]
+mod replace_lines;
+
+pub use replace_lines::replace_lines;
+
 use std::sync::Arc;
 use swiftide::traits::CommandError;
 
@@ -19,6 +22,7 @@ use crate::{
     util::{self, accept_non_zero_exit},
 };
 
+#[allow(dead_code)]
 static MAIN_BRANCH_CMD: &str = "git remote show origin | sed -n '/HEAD branch/s/.*: //p'";
 
 /// WARN: Experimental
@@ -465,116 +469,6 @@ pub async fn fetch_url(_context: &dyn AgentContext, url: &str) -> Result<ToolOut
             Ok(url_content)
         })
         .map(Into::into)
-}
-
-const REPLACE_LINES_DESCRIPTION: &str = "Replace lines in a file.
-
-You MUST read the file with line numbers first BEFORE EVERY EDIT, to know the start and end line numbers of the block you want to replace.
-After editing, you MUST read the file again to get the new line numbers.
-
-You MUST use the correct amount of whitespace.
-
-If you want to add lines, use `add_lines` instead
-
-Example:
-
-Given a file `test.txt`:
-```
-1|Line 1
-2|Line 2
-3|Line 3
-4|Line 4
-```
-
-To replace line 2 and 3 with:
-```
-New line 2
-New line 3
-New line 4
-```
-
-Call the tool with:
-
-start_line=2,end_line=3,content=New line 2\nNew line 3\nNew line 4
-
-Then the result will be:
-```
-1|Line 1
-2|New Line 2
-3|New Line 3
-4|New Line 4
-5|Line 4
-```
-";
-#[tool(
-    description = REPLACE_LINES_DESCRIPTION,
-    param(name = "file_name", description = "Full path of the file"),
-    param(
-        name = "start_line",
-        description = "Start line number of the lines to replace"
-    ),
-    param(
-        name = "end_line",
-        description = "Last line number of the block to replace."
-    ),
-    param(name = "content", description = "Replacement content")
-)]
-pub async fn replace_lines(
-    context: &dyn AgentContext,
-    file_name: &str,
-    start_line: &str,
-    end_line: &str,
-    content: &str,
-) -> Result<ToolOutput, ToolError> {
-    // Read the file content
-    let cmd = Command::ReadFile(file_name.into());
-
-    let file_content = match context.exec_cmd(&cmd).await {
-        Ok(output) => output.output,
-        Err(CommandError::NonZeroExit(output, ..)) => {
-            return Ok(output.into());
-        }
-        Err(e) => return Err(e.into()),
-    };
-
-    let mut lines = file_content.lines().collect::<Vec<_>>();
-
-    let Ok(start_line) = start_line.parse::<usize>() else {
-        return Ok("Invalid start line number, must be a valid number greater than 0".into());
-    };
-
-    let Ok(end_line) = end_line.parse::<usize>() else {
-        return Ok("Invalid end line number, must be a valid number 0 or greater".into());
-    };
-
-    let lines_len = lines.len();
-
-    if start_line > lines_len || end_line > lines_len {
-        return Ok("Start or end line number is out of bounds".into());
-    }
-
-    if end_line > 0 && start_line > end_line {
-        return Ok("Start line number must be less than or equal to end line number".into());
-    }
-
-    if start_line == 0 {
-        return Ok("Start line number must be greater than 0".into());
-    }
-
-    // Input is 1 indexed, lines are 0 indexed
-    if end_line == 0 {
-        lines.insert(start_line, content);
-    } else {
-        lines.splice(
-            start_line.saturating_sub(1)..=end_line.saturating_sub(1),
-            content.lines(),
-        );
-    }
-
-    let write_cmd = Command::WriteFile(file_name.into(), lines.join("\n"));
-    context.exec_cmd(&write_cmd).await?;
-
-    Ok(format!("Successfully replaced content in {file_name}. Before making new edits, you MUST read the file again, as the line numbers WILL have changed.").into())
 }
 
 #[tool(

@@ -109,7 +109,7 @@ Powered by [Swiftide](https://github.com/bosun-ai/swiftide)
 - View and pull code changes from an agent; or have it create a pull request
 - Sandboxed execution in docker
 - OpenAI, Ollama and many other models via [OpenRouter](https://openrouter.ai)
-- Python, TypeScript/Javascript, Go, Java, Ruby, and Rust
+- Python, TypeScript/Javascript, Go, Java, Ruby, Solidity, and Rust
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -284,6 +284,10 @@ You can mix and match models from different providers for different tasks.
 
 #### Other configuration
 
+- **`agent_custom_constraints`**: Additional constraints / instructions for the agent.
+  These are passes to the agent in the system prompt and are rendered in a list. If you
+  intend to use more complicated instructions, consider adding a file to read in the
+  repository instead.
 - **`cache_dir`, `log_dir`**: Directories for cache and logs. Defaults are within your system's cache directory.
 - **`indexing_concurrency`**: Adjust concurrency for indexing, defaults based on CPU count.
 - **`indexing_batch_size`**: Batch size setting for indexing. Defaults to a higher value for Ollama and a lower value for OpenAI.
@@ -295,6 +299,7 @@ You can mix and match models from different providers for different tasks.
 - **`git.auto_push_remote`**: Enabled by default if a github key is present. Automatically pushes to the remote repository after each chat completion. You can disable this by setting it to `false`.
 - `**git.auto_commit_disabled`: Opt-out of automatic commits after each chat completion.
 - **_`disabled_tools.pull_request`_**: Enables or disables the pull request tool. Defaults to `false`.
+- **`ui.hide_header`**: Optionally hide the top header in the UI. Defaults to `false`.
 
 <!-- ROADMAP -->
 
@@ -341,7 +346,7 @@ You can mix and match models from different providers for different tasks.
 
 **Q**: In my project, different contributors have different setups. How can I make sure kwaak works for everyone?
 
-**A**: You can use a `kwaak.local.toml` and add it to your `.gitignore`. Alternatively, all configuration can be overridden by environment variables, prefixed with `KWAAK_` and separated by underscores. For instance, `KWAAK_COMMAND_TEST=cargo nextest run`. Overwriting via environment currently does not work for the `llm` configuration.
+**A**: You can use a `kwaak.local.toml` and add it to your `.gitignore`. Alternatively, all configuration can be overridden by environment variables, prefixed with `KWAAK` and separated by double underscores. For instance, `KWAAK__COMMAND_TEST=cargo nextest run`. Overwriting via environment currently does not work for the `llm` configuration.
 
 ## Community
 

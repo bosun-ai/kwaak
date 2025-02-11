@@ -5,6 +5,7 @@ pub mod chat_message;
 pub mod cli;
 pub mod commands;
 pub mod config;
+pub mod evaluations;
 pub mod frontend;
 pub mod git;
 pub mod indexing;
