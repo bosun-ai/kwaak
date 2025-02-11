@@ -11,6 +11,13 @@ openai_api_key = "{{ openai_api_key}}"
 #openai_api_key = "env:OPENAI_API_KEY"
 {% endif %}
 
+## If you are using Anthropic, set the api key here
+{% if anthropic_api_key -%}
+anthropic_api_key = "{{ anthropic_api_key}}"
+{% else -%}
+#anthropic_api_key = "env:ANTHROPIC_API_KEY"
+{% endif %}
+
 ## Optional: Connect kwaak to github to create PRs, search code, and automatically push to a  remote
 {% if github_api_key -%}
 github_api_key = "{{ github_api_key }}"
