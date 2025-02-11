@@ -20,7 +20,7 @@ tokio-util = { version = "0.7.13", features = ["rt"] }
 strum = "0.26.3"
 strum_macros = "0.26.4"
 swiftide-docker-executor = "0.4.2"
-swiftide = { version = "0.18.1", features = [
+swiftide = { version = "0.18.2", features = [
   "lancedb",
   "openai",
   "tree-sitter",
@@ -144,9 +144,9 @@ default = ["otel"]
 
 
 [patch.crates-io]
-swiftide = { path = "../swiftide/swiftide" }
-swiftide-macros = { path = "../swiftide/swiftide-macros" }
-swiftide-core = { path = "../swiftide/swiftide-core" }
+# swiftide = { path = "../swiftide/swiftide" }
+# swiftide-macros = { path = "../swiftide/swiftide-macros" }
+# swiftide-core = { path = "../swiftide/swiftide-core" }
 
 
 # The profile that 'dist' will build with

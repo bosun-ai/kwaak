@@ -7404,7 +7404,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "swiftide"
-version = "0.18.1"
+version = "0.18.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f05711d623b823edf2a6d9bf3e291f78589f3329fb2ae4661b92b6366c6db960"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7420,7 +7422,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-agents"
-version = "0.18.1"
+version = "0.18.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "55f8a78ab7b4853b5a52fcbc39fda90190d71978224c4a754a85fbe07b1c79ae"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7440,7 +7444,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-core"
-version = "0.18.1"
+version = "0.18.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95ed3f4df188651b96cc539454c8a1e1c2b4c76b0669da1670686b815a5bc125"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7487,7 +7493,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-indexing"
-version = "0.18.1"
+version = "0.18.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d4b93b3394f61ddad240a7d0ec0c0338d61ba504a04d21357efdaed4ed55ca9"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7511,7 +7519,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-integrations"
-version = "0.18.1"
+version = "0.18.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c174a8067a8fc111146976da77d7289bfb4718adbb5840381bcfe0d9b9f7442f"
 dependencies = [
  "anyhow",
  "arrow",
@@ -7551,7 +7561,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-macros"
-version = "0.18.1"
+version = "0.18.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4fea39986b7e70b624726d557286b6a4acf6d8de246c903908e5d85c2f676e75"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7566,7 +7578,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-query"
-version = "0.18.1"
+version = "0.18.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d6428e9e7905f2f50d98c79b5bfe5deeefd341fce293a992bcfbfd2151ee4fe7"
 dependencies = [
  "anyhow",
  "async-trait",
