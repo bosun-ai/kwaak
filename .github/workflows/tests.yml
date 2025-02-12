@@ -18,8 +18,11 @@ env:
 
 jobs:
   test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     name: Test
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
