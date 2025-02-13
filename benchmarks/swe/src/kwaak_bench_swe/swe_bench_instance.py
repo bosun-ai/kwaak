@@ -1,3 +1,18 @@
+"""SWE-bench instance representation and management.
+
+This module provides the SWEBenchInstance class which represents a single test case
+from the SWE-bench dataset. It handles:
+- Test case metadata
+- Docker container configuration
+- Test execution environment setup
+- Command generation for test execution
+
+Typical usage:
+    instance = SWEBenchInstance(**dataset_item)
+    container_name = instance.get_instance_container_name()
+    test_cmd = instance.test_cmd
+"""
+
 from dataclasses import dataclass, asdict
 from typing import Any
 import json
@@ -8,6 +23,18 @@ from swebench.harness.constants import (
 
 @dataclass
 class SWEBenchInstance:
+    """Represents a single test case from the SWE-bench dataset.
+    
+    This class encapsulates all the information needed to run and evaluate
+    a single SWE-bench test case, including repository information, test
+    specifications, and Docker container configuration.
+    
+    The class provides methods for:
+    - Docker container management
+    - Test command generation
+    - Patch application
+    - Result evaluation
+    """
     repo: str # The repository owner/name identifier from GitHub.
     instance_id: str # A formatted instance identifier, usually as repo_owner__repo_name-PR-number.
     base_commit: str # The commit hash of the repository representing the HEAD of the repository before the solution PR is applied.
@@ -25,20 +52,53 @@ class SWEBenchInstance:
     repo_directory = "/testbed"
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert the instance to a dictionary for JSON serialization."""
+        """Convert the instance to a dictionary for JSON serialization.
+        
+        Returns:
+            dict[str, Any]: A dictionary representation of the instance,
+                           suitable for JSON serialization. All fields are
+                           included in their native Python types.
+        """        
         return asdict(self)
 
     @property
-    def instance_image_key(self):
+    def instance_image_key(self) -> str:
+        """Get the Docker image key for this test instance.
+        
+        The image key is constructed using the instance ID and is always
+        configured for x86_64 architecture for compatibility reasons.
+        
+        Returns:
+            str: Docker image identifier in the format
+                 'swebench/sweb.eval.x86_64.{normalized_instance_id}:latest'
+        """
         # Hardcoded to x86_64 because some instances don't support arm64, but all support x86_64
         return f"swebench/sweb.eval.x86_64.{self.instance_id.lower().replace('__', '_1776_')}:latest"
 
     @property
-    def specs(self):
+    def specs(self) -> dict[str, Any]:
+        """Get the test specifications for this instance.
+        
+        Retrieves the test specifications from the SWE-bench repository-version
+        mapping, which includes test commands and environment setup.
+        
+        Returns:
+            dict[str, Any]: Test specifications for this repository and version
+        """
         return MAP_REPO_VERSION_TO_SPECS[self.repo][self.version]
 
     @property
-    def test_cmd(self):
+    def test_cmd(self) -> str:
+        """Generate the full test command for this instance.
+        
+        Constructs a shell command string that:
+        1. Activates the correct conda environment
+        2. Changes to the repository directory
+        3. Executes the test command with appropriate directives
+        
+        Returns:
+            str: A newline-separated sequence of shell commands
+        """
         return [
             f"source /opt/miniconda3/bin/activate",
             f"conda activate {self.env_name}",
@@ -49,19 +109,48 @@ class SWEBenchInstance:
             )
         ].join("\n")
 
-    def get_instance_container_name(self, run_id=None):
+    def get_instance_container_name(self, run_id: str | None = None) -> str:
+        """Generate a unique container name for this instance.
+        
+        Args:
+            run_id: Optional identifier to make the container name unique
+                   across multiple runs
+        
+        Returns:
+            str: Container name in the format 'sweb.eval.{instance_id}[.{run_id}]'
+        """
         if not run_id:
             return f"sweb.eval.{self.instance_id}"
         return f"sweb.eval.{self.instance_id.lower()}.{run_id}"
 
     @property
-    def apply_test_patch_command(self):
+    def apply_test_patch_command(self) -> str:
+        """Generate the command to apply the test patch.
+        
+        Creates a shell command that applies the test patch using git apply
+        with a heredoc to avoid file creation. Uses a unique delimiter to
+        prevent conflicts with patch content.
+        
+        Returns:
+            str: Shell command to apply the test patch
+        """
         HEREDOC_DELIMITER = "EOF_114329324912"
         return f"git apply -v - <<'{HEREDOC_DELIMITER}'\n{self.test_patch}\n{HEREDOC_DELIMITER}"
 
     # class method from_dataset iterates over the dataset and returns a list of SWEBenchInstance objects
     @classmethod
-    def from_dataset(cls, dataset):
+    def from_dataset(cls, dataset: list[dict[str, Any]]) -> list['SWEBenchInstance']:
+        """Create SWEBenchInstance objects from dataset items.
+        
+        Args:
+            dataset: List of dictionary items from the SWE-bench dataset
+        
+        Returns:
+            list[SWEBenchInstance]: List of instantiated SWEBenchInstance objects
+            
+        The method handles JSON parsing of the FAIL_TO_PASS and PASS_TO_PASS
+        fields which are stored as JSON strings in the dataset.
+        """
         return [
             cls(
                 **{
