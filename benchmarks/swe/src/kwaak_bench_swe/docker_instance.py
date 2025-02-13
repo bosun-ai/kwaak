@@ -120,9 +120,9 @@ class DockerInstance:
           }
         ]
     )
-    logging.info(f"Container for {self.instance.instance_id} created: {container.id}")
-    container.start()
-    logging.info(f"Container for {self.instance.instance_id} started: {container.id}")
+    logging.info(f"Container for {self.instance.instance_id} created: {self.container.id}")
+    self.container.start()
+    logging.info(f"Container for {self.instance.instance_id} started: {self.container.id}")
 
     return self
   
@@ -150,7 +150,7 @@ class DockerInstance:
     This method ensures proper cleanup of the container and its
     resources using the SWE-bench docker utilities.
     """
-    docker_utils.cleanup_container(self.container)
+    docker_utils.cleanup_container(self.client, self.container, logger=logging.getLogger())
 
   def exec(self, command: str) -> ExecResult:
     """Execute a command in the container.

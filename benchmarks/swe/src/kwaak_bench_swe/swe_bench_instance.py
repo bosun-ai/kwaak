@@ -16,13 +16,18 @@ Typical usage:
 from dataclasses import dataclass, asdict
 from typing import Any
 import json
-from swebench.harness.test_spec import get_test_directives
+from swebench.harness.test_spec.python import get_test_directives
 from swebench.harness.constants import (
     MAP_REPO_VERSION_TO_SPECS,
 )
 
 @dataclass
 class SWEBenchInstance:
+    """Represents a single test case from the SWE-bench dataset.
+    
+    This class is our internal representation of a SWE-bench test case,
+    which is converted from the dataset's SWEbenchInstance format.
+    """
     """Represents a single test case from the SWE-bench dataset.
     
     This class encapsulates all the information needed to run and evaluate
@@ -140,6 +145,14 @@ class SWEBenchInstance:
     # class method from_dataset iterates over the dataset and returns a list of SWEBenchInstance objects
     @classmethod
     def from_dataset(cls, dataset: list[dict[str, Any]]) -> list['SWEBenchInstance']:
+        """Create SWEBenchInstances from dataset entries.
+        
+        Args:
+            dataset: List of SWEbenchInstance entries from the dataset
+            
+        Returns:
+            list[SWEBenchInstance]: List of our internal representations
+        """
         """Create SWEBenchInstance objects from dataset items.
         
         Args:

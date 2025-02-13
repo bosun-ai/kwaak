@@ -1,7 +1,7 @@
 README.md
 pyproject.toml
 src/kwaak_bench_swe/benchmark.py
-src/kwaak_bench_swe/docker.py
+src/kwaak_bench_swe/docker_instance.py
 src/kwaak_bench_swe/main.py
 src/kwaak_bench_swe/swe_bench_instance.py
 src/kwaak_bench_swe/trial.py
@@ -11,3 +11,4 @@ src/kwaak_bench_swe.egg-info/dependency_links.txt
 src/kwaak_bench_swe.egg-info/entry_points.txt
 src/kwaak_bench_swe.egg-info/requires.txt
 src/kwaak_bench_swe.egg-info/top_level.txt
+tests/test_trial.py
