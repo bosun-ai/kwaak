@@ -136,13 +136,18 @@ class DockerInstance:
         string: Content to write to the file
         filepath: Target path in the container
     """
-    src_path = os.path.join(self.instance_dir, filepath)
-    dst_path = os.path.join("/tmp", filepath)
+    # Write to a temporary file in the instance directory
+    tmp_name = os.path.basename(filepath)
+    src_path = os.path.join(self.instance_dir, tmp_name)
+    os.makedirs(self.instance_dir, exist_ok=True)
 
     with open(src_path, "w") as f:
       f.write(string)
 
-    self.container.exec_run(f"cp {dst_path} {filepath}")
+    # Create target directory and copy file
+    file_dir = os.path.dirname(filepath)
+    self.container.exec_run(f"mkdir -p {file_dir}")
+    self.container.exec_run(f"cp /tmp/{tmp_name} {filepath}")
 
   def cleanup(self) -> None:
     """Clean up container resources.
@@ -150,7 +155,8 @@ class DockerInstance:
     This method ensures proper cleanup of the container and its
     resources using the SWE-bench docker utilities.
     """
-    docker_utils.cleanup_container(self.client, self.container, logger=logging.getLogger())
+    if hasattr(self, 'container'):
+      docker_utils.cleanup_container(self.client, self.container, logger=logging.getLogger())
 
   def exec(self, command: str) -> ExecResult:
     """Execute a command in the container.

@@ -104,15 +104,12 @@ class SWEBenchInstance:
         Returns:
             str: A newline-separated sequence of shell commands
         """
-        return [
+        return "\n".join([
             f"source /opt/miniconda3/bin/activate",
             f"conda activate {self.env_name}",
             f"cd {self.repo_directory}",
-            " ".join(
-                self.specs["test_cmd"],
-                *get_test_directives(self.to_dict()),
-            )
-        ].join("\n")
+            " ".join([self.specs["test_cmd"]] + get_test_directives(self.to_dict()))
+        ])
 
     def get_instance_container_name(self, run_id: str | None = None) -> str:
         """Generate a unique container name for this instance.

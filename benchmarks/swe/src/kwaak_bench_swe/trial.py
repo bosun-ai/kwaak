@@ -18,13 +18,20 @@ Typical usage:
         print("Test passed!")
 """
 
+import logging
+import os
+import json
 from dataclasses import dataclass, asdict
 from typing import Any
+
 from .swe_bench_instance import SWEBenchInstance
 from .docker_instance import DockerInstance
-import logging
 
 from swebench.harness.grading import get_eval_report
+from swebench.harness.test_spec.test_spec import (
+    make_test_spec,
+    TestSpec,
+)
 
 @dataclass
 class TrialResult:
@@ -120,20 +127,29 @@ class Trial:
     """
     logging.info(f"Running trial {self.name}")
 
-    self.container.run()
+    self.container.run(self.name)
 
-    self.container.write_string_to_file(self.item.test_patch, "/tmp/test.patch")
-    patch_result = self.container.exec("git apply /tmp/test.patch")
-
+    # First establish initial git state
     initial_git_ref = self.establish_initial_git_ref()
 
+    # Then apply the patch
+    self.container.write_string_to_file(self.item.test_patch, "/tmp/test.patch")
+    # Try to apply the patch and get detailed error if it fails
+    patch_result = self.container.exec("git apply /tmp/test.patch")
     if patch_result.exit_code != 0:
-      logging.info(f"Test Patch failed: {patch_result}")
+      # Get more details about the failure
+      logging.info(f"Test Patch failed with code {patch_result.exit_code}")
+      logging.info(f"Patch output: {patch_result.output}")
+      
+      # Try with -v for more details
+      verbose_result = self.container.exec("git apply -v /tmp/test.patch")
+      logging.info(f"Verbose patch output: {verbose_result.output}")
+      
       return TrialResult(
         instance=self.item,
         run_failed=False,
         validation_failed=True,
-        error="Patch failed",
+        error=f"Patch failed: {patch_result.output}",
       )
     
     pre_patch_results = self.container.exec(self.item.test_cmd)
@@ -141,13 +157,14 @@ class Trial:
     
     # write results to file in results_dir
     with open(pre_patch_results_path, "w") as f:
-      f.write(pre_patch_results.output)
+      f.write(pre_patch_results.output.decode())
 
     # Run the agent
     self.install_agent()
     self.run_agent()
 
-    diff = self.container.exec(f"git diff {initial_git_ref}").output
+    # Get the changes made by the agent
+    diff = self.container.exec(f"git diff {initial_git_ref}").output.decode()
 
     prediction = {
       "instance_id": self.item.instance_id,
@@ -155,18 +172,18 @@ class Trial:
       "model_patch": diff,
     }
 
-    test_results = self.container.exec(self.item.test_cmd)
+    test_results = self.container.exec(self.item.test_cmd).output.decode()
     test_results_path = os.path.join(self.results_dir, f"{self.name}-test_results.txt")
     
     with open(test_results_path, "w") as f:
-      f.write(test_results.output)
+      f.write(test_results)
 
     model_patch_path = os.path.join(self.results_dir, f"{self.name}-patch.diff")
 
     with open(model_patch_path, "w") as f:
       f.write(diff)
 
-    result = self.evaluate_results(prediction, test_results.output)
+    result = self.evaluate_results(prediction, test_results_path)
     
     # TODO: Uncomment next line when debugging is done:
     # self.container.cleanup()
@@ -187,10 +204,23 @@ class Trial:
     Raises:
         Exception: If git operations fail
     """
-    commit_context = "git config user.name 'agent-test-harness'; git config user.email 'agent-test-harness@bosun.ai';"
-    result = self.container.exec(f"{commit_context} git commit -a -m \"benchmark-head\" 1>/dev/null; git rev-parse HEAD")
+    # Configure git user
+    result = self.container.exec("git config user.name 'agent-test-harness'")
     if result.exit_code != 0:
-        raise Exception(f"Failed to establish initial git ref: {result.output}")
+        raise Exception(f"Failed to configure git user name: {result.output}")
+
+    result = self.container.exec("git config user.email 'agent-test-harness@bosun.ai'")
+    if result.exit_code != 0:
+        raise Exception(f"Failed to configure git user email: {result.output}")
+
+    # Create initial commit - git commit may return non-zero even on success
+    self.container.exec("git commit -a -m 'benchmark-head'")
+
+    # Get commit hash - this will fail if there really was no commit
+    result = self.container.exec("git rev-parse HEAD")
+    if result.exit_code != 0:
+        raise Exception(f"Failed to get commit hash: {result.output}")
+
     return result.output.strip()
 
   def install_agent(self) -> None:
@@ -233,7 +263,7 @@ class Trial:
     # that includes the problem statement from instance.
     pass
 
-  def evaluate_results(self, prediction: dict, results: str) -> TrialResult:
+  def evaluate_results(self, prediction: dict, results_path: str) -> TrialResult:
     """Evaluate the trial results using SWE-bench grading.
     
     Args:
@@ -251,13 +281,10 @@ class Trial:
     """
     instance_id = self.item.instance_id
 
-    test_spec = {
-      "instance_id": instance_id,
-      "FAIL_TO_PASS": self.item.FAIL_TO_PASS,
-      "PASS_TO_PASS": self.item.PASS_TO_PASS,
-    }
+    
+    test_spec = make_test_spec(self.item.to_dict())
 
-    report = get_eval_report(test_spec, prediction, results, include_tests_status=True)
+    report = get_eval_report(test_spec, prediction, results_path, include_tests_status=True)
     resolved = report[instance_id]['resolved']
 
     logging.info(
@@ -265,7 +292,7 @@ class Trial:
       f"Result for {instance_id}: resolved: {resolved}"
     )
 
-    report_path = os.join(self.results_dir, f"{self.name}-report.json")
+    report_path = os.path.join(self.results_dir, f"{self.name}-report.json")
     
     with open(report_path, "w") as f:
       json.dump(report, f, indent=2)

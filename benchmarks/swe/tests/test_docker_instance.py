@@ -59,10 +59,10 @@ def test_docker_instance_write_file(mock_swe_instance, temp_results_dir):
     try:
         # Write a test file
         test_content = "test content"
-        instance.write_string_to_file(test_content, "test.txt")
+        instance.write_string_to_file(test_content, "/testbed/test.txt")
         
         # Verify file exists and has correct content
-        result = instance.exec("cat test.txt")
+        result = instance.exec("cat /testbed/test.txt")
         assert result.exit_code == 0
         assert result.output.decode().strip() == test_content
     finally:
