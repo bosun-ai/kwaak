@@ -12,8 +12,7 @@ def test_trial_with_real_docker(mock_swe_instance, temp_results_dir, mocker):
         # Mock run_agent to simulate agent making changes
         def mock_run_agent():
             # Make a simple change that would normally be made by the agent
-            trial.container.exec("echo 'test change' > /testbed/test.txt")
-            # Stage the changes so they'll be included in the git diff
+            trial.container.exec("sh -c \"echo 'test change' > /testbed/test.txt\"")
             trial.container.exec("git add /testbed/test.txt")
             trial.container.exec('git commit -m "test change"')
         
@@ -30,7 +29,7 @@ def test_trial_with_real_docker(mock_swe_instance, temp_results_dir, mocker):
         # Verify that test.txt was created and its contents are in the diff
         cat_result = trial.container.exec("cat /testbed/test.txt")
         assert cat_result.exit_code == 0
-        assert cat_result.output.strip() == "test change"
+        assert cat_result.output.decode().strip() == "test change"
         
         # The patch in the result should contain our change
         assert "test change" in result.patch

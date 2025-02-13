@@ -164,7 +164,7 @@ class Trial:
     self.run_agent()
 
     # Get the changes made by the agent
-    diff = self.container.exec(f"git diff {initial_git_ref}").output.decode()
+    diff = self.container.exec(f"git diff {initial_git_ref} HEAD").output.decode()
 
     prediction = {
       "instance_id": self.item.instance_id,
@@ -191,7 +191,7 @@ class Trial:
     return result
 
   def establish_initial_git_ref(self) -> str:
-    """Create an initial git commit and get its reference.
+    """Create a git commit of the current state and get its reference.
     
     This method:
     1. Configures git user information
@@ -221,7 +221,7 @@ class Trial:
     if result.exit_code != 0:
         raise Exception(f"Failed to get commit hash: {result.output}")
 
-    return result.output.strip()
+    return result.output.decode().strip()
 
   def install_agent(self) -> None:
     """Install the Kwaak agent in the test environment.
