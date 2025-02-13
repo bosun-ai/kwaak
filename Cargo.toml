@@ -146,6 +146,12 @@ default = ["otel"]
 # swiftide-macros = { path = "../swiftide/swiftide-macros" }
 # swiftide-core = { path = "../swiftide/swiftide-core" }
 
+[workspace.metadata.cross.target.x86_64-unknown-linux-gnu]
+image = "rust:1.83.0"
+pre-build = [
+    "apt-get update && apt-get --assume-yes install libssl-dev ripgrep fd-find git ssh curl libstdc++6 build-essential protobuf-compiler libprotobuf-dev pkg-config iputils-ping make libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev",
+]
+
 
 # The profile that 'dist' will build with
 [profile.dist]

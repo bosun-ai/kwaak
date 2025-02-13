@@ -28,7 +28,7 @@ class DockerInstance:
   def __init__(self, instance: SWEBenchInstance, results_dir: str):
     self.client = docker_from_env()
     self.instance = instance
-    self.instance_dir = os.path.join(results_dir, instance.instance_id)
+    self.instance_dir = os.path.join(results_dir, "container")
 
   def run(self, run_id: str) -> Self:
     os.makedirs(self.instance_dir, exist_ok=True)

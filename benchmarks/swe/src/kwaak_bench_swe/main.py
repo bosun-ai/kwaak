@@ -51,14 +51,14 @@ def main():
     dataset_items = SWEBenchInstance.from_dataset(raw_dataset_items)
     instance_ids = [item.instance_id for item in dataset_items]
 
-    prepare_images(
-        DATASET_NAME,
-        SPLIT,
-        instance_ids,
-        4, # max workers
-        False, # force rebuild
-        8192, # open file limit
-    )
+    # prepare_images(
+    #     DATASET_NAME,
+    #     SPLIT,
+    #     instance_ids,
+    #     4, # max workers
+    #     False, # force rebuild
+    #     8192, # open file limit
+    # )
 
     output_path = os.path.join(os.getcwd(), "results")
     os.makedirs(output_path, exist_ok=True)
