@@ -15,6 +15,7 @@ Typical usage:
 
 import os
 import json
+from typing import Any
 
 from .swe_bench_instance import SWEBenchInstance
 from .trial import Trial, TrialResult
@@ -133,7 +134,7 @@ class Benchmark:
         next_run = self.next_run()
         if next_run is None:
             return None
-        trial = Trial(next_run["instance"], next_run["run_name"])
+        trial = Trial(next_run["instance"], next_run["run_name"], self.output_path)
         result = trial.run()
         self.add_result(next_run["run_name"], result)
 
