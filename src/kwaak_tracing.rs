@@ -42,7 +42,7 @@ pub fn init(repository: &Repository) -> Result<Guard> {
     if cfg!(feature = "otel") && repository.config().otel_enabled {
         env_filter_layer = env_filter_layer
             .add_directive("swiftide=debug".parse().unwrap())
-            .add_directive("swiftide_docker_executor=info".parse().unwrap())
+            .add_directive("swiftide_docker_executor=debug".parse().unwrap())
             .add_directive("swiftide_indexing=debug".parse().unwrap())
             .add_directive("swiftide_integrations=debug".parse().unwrap())
             .add_directive("swiftide_query=debug".parse().unwrap())

@@ -20,7 +20,7 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest] # Macos-latest does not properly support docker.
     name: Test
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
