@@ -243,10 +243,14 @@ class Trial:
     if subprocess.run(["cross", "--version"], check=False).returncode != 0:
       subprocess.run(["cargo", "install", "cross", "--git", "https://github.com/cross-rs/cross"], check=True)
 
-    # we use cargo build to ensure the agent is built for the x96_64 architecture
-    subprocess.run(["cross", "build", "--target", "x86_64-unknown-linux-gnu", "--release"], cwd=agent_root)
     # copy the agent binary to the root of the results directory
     agent_path = os.path.join(agent_root, "target", "x86_64-unknown-linux-gnu", "release", "kwaak")
+
+    if not os.path.exists(agent_path):
+      # we use cargo build to ensure the agent is built for the x96_64 architecture
+      logging.info(f"Building agent in {agent_root}")
+      subprocess.run(["cross","build", "--target", "x86_64-unknown-linux-gnu", "--release"], cwd=agent_root)
+
     subprocess.run(["cp", agent_path, self.container.instance_dir])
     self.container.exec("chmod +x /tmp/kwaak")
     self.container.exec("cp /tmp/kwaak /usr/local/bin/kwaak")

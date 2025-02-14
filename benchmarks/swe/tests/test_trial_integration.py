@@ -38,3 +38,24 @@ def test_trial_with_real_docker(mock_swe_instance, temp_results_dir, mocker):
         # Clean up
         if hasattr(trial, 'container'):
             trial.container.cleanup()
+
+
+def test_trial_agent_installation(mock_swe_instance, temp_results_dir):
+    """Test that kwaak is properly installed and available in the container."""
+    trial = Trial(mock_swe_instance, "test-agent-install", temp_results_dir)
+    
+    try:
+        # Initialize the container
+        trial.container.run(trial.name)
+        
+        # Run the trial and verify kwaak installation
+        trial.install_agent()
+        
+        # Verify that kwaak is installed and available
+        result = trial.container.exec("kwaak --version")
+        assert result.exit_code == 0
+        assert "kwaak" in result.output.decode().lower()
+    finally:
+        # Clean up
+        if hasattr(trial, 'container'):
+            trial.container.cleanup()
