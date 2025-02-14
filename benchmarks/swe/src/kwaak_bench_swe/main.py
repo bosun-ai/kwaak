@@ -15,7 +15,6 @@ Typical usage:
 
 from datasets import load_dataset
 import os
-import yaml
 import subprocess
 import json
 import logging
@@ -95,10 +94,10 @@ def main():
     raw_dataset_items = []
     for repo in all_repos:
         repo_items = [item for item in dataset_list if item["repo"] == repo]
-        raw_dataset_items.extend(repo_items[:10])
+        raw_dataset_items.extend(repo_items[:2])
 
     dataset_items = SWEBenchInstance.from_dataset(raw_dataset_items)
-    instance_ids = [item.instance_id for item in dataset_items]
+    # instance_ids = [item.instance_id for item in dataset_items]
 
     # prepare_images(
     #     DATASET_NAME,
@@ -112,7 +111,7 @@ def main():
     output_path = os.path.join(os.getcwd(), "results")
     os.makedirs(output_path, exist_ok=True)
 
-    kwaak_version = "0.1.0"
+    kwaak_version = "0.8.1"
     benchmark_name = f"swe-bench-kwaak-{kwaak_version}"
     benchmark = Benchmark(benchmark_name, dataset_items, output_path)
 

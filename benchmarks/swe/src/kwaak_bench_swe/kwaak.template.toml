@@ -1,0 +1,20 @@
+language = "Python"
+tool_executor = "local"
+openai_api_key = "text:$OPENAI_API_KEY"
+otel_enabled = true
+
+[commands]
+test = "/tmp/test.sh"
+coverage = "/tmp/coverage.sh"
+
+[llm.indexing]
+provider = "OpenAI"
+prompt_model = "gpt-4o-mini"
+
+[llm.query]
+provider = "OpenAI"
+prompt_model = "gpt-4o"
+
+[llm.embedding]
+provider = "OpenAI"
+embedding_model = "text-embedding-3-large"

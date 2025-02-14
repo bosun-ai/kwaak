@@ -158,7 +158,7 @@ class DockerInstance:
     if hasattr(self, 'container'):
       docker_utils.cleanup_container(self.client, self.container, logger=logging.getLogger())
 
-  def exec(self, command: str) -> ExecResult:
+  def exec(self, command: str, env: dict[str, str] = {}) -> ExecResult:
     """Execute a command in the container.
     
     Args:
@@ -167,5 +167,5 @@ class DockerInstance:
     Returns:
         ExecResult: Object containing the command's output and exit code
     """
-    result = self.container.exec_run(command)
+    result = self.container.exec_run(command, environment=env)
     return ExecResult(result.output, result.exit_code)

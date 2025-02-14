@@ -21,6 +21,7 @@ Typical usage:
 import logging
 import os
 import json
+import subprocess
 from dataclasses import dataclass, asdict
 from typing import Any
 
@@ -239,29 +240,67 @@ class Trial:
     agent_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
 
     # check if cross is installed
-    if subprocess.run(["cross", "--version"], check=False) != 0:
-      subprocess.run(["cargo install cross --git https://github.com/cross-rs/cross"], check=True)
+    if subprocess.run(["cross", "--version"], check=False).returncode != 0:
+      subprocess.run(["cargo", "install", "cross", "--git", "https://github.com/cross-rs/cross"], check=True)
 
     # we use cargo build to ensure the agent is built for the x96_64 architecture
     subprocess.run(["cross", "build", "--target", "x86_64-unknown-linux-gnu", "--release"], cwd=agent_root)
     # copy the agent binary to the root of the results directory
     agent_path = os.path.join(agent_root, "target", "x86_64-unknown-linux-gnu", "release", "kwaak")
     subprocess.run(["cp", agent_path, self.container.instance_dir])
+    self.container.exec("chmod +x /tmp/kwaak")
+    self.container.exec("cp /tmp/kwaak /usr/local/bin/kwaak")
 
   def run_agent(self) -> None:
     """Execute the Kwaak agent in the test environment.
     
-    This method will:
-    1. Set up the agent configuration
-    2. Run the agent in run-agent mode
-    3. Provide the problem statement as initial message
+    This method:
+    1. Sets up the agent configuration
+    2. Runs the agent in run-agent mode
+    3. Provides the problem statement as initial message
     
-    Note: Currently a placeholder for future implementation
     """
+    template_path = os.path.join(os.path.dirname(__file__), "kwaak.template.toml")
+    with open(template_path, "r") as f:
+      template = f.read()
+
+    template_path = os.path.join(self.container.instance_dir, "kwaak.rendered.toml")
+    with open(template_path, "w") as f:
+      f.write(template)
+
+    # replace the problem statement in the template
     # We setup a kwaak.toml file in the instance directory, then we run the agent
     # using the kwaak command in run-agent mode with an initial-message with a prompt
     # that includes the problem statement from instance.
     pass
+
+  def invoke_kwaak(self):
+    prompt = self.render_prompt()
+    result = self.container.exec(
+      f"kwaak -c /tmp/kwaak.rendered.toml run-agent --initial-message \"$PROMPT\" 2>&1 | tee -a /tmp/kwaak.log",
+      env={
+        "PROMPT": prompt,
+        "KWAAK_CACHE_DIR": f"/tmp/kwaak_cache/{self.item.repo}",
+        "OPENAI_API_KEY": os.environ["OPENAI_API_KEY"],
+      }
+    )
+    agent_result_path = os.path.join(self.results_dir, "agent_result.txt")
+    
+    with open(agent_result_path, "w") as f:
+      f.write(result.output.decode())
+      f.write(f"\nExit Code: {result.exit_code}")
+
+  def render_prompt(self):
+    return (
+        "A user has reported the following issue:\n\n"
+        f"<issue>\n{self.item.problem_statement}\n</issue>\n\n"
+        "Could you solve the issue? I have added a failing test case for it. Using the following patch:\n\n"
+        f"<patch>\n{self.item.test_patch}\n</patch>\n\n"
+        "Please make sure that your solution makes the test(s) in this patch pass, "
+        "and does not introduce any new failing tests. "
+        "You can ignore tests that were already failing that are not related to the tests in this patch."
+        "Do not modify the tests in this patch nor any other tests in the repository, only fix the issue."
+    )
 
   def evaluate_results(self, prediction: dict, results_path: str) -> TrialResult:
     """Evaluate the trial results using SWE-bench grading.
@@ -280,7 +319,6 @@ class Trial:
     4. Saves the evaluation report
     """
     instance_id = self.item.instance_id
-
     
     test_spec = make_test_spec(self.item.to_dict())
 
