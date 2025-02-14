@@ -128,68 +128,76 @@ class Trial:
     """
     logging.info(f"Running trial {self.name}")
 
-    self.container.run(self.name)
+    try:
+        self.container.run(self.name)
 
-    # First establish initial git state
-    initial_git_ref = self.establish_initial_git_ref()
+        # First establish initial git state
+        initial_git_ref = self.establish_initial_git_ref()
 
-    # Then apply the patch
-    self.container.write_string_to_file(self.item.test_patch, "/tmp/test.patch")
-    # Try to apply the patch and get detailed error if it fails
-    patch_result = self.container.exec("git apply /tmp/test.patch")
-    if patch_result.exit_code != 0:
-      # Get more details about the failure
-      logging.info(f"Test Patch failed with code {patch_result.exit_code}")
-      logging.info(f"Patch output: {patch_result.output}")
-      
-      # Try with -v for more details
-      verbose_result = self.container.exec("git apply -v /tmp/test.patch")
-      logging.info(f"Verbose patch output: {verbose_result.output}")
-      
-      return TrialResult(
-        instance=self.item,
-        run_failed=False,
-        validation_failed=True,
-        error=f"Patch failed: {patch_result.output}",
-      )
-    
-    pre_patch_results = self.container.exec(self.item.test_cmd)
-    pre_patch_results_path = os.path.join(self.results_dir, f"{self.name}-pre_patch_test_results.txt")
-    
-    # write results to file in results_dir
-    with open(pre_patch_results_path, "w") as f:
-      f.write(pre_patch_results.output.decode())
+        # Then apply the patch
+        self.container.write_string_to_file(self.item.test_patch, "/tmp/test.patch")
+        # Try to apply the patch and get detailed error if it fails
+        patch_result = self.container.exec("git apply /tmp/test.patch")
+        if patch_result.exit_code != 0:
+          # Get more details about the failure
+          logging.info(f"Test Patch failed with code {patch_result.exit_code}")
+          logging.info(f"Patch output: {patch_result.output}")
+          
+          # Try with -v for more details
+          verbose_result = self.container.exec("git apply -v /tmp/test.patch")
+          logging.info(f"Verbose patch output: {verbose_result.output}")
+          
+          return TrialResult(
+            instance=self.item,
+            run_failed=False,
+            validation_failed=True,
+            error=f"Patch failed: {patch_result.output}",
+          )
+        
+        pre_patch_results = self.container.exec(self.item.test_cmd)
+        pre_patch_results_path = os.path.join(self.results_dir, f"{self.name}-pre_patch_test_results.txt")
+        
+        # write results to file in results_dir
+        with open(pre_patch_results_path, "w") as f:
+          f.write(pre_patch_results.output.decode())
 
-    # Run the agent
-    self.install_agent()
-    self.run_agent()
+        # Run the agent
+        self.install_agent()
+        self.run_agent()
 
-    # Get the changes made by the agent
-    diff = self.container.exec(f"git diff {initial_git_ref} HEAD").output.decode()
+        # Get the changes made by the agent
+        diff = self.container.exec(f"git diff {initial_git_ref} HEAD").output.decode()
 
-    prediction = {
-      "instance_id": self.item.instance_id,
-      "model_name_or_path": self.name,
-      "model_patch": diff,
-    }
+        prediction = {
+          "instance_id": self.item.instance_id,
+          "model_name_or_path": self.name,
+          "model_patch": diff,
+        }
 
-    test_results = self.container.exec(self.item.test_cmd).output.decode()
-    test_results_path = os.path.join(self.results_dir, f"{self.name}-test_results.txt")
-    
-    with open(test_results_path, "w") as f:
-      f.write(test_results)
+        test_results = self.container.exec(self.item.test_cmd).output.decode()
+        test_results_path = os.path.join(self.results_dir, f"{self.name}-test_results.txt")
+        
+        with open(test_results_path, "w") as f:
+          f.write(test_results)
 
-    model_patch_path = os.path.join(self.results_dir, f"{self.name}-patch.diff")
+        model_patch_path = os.path.join(self.results_dir, f"{self.name}-patch.diff")
 
-    with open(model_patch_path, "w") as f:
-      f.write(diff)
+        with open(model_patch_path, "w") as f:
+          f.write(diff)
 
-    result = self.evaluate_results(prediction, test_results_path)
-    
-    # TODO: Uncomment next line when debugging is done:
-    # self.container.cleanup()
+        result = self.evaluate_results(prediction, test_results_path)
+        
+        # TODO: Uncomment next line when debugging is done:
+        # self.container.cleanup()
 
-    return result
+        return result
+    except Exception as e:
+        return TrialResult(
+            instance=self.item,
+            run_failed=True,
+            validation_failed=False,
+            error=str(e)
+        )
 
   def establish_initial_git_ref(self) -> str:
     """Create a git commit of the current state and get its reference.
@@ -272,11 +280,7 @@ class Trial:
     with open(template_path, "w") as f:
       f.write(template)
 
-    # replace the problem statement in the template
-    # We setup a kwaak.toml file in the instance directory, then we run the agent
-    # using the kwaak command in run-agent mode with an initial-message with a prompt
-    # that includes the problem statement from instance.
-    pass
+    self.invoke_kwaak()
 
   def invoke_kwaak(self):
     prompt = self.render_prompt()
@@ -326,7 +330,9 @@ class Trial:
     
     test_spec = make_test_spec(self.item.to_dict())
 
+    logging.info(f"test_spec: {test_spec}")
     report = get_eval_report(test_spec, prediction, results_path, include_tests_status=True)
+    logging.info(f"report: {report}")
     resolved = report[instance_id]['resolved']
 
     logging.info(

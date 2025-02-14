@@ -40,6 +40,41 @@ def test_trial_with_real_docker(mock_swe_instance, temp_results_dir, mocker):
             trial.container.cleanup()
 
 
+def test_trial_evaluate_results(mock_swe_instance, temp_results_dir, mocker):
+    """Test result evaluation with a simple Hello World change."""
+    trial = Trial(mock_swe_instance, "test-1", temp_results_dir)
+    
+    try:
+        # Mock invoke_kwaak to make a simple change
+        def mock_invoke_kwaak():
+            # Make a simple change that adds Hello World to README.md
+            trial.container.exec('sh -c "echo \'Hello World\' >> /testbed/README.md"')
+            trial.container.exec('git add /testbed/README.md')
+            trial.container.exec('git commit -m "Add Hello World"')
+        
+        mocker.patch.object(trial, 'invoke_kwaak', side_effect=mock_invoke_kwaak)
+        
+        # Run the trial
+        result = trial.run()
+        
+        # Verify the result
+        assert isinstance(result, TrialResult)
+        assert not result.failed()
+        
+        # Verify that README.md was modified
+        cat_result = trial.container.exec('cat /testbed/README.md')
+        assert cat_result.exit_code == 0
+        assert 'Hello World' in cat_result.output.decode()
+        
+        # The patch in the result should contain our change
+        assert 'Hello World' in result.patch
+        
+    finally:
+        # Clean up
+        if hasattr(trial, 'container'):
+            trial.container.cleanup()
+
+
 def test_trial_agent_installation(mock_swe_instance, temp_results_dir):
     """Test that kwaak is properly installed and available in the container."""
     trial = Trial(mock_swe_instance, "test-agent-install", temp_results_dir)

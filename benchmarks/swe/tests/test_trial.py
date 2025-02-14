@@ -1,7 +1,9 @@
 """Unit tests for the trial module."""
 
+import os
 import pytest
 from kwaak_bench_swe.trial import Trial, TrialResult
+from swebench.harness.test_spec.test_spec import TestSpec
 
 
 def test_trial_result_failed():
@@ -35,7 +37,7 @@ def test_trial_result_to_dict(mock_swe_instance):
     
     result_dict = result.to_dict()
     assert isinstance(result_dict, dict)
-    assert result_dict["instance"]["repo"] == "test/repo"
+    assert result_dict["instance"]["repo"] == "psf/requests"
     assert result_dict["patch"] == "test patch"
     assert not result_dict["run_failed"]
     assert not result_dict["validation_failed"]
@@ -65,39 +67,12 @@ def test_trial_establish_git_ref(mock_swe_instance, temp_results_dir, mock_docke
     assert ref == "test-hash"
     
     # Verify git commands were called
-    calls = mock_docker_instance.container.exec_run.call_args_list
-    assert len(calls) == 1
-    assert "git config" in calls[0].args[0]
-    assert "git commit" in calls[0].args[0]
-
-
-def test_trial_evaluate_results(mock_swe_instance, temp_results_dir, mocker):
-    """Test result evaluation."""
-    trial = Trial(mock_swe_instance, "test-1", temp_results_dir)
-    
-    # Mock the SWE-bench evaluation
-    mock_eval = mocker.patch('swebench.harness.grading.get_eval_report')
-    mock_eval.return_value = {
-        "resolved": True,
-        "error": None,
-        "tests_status": {
-            "test_foo_fails": True,
-            "test_foo_passes": True
-        }
-    }
-    
-    prediction = {
-        "instance_id": mock_swe_instance.instance_id,
-        "model_name_or_path": "test-model",
-        "model_patch": "test patch"
-    }
-    results = "test output"
-    
-    result = trial.evaluate_results(prediction, results)
-    assert isinstance(result, TrialResult)
-    assert result.success
-    assert not result.failed()
-    assert result.patch == "test patch"
+    calls = mock_docker_instance.container.exec.call_args_list
+    assert len(calls) == 4  # git config name, email, commit, and rev-parse
+    assert "git config user.name" in calls[0].args[0]
+    assert "git config user.email" in calls[1].args[0]
+    assert "git commit" in calls[2].args[0]
+    assert "git rev-parse" in calls[3].args[0]
 
 
 def test_trial_run(mock_swe_instance, temp_results_dir, mock_docker_instance, mocker):
