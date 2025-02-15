@@ -63,14 +63,18 @@ class Benchmark:
         self.output_path = os.path.join(output_path, name)
         os.makedirs(self.output_path, exist_ok=True)
         
+        # Load existing results from JSON files
         for file in os.listdir(self.output_path):
-            with open(os.path.join(self.output_path, file), "r") as f:
-                run_name = file.split(".json")[0]
-                data = json.load(f)
-                # Convert instance data back to SWEBenchInstance
-                if 'instance' in data:
-                    data['instance'] = SWEBenchInstance(**data['instance'])
-                self.results[run_name] = TrialResult(**data)
+            if file.endswith('.json'):
+                file_path = os.path.join(self.output_path, file)
+                if os.path.isfile(file_path):
+                    with open(file_path, "r") as f:
+                        run_name = file.split(".json")[0]
+                        data = json.load(f)
+                        # Convert instance data back to SWEBenchInstance
+                        if 'instance' in data:
+                            data['instance'] = SWEBenchInstance(**data['instance'])
+                        self.results[run_name] = TrialResult(**data)
 
     def run_name(self, instance: SWEBenchInstance) -> str:
         """Generate a unique name for a trial run.

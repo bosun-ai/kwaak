@@ -18,11 +18,15 @@ import os
 import subprocess
 import json
 import logging
+import docker
 
 from .benchmark import Benchmark
 from .swe_bench_instance import SWEBenchInstance
 
 from swebench.harness.prepare_images import main as prepare_images
+from swebench.harness.test_spec.test_spec import (
+    get_test_specs_from_dataset,
+)
 
 # Configuration constants
 DATASET_NAME = "princeton-nlp/SWE-bench_Verified"
@@ -52,27 +56,33 @@ def cleanup_processes():
 def main():
     """Run the SWE-bench benchmark with the Kwaak agent.
     
-    This function orchestrates the entire benchmark process:
-    1. Sets up logging
-    2. Cleans up any existing processes
-    3. Loads and filters the SWE-bench dataset
-    4. Creates benchmark instances
-    5. Runs trials for each instance
-    6. Collects and saves results
+    This function orchestrates the benchmark process. It can either:
+    1. Run a single instance if --instance is specified
+    2. Run a subset of the dataset (first 2 items per repository) by default
     
-    The function processes a subset of the dataset by taking the first 10 items
-    from each repository. Results are saved in both detailed JSON format and
-    the SWE-bench submission format (predictions.jsonl).
+    Results are saved in both detailed JSON format and the SWE-bench 
+    submission format (predictions.jsonl).
     
     Environment Requirements:
         - Docker must be running
         - Python 3.11 or higher
         - Sufficient disk space for Docker images
     
+    Command-line Arguments:
+        --instance: Optional instance ID to run a single test case
+                   e.g., psf__requests-2317
+    
     Returns:
         None
     """
 
+    import argparse
+    
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description='Run SWE-bench benchmark with Kwaak agent')
+    parser.add_argument('--instance', type=str, help='Instance ID to run a single test case')
+    args = parser.parse_args()
+    
     # Configure logging
     logging.basicConfig(level=logging.INFO)
     
@@ -84,20 +94,47 @@ def main():
     logging.info(f"Total items in test split: {len(dataset)}\n")
     predictions = []
 
-    all_repos = list(set([item["repo"] for item in dataset]))
-
     # Convert dataset to list and sort by instance_id
     dataset_list = list(dataset)
     dataset_list.sort(key=lambda x: x["instance_id"])
-
-    # Get the first 10 items for each repo from the dataset
+    
+    # Filter dataset based on command line arguments
     raw_dataset_items = []
-    for repo in all_repos:
-        repo_items = [item for item in dataset_list if item["repo"] == repo]
-        raw_dataset_items.extend(repo_items[:2])
+    if args.instance:
+        # Find the specific instance
+        instance_items = [item for item in dataset_list if item["instance_id"] == args.instance]
+        if not instance_items:
+            logging.error(f"Instance {args.instance} not found in dataset")
+            return
+        raw_dataset_items = instance_items
+        logging.info(f"Running single instance: {args.instance}")
+    else:
+        # Get the first 2 items for each repo from the dataset
+        all_repos = list(set([item["repo"] for item in dataset]))
+        for repo in all_repos:
+            repo_items = [item for item in dataset_list if item["repo"] == repo]
+            raw_dataset_items.extend(repo_items[:2])
+        logging.info(f"Running first 2 items from {len(all_repos)} repositories")
 
     dataset_items = SWEBenchInstance.from_dataset(raw_dataset_items)
-    # instance_ids = [item.instance_id for item in dataset_items]
+    instance_ids = [item.instance_id for item in dataset_items]
+
+    test_specs = get_test_specs_from_dataset(raw_dataset_items, 'swebench', 'latest')
+    for spec in test_specs:
+        spec.arch = 'x86_64'
+ 
+    images_to_pull = [
+    #     'swebench/' + spec.base_image_key for spec in test_specs
+    # ] + [
+    #     'swebench/' + spec.env_image_key for spec in test_specs
+    # ] + [
+        spec.instance_image_key for spec in test_specs
+    ]
+
+    docker_client = docker.from_env()
+    for image in images_to_pull:
+        logging.info(f"Pulling image {image}")
+        docker_client.images.pull(image)
 
     # prepare_images(
     #     DATASET_NAME,
@@ -106,7 +143,10 @@ def main():
     #     4, # max workers
     #     False, # force rebuild
     #     8192, # open file limit
+    #     "swebench", # namespace
+    #     "latest" # tag
     # )
+    
 
     output_path = os.path.join(os.getcwd(), "results")
     os.makedirs(output_path, exist_ok=True)
@@ -115,8 +155,11 @@ def main():
     benchmark_name = f"swe-bench-kwaak-{kwaak_version}"
     benchmark = Benchmark(benchmark_name, dataset_items, output_path)
 
+    logging.info(f"Benchmark name: {benchmark_name}\n")
+    logging.info(f"Output path: {output_path}\n")
+
     while result := benchmark.run_next_trial():
-        logging.info(f"Running trial {result.instance.instance_id}")
+        logging.info(f"Done running trial {result.instance.instance_id}: {result.error or 'Success'}")
 
     for name, result in benchmark.results.items():
         if result.failed():

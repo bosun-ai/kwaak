@@ -18,6 +18,7 @@ Typical usage:
 """
 
 import logging
+from time import sleep
 from typing import Self
 import os
 
@@ -97,6 +98,7 @@ class DockerInstance:
         ImageNotFound: If the required Docker image is not available
     """
     os.makedirs(self.instance_dir, exist_ok=True)
+    
 
     try:
       self.client.images.get(self.instance.instance_image_key)

@@ -131,9 +131,6 @@ class Trial:
     try:
         self.container.run(self.name)
 
-        # First establish initial git state
-        initial_git_ref = self.establish_initial_git_ref()
-
         # Then apply the patch
         self.container.write_string_to_file(self.item.test_patch, "/tmp/test.patch")
         # Try to apply the patch and get detailed error if it fails
@@ -153,6 +150,9 @@ class Trial:
             validation_failed=True,
             error=f"Patch failed: {patch_result.output}",
           )
+
+        # Establish initial git state
+        initial_git_ref = self.establish_initial_git_ref()
         
         pre_patch_results = self.container.exec(self.item.test_cmd)
         pre_patch_results_path = os.path.join(self.results_dir, f"{self.name}-pre_patch_test_results.txt")
@@ -223,7 +223,10 @@ class Trial:
         raise Exception(f"Failed to configure git user email: {result.output}")
 
     # Create initial commit - git commit may return non-zero even on success
-    self.container.exec("git commit -a -m 'benchmark-head'")
+    self.container.exec("git add .")
+    result = self.container.exec("git commit -a -m 'benchmark-head'")
+    if result.exit_code != 0:
+      logging.info(f"Failed to create initial commit (exit code: {result.exit_code}): {result.output}")
 
     # Get commit hash - this will fail if there really was no commit
     result = self.container.exec("git rev-parse HEAD")
@@ -261,6 +264,7 @@ class Trial:
 
     subprocess.run(["cp", agent_path, self.container.instance_dir])
     self.container.exec("chmod +x /tmp/kwaak")
+    logging.info("Copying agent to container")
     self.container.exec("cp /tmp/kwaak /usr/local/bin/kwaak")
 
   def run_agent(self) -> None:
@@ -283,13 +287,16 @@ class Trial:
     self.invoke_kwaak()
 
   def invoke_kwaak(self):
+    logging.info("Invoking kwaak")
     prompt = self.render_prompt()
     result = self.container.exec(
-      f"kwaak -c /tmp/kwaak.rendered.toml run-agent --initial-message \"$PROMPT\" 2>&1 | tee -a /tmp/kwaak.log",
+      f"kwaak -c /tmp/kwaak.rendered.toml run-agent --initial-message \"$PROMPT\"",
       env={
         "PROMPT": prompt,
         "KWAAK_CACHE_DIR": f"/tmp/kwaak_cache/{self.item.repo}",
         "OPENAI_API_KEY": os.environ["OPENAI_API_KEY"],
+        "RUST_LOG": "debug",
+        "RUST_BACKTRACE": "1"
       }
     )
     agent_result_path = os.path.join(self.results_dir, "agent_result.txt")
