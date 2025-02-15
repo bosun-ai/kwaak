@@ -1,10 +1,11 @@
-use std::str::FromStr;
+use std::{str::FromStr, time::Duration};
 
 #[cfg(debug_assertions)]
-use crate::test_utils::NoopLLM;
+use crate::{config::Config, test_utils::NoopLLM};
 
 use super::ApiKey;
 use anyhow::{Context as _, Result};
+use backoff::ExponentialBackoffBuilder;
 use fastembed::{InitOptions, TextEmbedding};
 use serde::{Deserialize, Serialize};
 use swiftide::{
@@ -297,6 +298,7 @@ fn build_openai(
     base_url: Option<&Url>,
 ) -> Result<integrations::openai::OpenAI> {
     let api_key = api_key.context("Expected an api key")?;
+
     let mut config =
         async_openai::config::OpenAIConfig::default().with_api_key(api_key.expose_secret());
 
@@ -304,8 +306,27 @@ fn build_openai(
         config = config.with_api_base(base_url.to_string());
     };
 
+    // Load backoff settings from configuration
+    let initial_interval = Duration::from_secs(
+        Config::get("backoff.initial_interval").unwrap_or(Duration::from_secs(15)),
+    );
+    let multiplier = Config::get("backoff.multiplier").unwrap_or(2.0);
+    let randomization_factor = Config::get("backoff.randomization_factor").unwrap_or(0.05);
+    let max_elapsed_time = Duration::from_secs(
+        Config::get("backoff.max_elapsed_time").unwrap_or(Duration::from_secs(120)),
+    );
+
+    let backoff = ExponentialBackoffBuilder::default()
+        .with_initial_interval(initial_interval)
+        .with_multiplier(multiplier)
+        .with_randomization_factor(randomization_factor)
+        .with_max_elapsed_time(Some(max_elapsed_time))
+        .build();
+
+    let client = async_openai::Client::with_config(config).with_backoff(backoff);
+
     integrations::openai::OpenAI::builder()
-        .client(async_openai::Client::with_config(config))
+        .client(client)
         .default_prompt_model(prompt_model.to_string())
         .default_embed_model(embedding_model.to_string())
         .build()

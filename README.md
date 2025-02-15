@@ -296,6 +296,29 @@ You can mix and match models from different providers for different tasks.
 
 #### Other configuration
 
+#### Backoff Configuration
+
+Kwaak uses an `ExponentialBackoffBuilder` to handle retry strategies. You can configure the backoff settings in the `kwaak.toml` file under the `[backoff]` section. 
+These settings are optional, and default to the following values:
+
+- `initial_interval`: Defaults to 15 seconds. This sets the initial waiting time between retries.
+- `multiplier`: Defaults to 2.0. This factor multiplies the interval on each retry attempt.
+- `randomization_factor`: Defaults to 0.05. Introduces randomness to avoid retry storms.
+- `max_elapsed_time`: Defaults to 120 seconds. This total time all attempts are allowed.
+
+Example Configuration:
+
+```toml
+[backoff]
+initial_interval = "10s"
+multiplier = 1.5
+randomization_factor = 0.1
+max_elapsed_time = "100s"
+```
+
+Adjust these values based on your specific requirements and preferences.
+
+
 - **`agent_custom_constraints`**: Additional constraints / instructions for the agent.
   These are passes to the agent in the system prompt and are rendered in a list. If you
   intend to use more complicated instructions, consider adding a file to read in the
