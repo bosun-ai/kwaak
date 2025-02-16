@@ -171,7 +171,7 @@ impl Default for DockerConfiguration {
 }
 
 /// Backoff configuration for api calls.
-/// Each time an api call fails backoff will wait an increasing period of time for each subsiquent
+/// Each time an api call fails backoff will wait an increasing period of time for each subsequent
 /// retry attempt. see <https://docs.rs/backoff/latest/backoff/> for more details.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct BackoffConfiguration {
