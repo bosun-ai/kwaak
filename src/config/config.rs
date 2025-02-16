@@ -123,6 +123,10 @@ pub struct Config {
     /// Defaults to 10.
     #[serde(default = "default_num_completions_for_summary")]
     pub num_completions_for_summary: usize,
+
+    /// The git user to use for the agent when committing changes
+    #[serde(default)]
+    pub agent_git_user: AgentGitUser,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -137,6 +141,21 @@ fn default_otel_enabled() -> bool {
 
 fn default_num_completions_for_summary() -> usize {
     10
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentGitUser {
+    pub name: String,
+    pub email: String,
+}
+
+impl Default for AgentGitUser {
+    fn default() -> Self {
+        Self {
+            name: "kwaak".to_string(),
+            email: "kwaak@bosun.ai".to_string(),
+        }
+    }
 }
 
 /// Opt out of certain tools an agent can use
