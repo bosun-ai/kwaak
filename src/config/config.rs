@@ -111,6 +111,18 @@ pub struct Config {
 
     #[serde(default)]
     pub ui: UIConfig,
+
+    /// Number of completions before the agent summarizes the conversation.
+    /// This is used to steer the agent to focus on the current task. If this value is too small
+    /// the agent will have clear loss of context when performing tasks. If this value is too large
+    /// the agent will not have focus and not understand what is relevant and important.
+    ///
+    /// Additionally, summarizing the conversation will reduce the context window which can be
+    /// beneficial for APIs with stringent limits on context tokens.
+    ///
+    /// Defaults to 10.
+    #[serde(default = "default_num_completions_for_summary")]
+    pub num_completions_for_summary: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -121,6 +133,10 @@ pub struct UIConfig {
 
 fn default_otel_enabled() -> bool {
     false
+}
+
+fn default_num_completions_for_summary() -> usize {
+    10
 }
 
 /// Opt out of certain tools an agent can use

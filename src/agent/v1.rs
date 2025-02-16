@@ -180,8 +180,12 @@ pub async fn start(
         &tools,
         &agent_env.start_ref,
     );
-    let conversation_summarizer =
-        ConversationSummarizer::new(query_provider.clone(), &tools, &agent_env.start_ref);
+    let conversation_summarizer = ConversationSummarizer::new(
+        query_provider.clone(),
+        &tools,
+        &agent_env.start_ref,
+        repository.config().num_completions_for_summary,
+    );
     let maybe_lint_fix_command = repository.config().commands.lint_and_fix.clone();
 
     let push_to_remote_enabled =

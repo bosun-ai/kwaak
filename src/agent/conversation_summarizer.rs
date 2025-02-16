@@ -23,14 +23,13 @@ use tracing::Instrument as _;
 
 use crate::util::accept_non_zero_exit;
 
-const NUM_COMPLETIONS_FOR_SUMMARY: usize = 10;
-
 #[derive(Clone)]
 pub struct ConversationSummarizer {
     llm: Arc<dyn ChatCompletion>,
     available_tools: Vec<Box<dyn Tool>>,
     num_completions_since_summary: Arc<AtomicUsize>,
     git_start_sha: String,
+    num_completions_for_summary: usize,
 }
 
 impl ConversationSummarizer {
@@ -38,12 +37,14 @@ impl ConversationSummarizer {
         llm: Box<dyn ChatCompletion>,
         available_tools: &[Box<dyn Tool>],
         git_start_sha: impl Into<String>,
+        num_completions_for_summary: usize,
     ) -> Self {
         Self {
             llm: llm.into(),
             available_tools: available_tools.into(),
             num_completions_since_summary: Arc::new(0.into()),
             git_start_sha: git_start_sha.into(),
+            num_completions_for_summary,
         }
     }
 
@@ -57,7 +58,7 @@ impl ConversationSummarizer {
                 .num_completions_since_summary
                 .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 
-            if current_count < NUM_COMPLETIONS_FOR_SUMMARY {
+            if current_count < self.num_completions_for_summary {
                 tracing::debug!(current_count, "Not enough completions for summary");
 
                 return Box::pin(async move { Ok(()) });
