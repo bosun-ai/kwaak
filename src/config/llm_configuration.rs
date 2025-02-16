@@ -314,7 +314,6 @@ impl LLMConfiguration {
         };
 
         // Load backoff settings from configuration
-        //let c_backoff = config.backoff;
         let backoff = ExponentialBackoffBuilder::default()
             .with_initial_interval(Duration::from_secs(backoff_config.initial_interval_sec))
             .with_multiplier(backoff_config.multiplier)
@@ -385,7 +384,7 @@ impl LLMConfiguration {
             .context("Failed to build Anthropic client")
     }
 
-    fn build_open_router(&self) -> Result<OpenRouter> {
+    fn build_open_router(&self, backoff_config: BackoffConfiguration) -> Result<OpenRouter> {
         let LLMConfiguration::OpenRouter {
             prompt_model,
             api_key,
@@ -401,8 +400,20 @@ impl LLMConfiguration {
             .site_name("Kwaak")
             .build()?;
 
+        // Load backoff settings from configuration
+        let backoff = ExponentialBackoffBuilder::default()
+            .with_initial_interval(Duration::from_secs(backoff_config.initial_interval_sec))
+            .with_multiplier(backoff_config.multiplier)
+            .with_randomization_factor(backoff_config.randomization_factor)
+            .with_max_elapsed_time(Some(Duration::from_secs(
+                backoff_config.max_elapsed_time_sec,
+            )))
+            .build();
+
+        let client = async_openai::Client::with_config(config).with_backoff(backoff);
+
         OpenRouter::builder()
-            .client(async_openai::Client::with_config(config))
+            .client(client)
             .default_prompt_model(prompt_model)
             .to_owned()
             .build()
@@ -452,7 +463,7 @@ impl LLMConfiguration {
                 Box::new(self.build_ollama()?) as Box<dyn SimplePrompt>
             }
             LLMConfiguration::OpenRouter { .. } => {
-                Box::new(self.build_open_router()?) as Box<dyn SimplePrompt>
+                Box::new(self.build_open_router(backoff_config)?) as Box<dyn SimplePrompt>
             }
             LLMConfiguration::FastEmbed { .. } => {
                 anyhow::bail!("FastEmbed does not have a simpl prompt model")
@@ -478,7 +489,7 @@ impl LLMConfiguration {
                 Box::new(self.build_ollama()?) as Box<dyn ChatCompletion>
             }
             LLMConfiguration::OpenRouter { .. } => {
-                Box::new(self.build_open_router()?) as Box<dyn ChatCompletion>
+                Box::new(self.build_open_router(backoff_config)?) as Box<dyn ChatCompletion>
             }
             LLMConfiguration::FastEmbed { .. } => {
                 anyhow::bail!("FastEmbed does not have a chat completion model")
