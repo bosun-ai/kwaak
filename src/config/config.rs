@@ -44,6 +44,8 @@ pub struct Config {
     #[serde(default)]
     pub docker: DockerConfiguration,
 
+    /// Optional: Backoff configuration for api calls
+    /// this is currently only used for open-ai and open-router
     #[serde(default)]
     pub backoff: BackoffConfiguration,
 
@@ -168,11 +170,19 @@ impl Default for DockerConfiguration {
     }
 }
 
+/// Backoff configuration for api calls.
+/// Each time an api call fails backoff will wait an increasing period of time for each subsiquent
+/// retry attempt. see <https://docs.rs/backoff/latest/backoff/> for more details.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct BackoffConfiguration {
+    /// Initial interval in seconds between retries
     pub initial_interval_sec: u64,
+    /// The factor by which the interval is multiplied on each retry attempt
     pub multiplier: f64,
+    /// Introduces randomness to avoid retry storms
     pub randomization_factor: f64,
+    /// Total time all attempts are allowed in seconds. Once a retry must wait longer than this,
+    /// the request is considered to have failed.
     pub max_elapsed_time_sec: u64,
 }
 
