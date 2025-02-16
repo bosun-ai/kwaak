@@ -131,6 +131,12 @@ class Trial:
     try:
         self.container.run(self.name)
 
+        # Write the test_cmd to a shell script
+        test_cmd_path = "/tmp/test.sh"
+        test_cmd = f"#!/bin/bash\nset -e\n{self.item.test_cmd}\n"
+        self.container.write_string_to_file(test_cmd, test_cmd_path)
+        self.container.exec(f"chmod +x {test_cmd_path}")
+
         # Then apply the patch
         self.container.write_string_to_file(self.item.test_patch, "/tmp/test.patch")
         # Try to apply the patch and get detailed error if it fails
@@ -154,18 +160,12 @@ class Trial:
         # Establish initial git state
         initial_git_ref = self.establish_initial_git_ref()
         
-        pre_patch_results = self.container.exec(self.item.test_cmd)
+        pre_patch_results = self.container.exec("/tmp/test.sh")
         pre_patch_results_path = os.path.join(self.results_dir, f"{self.name}-pre_patch_test_results.txt")
         
         # write results to file in results_dir
         with open(pre_patch_results_path, "w") as f:
           f.write(pre_patch_results.output.decode())
-
-        # Write the test_cmd to a shell script
-        test_cmd_path = "/tmp/test.sh"
-        test_cmd = f"#!/bin/bash\nset -e\n{self.item.test_cmd}\n"
-        self.container.write_string_to_file(test_cmd, test_cmd_path)
-        self.container.exec(f"chmod +x {test_cmd_path}")
 
         # Run the agent
         self.install_agent()
@@ -180,7 +180,7 @@ class Trial:
           "model_patch": diff,
         }
 
-        test_results = self.container.exec(self.item.test_cmd).output.decode()
+        test_results = self.container.exec("/tmp/test.sh").output.decode()
         test_results_path = os.path.join(self.results_dir, f"{self.name}-test_results.txt")
         
         with open(test_results_path, "w") as f:
