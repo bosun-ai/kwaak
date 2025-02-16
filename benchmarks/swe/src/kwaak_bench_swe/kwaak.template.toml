@@ -1,7 +1,7 @@
 language = "Python"
 tool_executor = "local"
-openai_api_key = "text:$OPENAI_API_KEY"
-otel_enabled = true
+openai_api_key = "env:OPENAI_API_KEY"
+otel_enabled = false
 
 [git]
 owner = "bosun-ai"
@@ -9,7 +9,6 @@ main_branch = "master"
 
 [commands]
 test = "/tmp/test.sh"
-coverage = "/tmp/coverage.sh"
 
 [llm.indexing]
 provider = "OpenAI"

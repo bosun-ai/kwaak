@@ -161,6 +161,12 @@ class Trial:
         with open(pre_patch_results_path, "w") as f:
           f.write(pre_patch_results.output.decode())
 
+        # Write the test_cmd to a shell script
+        test_cmd_path = "/tmp/test.sh"
+        test_cmd = f"#!/bin/bash\nset -e\n{self.item.test_cmd}\n"
+        self.container.write_string_to_file(test_cmd, test_cmd_path)
+        self.container.exec(f"chmod +x {test_cmd_path}")
+
         # Run the agent
         self.install_agent()
         self.run_agent()
@@ -262,10 +268,28 @@ class Trial:
       logging.info(f"Building agent in {agent_root}")
       subprocess.run(["cross","build", "--target", "x86_64-unknown-linux-gnu", "--release"], cwd=agent_root)
 
+    self.container.exec("apt-get update")
+    self.container.exec("apt-get install -y ripgrep fd-find")
+
     subprocess.run(["cp", agent_path, self.container.instance_dir])
     self.container.exec("chmod +x /tmp/kwaak")
     logging.info("Copying agent to container")
     self.container.exec("cp /tmp/kwaak /usr/local/bin/kwaak")
+
+    # write kwaak execution script to container
+    kwaak_script = """#!/bin/bash
+      echo "Setting modes.."
+      set -e
+      set -x
+      echo "Linking fdfind to fd"
+      ln -s $(which fdfind) /usr/local/bin/fd
+      echo "Dumping env.."
+      env > /tmp/env.log
+      echo "Invoking kwaak.."
+      kwaak --config-path /tmp/kwaak.rendered.toml run-agent --initial-message "$PROMPT" 2>&1 | tee /tmp/kwaak.log
+    """
+    self.container.write_string_to_file(kwaak_script, "/tmp/kwaak.sh")
+    self.container.exec("chmod +x /tmp/kwaak.sh")
 
   def run_agent(self) -> None:
     """Execute the Kwaak agent in the test environment.
@@ -288,13 +312,14 @@ class Trial:
 
   def invoke_kwaak(self):
     logging.info("Invoking kwaak")
+    openai_api_key = os.environ["OPENAI_API_KEY"]
     prompt = self.render_prompt()
     result = self.container.exec(
-      f"kwaak -c /tmp/kwaak.rendered.toml run-agent --initial-message \"$PROMPT\"",
+      "/tmp/kwaak.sh",
       env={
         "PROMPT": prompt,
         "KWAAK_CACHE_DIR": f"/tmp/kwaak_cache/{self.item.repo}",
-        "OPENAI_API_KEY": os.environ["OPENAI_API_KEY"],
+        "OPENAI_API_KEY": openai_api_key,
         "RUST_LOG": "debug",
         "RUST_BACKTRACE": "1"
       }
