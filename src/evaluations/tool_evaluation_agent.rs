@@ -17,8 +17,13 @@ pub async fn start_tool_evaluation_agent(
     let system_prompt = v1::build_system_prompt(repository)?;
     let agent_context: Arc<dyn AgentContext> = Arc::new(DefaultContext::default());
     let executor = Arc::new(swiftide::agents::tools::local_executor::LocalExecutor::default());
-    let query_provider: Box<dyn ChatCompletion> =
-        repository.config().query_provider().try_into()?;
+
+    let backoff = repository.config().backoff;
+
+    let query_provider: Box<dyn ChatCompletion> = repository
+        .config()
+        .query_provider()
+        .get_chat_completion_model(backoff)?;
 
     let responder_for_messages = responder.clone();
     let responder_for_tools = responder.clone();

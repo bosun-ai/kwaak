@@ -44,6 +44,9 @@ pub struct Config {
     #[serde(default)]
     pub docker: DockerConfiguration,
 
+    #[serde(default)]
+    pub backoff: BackoffConfiguration,
+
     pub git: GitConfiguration,
 
     /// Optional: Use tavily as a search tool
@@ -161,6 +164,25 @@ impl Default for DockerConfiguration {
         Self {
             dockerfile: "Dockerfile".into(),
             context: ".".into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct BackoffConfiguration {
+    pub initial_interval_sec: u64,
+    pub multiplier: f64,
+    pub randomization_factor: f64,
+    pub max_elapsed_time_sec: u64,
+}
+
+impl Default for BackoffConfiguration {
+    fn default() -> Self {
+        Self {
+            initial_interval_sec: 15,
+            multiplier: 2.0,
+            randomization_factor: 0.05,
+            max_elapsed_time_sec: 120,
         }
     }
 }

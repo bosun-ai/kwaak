@@ -125,10 +125,15 @@ pub async fn start(
     repository: &Repository,
     command_responder: Arc<dyn Responder>,
 ) -> Result<RunningAgent> {
-    let query_provider: Box<dyn ChatCompletion> =
-        repository.config().query_provider().try_into()?;
-    let fast_query_provider: Box<dyn SimplePrompt> =
-        repository.config().indexing_provider().try_into()?;
+    let backoff = repository.config().backoff;
+    let query_provider: Box<dyn ChatCompletion> = repository
+        .config()
+        .query_provider()
+        .get_chat_completion_model(backoff)?;
+    let fast_query_provider: Box<dyn SimplePrompt> = repository
+        .config()
+        .indexing_provider()
+        .get_simple_prompt_model(backoff)?;
 
     let github_session = match repository.config().github_api_key {
         Some(_) => Some(Arc::new(GithubSession::from_repository(&repository)?)),
