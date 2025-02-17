@@ -166,7 +166,7 @@ class Trial:
         initial_git_ref = self.establish_initial_git_ref()
         
         pre_patch_results = self.container.exec("/tmp/test.sh")
-        pre_patch_results_path = os.path.join(self.results_dir, f"{self.name}-pre_patch_test_results.txt")
+        pre_patch_results_path = os.path.join(self.results_dir, f"pre_patch_test_results.txt")
         
         # write results to file in results_dir
         with open(pre_patch_results_path, "w") as f:
@@ -185,21 +185,25 @@ class Trial:
           "model_patch": diff,
         }
 
+        prediction_path = os.path.join(self.results_dir, f"prediction.json")
+        with open(prediction_path, "w") as f:
+          json.dump(prediction, f, indent=2)
+
         test_results = self.container.exec("/tmp/test.sh").output.decode()
-        test_results_path = os.path.join(self.results_dir, f"{self.name}-test_results.txt")
+        test_results_path = os.path.join(self.results_dir, f"test_results.txt")
         
         with open(test_results_path, "w") as f:
           f.write(f"{START_TEST_OUTPUT}\n")
           f.write(test_results)
           f.write(f"\n{END_TEST_OUTPUT}\n")
 
-        model_patch_path = os.path.join(self.results_dir, f"{self.name}-patch.diff")
+        model_patch_path = os.path.join(self.results_dir, f"patch.diff")
 
         with open(model_patch_path, "w") as f:
           f.write(diff)
 
         result = self.evaluate_results(prediction, test_results_path)
-        
+
         # TODO: Uncomment next line when debugging is done:
         # self.container.cleanup()
 
@@ -379,7 +383,7 @@ class Trial:
       f"Result for {instance_id}: resolved: {resolved}"
     )
 
-    report_path = os.path.join(self.results_dir, f"{self.name}-report.json")
+    report_path = os.path.join(self.results_dir, f"report.json")
     
     with open(report_path, "w") as f:
       json.dump(report, f, indent=2)
