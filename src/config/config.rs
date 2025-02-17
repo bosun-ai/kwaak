@@ -1,6 +1,9 @@
 use config::{Config as ConfigRs, Environment, File};
-use std::path::{Path, PathBuf};
-use std::str::FromStr;
+use std::{
+    path::{Path, PathBuf},
+    str::FromStr,
+    time::Duration,
+};
 
 use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
@@ -210,6 +213,17 @@ impl Default for BackoffConfiguration {
             randomization_factor: 0.05,
             max_elapsed_time_sec: 120,
         }
+    }
+}
+
+impl From<BackoffConfiguration> for backoff::ExponentialBackoff {
+    fn from(from_backoff: BackoffConfiguration) -> Self {
+        backoff::ExponentialBackoffBuilder::default()
+            .with_initial_interval(Duration::from_secs(from_backoff.initial_interval_sec))
+            .with_multiplier(from_backoff.multiplier)
+            .with_randomization_factor(from_backoff.randomization_factor)
+            .with_max_elapsed_time(Some(Duration::from_secs(from_backoff.max_elapsed_time_sec)))
+            .build()
     }
 }
 

@@ -1,14 +1,9 @@
-use std::{str::FromStr, time::Duration};
-
-#[cfg(debug_assertions)]
-use crate::test_utils::NoopLLM;
-
 use super::ApiKey;
 use crate::config::BackoffConfiguration;
 use anyhow::{Context as _, Result};
-use backoff::ExponentialBackoffBuilder;
 use fastembed::{InitOptions, TextEmbedding};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use swiftide::{
     chat_completion::ChatCompletion,
     integrations::{
@@ -21,6 +16,9 @@ use swiftide::{
     traits::{EmbeddingModel, SimplePrompt},
 };
 use url::Url;
+
+#[cfg(debug_assertions)]
+use crate::test_utils::NoopLLM;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LLMConfigurations {
@@ -291,10 +289,7 @@ impl LLMConfiguration {
         }
     }
 
-    fn build_openai(
-        &self,
-        backoff_config: BackoffConfiguration,
-    ) -> Result<integrations::openai::OpenAI> {
+    fn build_openai(&self, backoff: BackoffConfiguration) -> Result<integrations::openai::OpenAI> {
         let LLMConfiguration::OpenAI {
             api_key,
             embedding_model,
@@ -314,17 +309,7 @@ impl LLMConfiguration {
             config = config.with_api_base(base_url.to_string());
         };
 
-        // Load backoff settings from configuration
-        let backoff = ExponentialBackoffBuilder::default()
-            .with_initial_interval(Duration::from_secs(backoff_config.initial_interval_sec))
-            .with_multiplier(backoff_config.multiplier)
-            .with_randomization_factor(backoff_config.randomization_factor)
-            .with_max_elapsed_time(Some(Duration::from_secs(
-                backoff_config.max_elapsed_time_sec,
-            )))
-            .build();
-
-        let client = async_openai::Client::with_config(config).with_backoff(backoff);
+        let client = async_openai::Client::with_config(config).with_backoff(backoff.into());
 
         integrations::openai::OpenAI::builder()
             .client(client)
@@ -366,7 +351,7 @@ impl LLMConfiguration {
         builder.build().context("Failed to build Ollama client")
     }
 
-    fn build_anthropic(&self) -> Result<Anthropic> {
+    fn build_anthropic(&self, backoff: BackoffConfiguration) -> Result<Anthropic> {
         let LLMConfiguration::Anthropic {
             api_key,
             prompt_model,
@@ -376,7 +361,7 @@ impl LLMConfiguration {
         };
 
         let api_key = api_key.as_ref().context("Expected an api key")?;
-        let client = async_anthropic::Client::from_api_key(api_key);
+        let client = async_anthropic::Client::from_api_key(api_key).with_backoff(backoff.into());
 
         Anthropic::builder()
             .client(client)
@@ -385,7 +370,7 @@ impl LLMConfiguration {
             .context("Failed to build Anthropic client")
     }
 
-    fn build_open_router(&self, backoff_config: BackoffConfiguration) -> Result<OpenRouter> {
+    fn build_open_router(&self, backoff: BackoffConfiguration) -> Result<OpenRouter> {
         let LLMConfiguration::OpenRouter {
             prompt_model,
             api_key,
@@ -401,17 +386,7 @@ impl LLMConfiguration {
             .site_name("Kwaak")
             .build()?;
 
-        // Load backoff settings from configuration
-        let backoff = ExponentialBackoffBuilder::default()
-            .with_initial_interval(Duration::from_secs(backoff_config.initial_interval_sec))
-            .with_multiplier(backoff_config.multiplier)
-            .with_randomization_factor(backoff_config.randomization_factor)
-            .with_max_elapsed_time(Some(Duration::from_secs(
-                backoff_config.max_elapsed_time_sec,
-            )))
-            .build();
-
-        let client = async_openai::Client::with_config(config).with_backoff(backoff);
+        let client = async_openai::Client::with_config(config).with_backoff(backoff.into());
 
         OpenRouter::builder()
             .client(client)
@@ -454,23 +429,23 @@ impl LLMConfiguration {
 
     pub fn get_simple_prompt_model(
         &self,
-        backoff_config: BackoffConfiguration,
+        backoff: BackoffConfiguration,
     ) -> Result<Box<dyn SimplePrompt>> {
         let boxed = match self {
             LLMConfiguration::OpenAI { .. } => {
-                Box::new(self.build_openai(backoff_config)?) as Box<dyn SimplePrompt>
+                Box::new(self.build_openai(backoff)?) as Box<dyn SimplePrompt>
             }
             LLMConfiguration::Ollama { .. } => {
                 Box::new(self.build_ollama()?) as Box<dyn SimplePrompt>
             }
             LLMConfiguration::OpenRouter { .. } => {
-                Box::new(self.build_open_router(backoff_config)?) as Box<dyn SimplePrompt>
+                Box::new(self.build_open_router(backoff)?) as Box<dyn SimplePrompt>
             }
             LLMConfiguration::FastEmbed { .. } => {
                 anyhow::bail!("FastEmbed does not have a simpl prompt model")
             }
             LLMConfiguration::Anthropic { .. } => {
-                Box::new(self.build_anthropic()?) as Box<dyn SimplePrompt>
+                Box::new(self.build_anthropic(backoff)?) as Box<dyn SimplePrompt>
             }
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => Box::new(NoopLLM) as Box<dyn SimplePrompt>,
@@ -480,23 +455,23 @@ impl LLMConfiguration {
 
     pub fn get_chat_completion_model(
         &self,
-        backoff_config: BackoffConfiguration,
+        backoff: BackoffConfiguration,
     ) -> Result<Box<dyn ChatCompletion>> {
         let boxed = match self {
             LLMConfiguration::OpenAI { .. } => {
-                Box::new(self.build_openai(backoff_config)?) as Box<dyn ChatCompletion>
+                Box::new(self.build_openai(backoff)?) as Box<dyn ChatCompletion>
             }
             LLMConfiguration::Ollama { .. } => {
                 Box::new(self.build_ollama()?) as Box<dyn ChatCompletion>
             }
             LLMConfiguration::OpenRouter { .. } => {
-                Box::new(self.build_open_router(backoff_config)?) as Box<dyn ChatCompletion>
+                Box::new(self.build_open_router(backoff)?) as Box<dyn ChatCompletion>
             }
             LLMConfiguration::FastEmbed { .. } => {
                 anyhow::bail!("FastEmbed does not have a chat completion model")
             }
             LLMConfiguration::Anthropic { .. } => {
-                Box::new(self.build_anthropic()?) as Box<dyn ChatCompletion>
+                Box::new(self.build_anthropic(backoff)?) as Box<dyn ChatCompletion>
             }
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => Box::new(NoopLLM) as Box<dyn ChatCompletion>,

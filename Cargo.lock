@@ -417,21 +417,6 @@ dependencies = [
 [[package]]
 name = "async-anthropic"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d5ab06d2a635f46bfbc20de71461e3739448ba4ea52ad6aaad72532e8437f9a"
-dependencies = [
- "derive_builder",
- "reqwest",
- "secrecy",
- "serde",
- "serde_json",
- "thiserror 2.0.11",
- "tracing",
-]
-
-[[package]]
-name = "async-anthropic"
-version = "0.2.1"
 source = "git+https://github.com/bogzbonny/async-anthropic?branch=backoff#c74be5f6a614c70ceeab7b08e3c080e0dfd54a9c"
 dependencies = [
  "backoff",
@@ -3862,7 +3847,7 @@ dependencies = [
  "ansi-to-tui",
  "anyhow",
  "assert_cmd",
- "async-anthropic 0.2.1 (git+https://github.com/bogzbonny/async-anthropic?branch=backoff)",
+ "async-anthropic",
  "async-openai",
  "async-trait",
  "backoff",
@@ -7361,7 +7346,7 @@ dependencies = [
  "anyhow",
  "arrow",
  "arrow-array",
- "async-anthropic 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "async-anthropic",
  "async-openai",
  "async-trait",
  "chrono",
