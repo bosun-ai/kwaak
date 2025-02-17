@@ -40,7 +40,8 @@ serde_json = "1.0.138"
 secrecy = { version = "0.10.3", features = ["serde"] }
 tracing = "0.1.41"
 async-openai = "0.27.1"
-async-anthropic = "0.2.1"
+#async-anthropic = "0.2.1" // XXX update and remove next line
+async-anthropic = { git = "https://github.com/bogzbonny/async-anthropic", branch = "backoff" }
 dirs = "6.0.0"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 tracing-appender = "0.2.3"
