@@ -34,6 +34,11 @@ from swebench.harness.test_spec.test_spec import (
     TestSpec,
 )
 
+from swebench.harness.constants import (
+    START_TEST_OUTPUT,
+    END_TEST_OUTPUT,
+)
+
 @dataclass
 class TrialResult:
     """Represents the outcome of a trial execution.
@@ -184,7 +189,9 @@ class Trial:
         test_results_path = os.path.join(self.results_dir, f"{self.name}-test_results.txt")
         
         with open(test_results_path, "w") as f:
+          f.write(f"{START_TEST_OUTPUT}\n")
           f.write(test_results)
+          f.write(f"\n{END_TEST_OUTPUT}\n")
 
         model_patch_path = os.path.join(self.results_dir, f"{self.name}-patch.diff")
 

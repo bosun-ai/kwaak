@@ -19,9 +19,11 @@ import subprocess
 import json
 import logging
 import docker
+import argparse
 
 from .benchmark import Benchmark
 from .swe_bench_instance import SWEBenchInstance
+from .trial import Trial
 
 from swebench.harness.prepare_images import main as prepare_images
 from swebench.harness.test_spec.test_spec import (
@@ -53,12 +55,64 @@ def cleanup_processes():
     except Exception as e:
         print(f"Warning: Error cleaning up processes: {e}")
 
+def evaluate_trial(instance_id: str, results_path: str) -> None:
+    """Evaluate a specific trial's results.
+    
+    Args:
+        instance_id: The ID of the instance to evaluate
+        results_path: Path to the directory containing the trial results and prediction.json
+    """
+    # Load the dataset to get the instance
+    dataset = load_dataset(DATASET_NAME, split=SPLIT)
+    dataset_list = list(dataset)
+    instance_items = [item for item in dataset_list if item["instance_id"] == instance_id]
+    if not instance_items:
+        logging.error(f"Instance {instance_id} not found in dataset")
+        return
+    
+    # Create SWEBenchInstance
+    instance = SWEBenchInstance.from_dataset([instance_items[0]])[0]
+    
+    # Create trial
+    trial = Trial(instance, instance_id, results_path)
+    
+    # Load prediction
+    prediction_path = os.path.join(results_path, "prediction.json")
+    if not os.path.exists(prediction_path):
+        logging.error(f"prediction.json not found in {results_path}")
+        return
+    
+    with open(prediction_path, "r") as f:
+        prediction = json.load(f)
+    
+    # Find test results file
+    test_results_file = None
+    for file in os.listdir(results_path):
+        if file.endswith("-test_results.txt") and not file.endswith("-pre_patch_test_results.txt"):
+            test_results_file = file
+            break
+    
+    if not test_results_file:
+        logging.error(f"No test results file found in {results_path}")
+        return
+    
+    # Evaluate results
+    result = trial.evaluate_results(prediction, os.path.join(results_path, test_results_file))
+    
+    # Print evaluation results
+    logging.info(f"Evaluation results for {instance_id}:")
+    logging.info(f"Success: {result.success}")
+    logging.info(f"Error: {result.error or 'None'}")
+    logging.info(f"Validation failed: {result.validation_failed}")
+
+
 def main():
     """Run the SWE-bench benchmark with the Kwaak agent.
     
     This function orchestrates the benchmark process. It can either:
     1. Run a single instance if --instance is specified
     2. Run a subset of the dataset (first 2 items per repository) by default
+    3. Evaluate a specific trial's results if --evaluate and --results-path are specified
     
     Results are saved in both detailed JSON format and the SWE-bench 
     submission format (predictions.jsonl).
@@ -71,23 +125,34 @@ def main():
     Command-line Arguments:
         --instance: Optional instance ID to run a single test case
                    e.g., psf__requests-2317
+        --evaluate: Instance ID to evaluate results for
+        --results-path: Path to directory containing trial results
     
     Returns:
         None
     """
 
-    import argparse
-    
-    # Set up argument parser
-    parser = argparse.ArgumentParser(description='Run SWE-bench benchmark with Kwaak agent')
-    parser.add_argument('--instance', type=str, help='Instance ID to run a single test case')
-    args = parser.parse_args()
-    
     # Configure logging
     logging.basicConfig(level=logging.INFO)
     
     # Clean up any existing processes
     cleanup_processes()
+    
+    
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description='Run SWE-bench benchmark with Kwaak agent')
+    parser.add_argument('--instance', type=str, help='Instance ID to run a single test case')
+    parser.add_argument('--evaluate', type=str, help='Instance ID to evaluate results for')
+    parser.add_argument('--results-path', type=str, help='Path to directory containing trial results')
+    args = parser.parse_args()
+    
+    # If evaluating a specific trial
+    if args.evaluate:
+        if not args.results_path:
+            logging.error("--results-path is required when using --evaluate")
+            return
+        evaluate_trial(args.evaluate, args.results_path)
+        return
     
     # Load the dataset
     dataset = load_dataset(DATASET_NAME, split=SPLIT)
