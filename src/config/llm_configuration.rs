@@ -1,9 +1,10 @@
 use std::{str::FromStr, time::Duration};
 
 #[cfg(debug_assertions)]
-use crate::{config::BackoffConfiguration, test_utils::NoopLLM};
+use crate::test_utils::NoopLLM;
 
 use super::ApiKey;
+use crate::config::BackoffConfiguration;
 use anyhow::{Context as _, Result};
 use backoff::ExponentialBackoffBuilder;
 use fastembed::{InitOptions, TextEmbedding};
