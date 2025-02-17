@@ -91,16 +91,11 @@ impl EnvSetup<'_> {
     }
 
     async fn configure_git_user(&self) -> Result<()> {
-        let git_user = self.repository.config().agent_git_user.clone();
+        let name = self.repository.config().git.agent_user_name.clone();
+        let email = self.repository.config().git.agent_user_email.clone();
         for cmd in &[
-            Command::shell(format!(
-                "git config --global user.email \"{}\"",
-                git_user.email
-            )),
-            Command::shell(format!(
-                "git config --global user.name \"{}\"",
-                git_user.name
-            )),
+            Command::shell(format!("git config --global user.name \"{name}\"")),
+            Command::shell(format!("git config --global user.email \"{email}\"")),
             Command::shell("git config --global push.autoSetupRemote true"),
         ] {
             self.executor.exec_cmd(cmd).await?;

@@ -336,9 +336,9 @@ max_elapsed_time_sec = 120
 - **`disabled_tools.pull_request`**: Enables or disables the pull request tool. Defaults to `false`.
 - **`ui.hide_header`**: Optionally hide the top header in the UI. Defaults to `false`.
 - **`num_completions_for_summary`**: Number of completions before the agent summarizes the conversation. Defaults to 10; 
-- **`agent_git_user.name`**: Name which the kwaak agent will make commands with.
+- **`git.agent_user_name`**: Name which the kwaak agent will make commands with.
   Defaults to "kwaak"` 
-- **`agent_git_user.email`**: Email which the kwaak agent will make commits
+- **`git.agent_user_email`**: Email which the kwaak agent will make commits
   with. Defaults to "kwaak@bosun.ai"
 
 <!-- ROADMAP -->

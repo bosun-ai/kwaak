@@ -123,10 +123,6 @@ pub struct Config {
     /// Defaults to 10.
     #[serde(default = "default_num_completions_for_summary")]
     pub num_completions_for_summary: usize,
-
-    /// The git user to use for the agent when committing changes
-    #[serde(default)]
-    pub agent_git_user: AgentGitUser,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -141,21 +137,6 @@ fn default_otel_enabled() -> bool {
 
 fn default_num_completions_for_summary() -> usize {
     10
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AgentGitUser {
-    pub name: String,
-    pub email: String,
-}
-
-impl Default for AgentGitUser {
-    fn default() -> Self {
-        Self {
-            name: "kwaak".to_string(),
-            email: "kwaak@bosun.ai".to_string(),
-        }
-    }
 }
 
 /// Opt out of certain tools an agent can use
@@ -248,6 +229,22 @@ pub struct GitConfiguration {
     /// Opt out of automatically committing changes after each completion
     #[serde(default)]
     pub auto_commit_disabled: bool,
+
+    /// The git user name to use for the agent when committing changes
+    #[serde(default = "default_agent_user_name")]
+    pub agent_user_name: String,
+
+    /// The git email to use for the agent when committing changes
+    #[serde(default = "default_agent_user_email")]
+    pub agent_user_email: String,
+}
+
+fn default_agent_user_name() -> String {
+    "kwaak".to_string()
+}
+
+fn default_agent_user_email() -> String {
+    "kwaak@bosun.ai".to_string()
 }
 
 impl FromStr for Config {
