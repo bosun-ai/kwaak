@@ -108,7 +108,7 @@ Powered by [Swiftide](https://github.com/bosun-ai/swiftide)
 - Agents operate on code, use tools, and can be interacted with
 - View and pull code changes from an agent; or have it create a pull request
 - Sandboxed execution in docker
-- OpenAI, Ollama and many other models via [OpenRouter](https://openrouter.ai)
+- OpenAI, Ollama, Anthropic, and many other models via [OpenRouter](https://openrouter.ai)
 - Python, TypeScript/Javascript, Go, Java, Ruby, Solidity, and Rust
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -246,12 +246,11 @@ Kwaak uses tests, coverages, and lints as an additional opportunity to steer the
 
 #### LLM Configuration
 
-Configure LLMs such as OpenAI and Ollama by specifying models for different tasks:
-
 Supported providers:
 
 - OpenAI
 - Ollama
+- Anthropic
 - OpenRouter (no embeddings)
 - FastEmbed (embeddings only)
 
@@ -290,7 +289,7 @@ provider = "Ollama"
 embedding_model = { name = "bge-m3", vector_size = 1024 }
 ```
 
-For both you can provide a `base_url` to use a custom API endpoint.
+For both you can provide a `base_url` to use a custom API endpoint. The `api_key` can be set per provider, or globally.
 
 You can mix and match models from different providers for different tasks.
 
@@ -301,7 +300,6 @@ OpenAI, OpenRouter, and Anthropic calls will make use of the backoff parameters.
 You can configure the backoff settings in the `kwaak.toml` file under a
 `[backoff]` section. These settings are optional, and default to the following
 values:
-
 
 - `initial_interval_sec`: Defaults to 15 seconds. This sets the initial waiting time between retries.
 - `multiplier`: Defaults to 2.0. This factor multiplies the interval on each retry attempt.

@@ -122,6 +122,7 @@ async fn main() -> Result<()> {
 
     if let Err(error) = app_result {
         ::tracing::error!("Kwaak encountered an error\n {error:#}");
+        eprintln!("Kwaak encountered an error\n {error:#}");
         std::process::exit(1);
     }
 
