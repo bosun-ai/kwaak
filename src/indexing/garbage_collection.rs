@@ -91,7 +91,7 @@ impl<'repository> GarbageCollector<'repository> {
                 "diff",
                 "--name-only",
                 "--diff-filter=D",
-                &format!("{last_indexed_commit}^1..HEAD"),
+                &format!("{last_indexed_commit}^..HEAD"),
             ])
             .current_dir(self.repository.path())
             .output()
@@ -466,12 +466,20 @@ mod tests {
             .output()
             .expect("failed to commit file deletion");
 
+        // debug the git log
+        let output = std::process::Command::new("git")
+            .arg("log")
+            .current_dir(context.repository.path())
+            .output()
+            .expect("failed to execute git log command");
+
+        tracing::debug!("Git log:\n{}", String::from_utf8_lossy(&output.stdout));
+
         tracing::info!("Starting clean up after detecting file deletion.");
         context.subject.clean_up().await.unwrap();
 
         let cache_result = context.redb.get(&context.node).await;
         tracing::debug!("Cache result after detection clean up: {:?}", cache_result);
-        dbg!(&context.node.path);
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 0);
 
