@@ -157,7 +157,7 @@ def copy_kwaak_caches(benchmark_name: str = None):
         
         # Get the benchmark name if not provided
         if not benchmark_name:
-            kwaak_version = "0.8.1"
+            kwaak_version = "0.10.0"
             benchmark_name = f"swe-bench-kwaak-{kwaak_version}"
             
         # Construct cache directory path
@@ -261,7 +261,7 @@ def main():
         return
         
     if args.copy_caches:
-        kwaak_version = "0.8.1"
+        kwaak_version = "0.10.0"
         benchmark_name = f"swe-bench-kwaak-{kwaak_version}"
         copy_kwaak_caches(benchmark_name)
         return
@@ -328,7 +328,7 @@ def main():
     output_path = os.path.join(os.getcwd(), "results")
     os.makedirs(output_path, exist_ok=True)
 
-    kwaak_version = "0.8.1"
+    kwaak_version = "0.10.0"
     benchmark_name = f"swe-bench-kwaak-{kwaak_version}"
     benchmark = Benchmark(benchmark_name, dataset_items, output_path)
 
