@@ -121,14 +121,11 @@ impl<'repository> GarbageCollector<'repository> {
             .filter(|entry| entry.file_type().is_some_and(|ft| ft.is_file()))
             .filter(|entry| {
                 // If the file does not have any of the extensions, skip it
-                if self.file_extensions.iter().all(|ext| {
-                    tracing::debug!(
-                        "Checking file extension: {} against {:?}",
-                        entry.path().display(),
-                        ext
-                    );
-                    !entry.path().to_string_lossy().ends_with(ext)
-                }) {
+                if self
+                    .file_extensions
+                    .iter()
+                    .all(|ext| !entry.path().to_string_lossy().ends_with(ext))
+                {
                     tracing::debug!(
                         "Skipping file with extension not in list: {}",
                         entry.path().display()
