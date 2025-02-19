@@ -42,8 +42,10 @@ impl<'repository> GarbageCollector<'repository> {
         self.runtime_settings().get(LAST_CLEANED_UP_AT)
     }
 
-    fn update_last_cleaned_up_at(&self, date: SystemTime) -> Result<()> {
-        self.runtime_settings().set(LAST_CLEANED_UP_AT, date)
+    fn update_last_cleaned_up_at(&self, date: SystemTime) {
+        if let Ok(e) = self.runtime_settings().set(LAST_CLEANED_UP_AT, date) {
+            tracing::error!("Failed to update last cleaned up at: {:?}", e);
+        }
     }
 
     fn files_deleted_since_last_index(&self) -> Vec<PathBuf> {
@@ -105,6 +107,7 @@ impl<'repository> GarbageCollector<'repository> {
             .filter(|entry| {
                 // If no clean up is known, all files are considered changed
                 let Some(last_cleaned_up_at) = last_cleaned_up_at else {
+                    tracing::warn!("No last clean up date found; assuming all files changed");
                     return true;
                 };
 
@@ -204,11 +207,13 @@ impl<'repository> GarbageCollector<'repository> {
 
         if files.is_empty() {
             tracing::info!("No files changed since last index; skipping garbage collection");
+            self.update_last_cleaned_up_at(SystemTime::now());
             return Ok(());
         }
 
         if self.never_been_indexed().await {
             tracing::warn!("No index date found; skipping garbage collection");
+            self.update_last_cleaned_up_at(SystemTime::now());
             return Ok(());
         }
 
@@ -220,11 +225,18 @@ impl<'repository> GarbageCollector<'repository> {
         tracing::debug!(?files, "Files changed since last index");
 
         {
-            self.delete_files_from_cache(&files)?;
-            self.delete_files_from_index(files).await?;
+            if let Err(e) = self.delete_files_from_cache(&files) {
+                self.update_last_cleaned_up_at(SystemTime::now());
+                return Err(e);
+            };
+
+            if let Err(e) = self.delete_files_from_index(files).await {
+                self.update_last_cleaned_up_at(SystemTime::now());
+                return Err(e);
+            }
         }
 
-        self.update_last_cleaned_up_at(SystemTime::now())?;
+        self.update_last_cleaned_up_at(SystemTime::now());
 
         tracing::info!("Garbage collection completed and cleaned up at updated.");
 
@@ -351,8 +363,7 @@ mod tests {
 
         context
             .subject
-            .update_last_cleaned_up_at(SystemTime::now() - Duration::from_secs(60))
-            .unwrap();
+            .update_last_cleaned_up_at(SystemTime::now() - Duration::from_secs(60));
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
@@ -372,8 +383,7 @@ mod tests {
 
         context
             .subject
-            .update_last_cleaned_up_at(SystemTime::now() + Duration::from_secs(600))
-            .unwrap();
+            .update_last_cleaned_up_at(SystemTime::now() + Duration::from_secs(600));
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
@@ -389,8 +399,7 @@ mod tests {
         let context = setup().await;
         context
             .subject
-            .update_last_cleaned_up_at(SystemTime::now() + Duration::from_secs(600))
-            .unwrap();
+            .update_last_cleaned_up_at(SystemTime::now() + Duration::from_secs(600));
 
         assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
 
