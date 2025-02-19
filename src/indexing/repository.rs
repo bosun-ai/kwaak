@@ -37,10 +37,16 @@ pub async fn index_repository(
 
     let loader = loaders::FileLoader::new(repository.path()).with_extensions(&extensions);
 
-    let indexing_provider: Box<dyn SimplePrompt> =
-        repository.config().indexing_provider().try_into()?;
-    let embedding_provider: Box<dyn EmbeddingModel> =
-        repository.config().embedding_provider().try_into()?;
+    let backoff = repository.config().backoff;
+
+    let indexing_provider: Box<dyn SimplePrompt> = repository
+        .config()
+        .indexing_provider()
+        .get_simple_prompt_model(backoff)?;
+    let embedding_provider: Box<dyn EmbeddingModel> = repository
+        .config()
+        .embedding_provider()
+        .get_embedding_model(backoff)?;
 
     let lancedb = storage::get_lancedb(repository);
     let redb = storage::get_redb(repository) as Arc<dyn NodeCache>;

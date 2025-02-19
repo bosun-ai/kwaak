@@ -108,8 +108,8 @@ Powered by [Swiftide](https://github.com/bosun-ai/swiftide)
 - Agents operate on code, use tools, and can be interacted with
 - View and pull code changes from an agent; or have it create a pull request
 - Sandboxed execution in docker
-- OpenAI, Ollama and many other models via [OpenRouter](https://openrouter.ai)
-- Python, TypeScript/Javascript, Go, Java, Ruby, and Rust
+- OpenAI, Ollama, Anthropic, and many other models via [OpenRouter](https://openrouter.ai)
+- Python, TypeScript/Javascript, Go, Java, Ruby, Solidity, and Rust
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -123,22 +123,34 @@ Powered by [Swiftide](https://github.com/bosun-ai/swiftide)
 
 Before you can run Kwaak, make sure you have Docker installed on your machine.
 
+#### Docker
+
 Kwaak expects a Dockerfile in the root of your project. If you already have a Dockerfile, you can just name it differently and configure it in the configuration file. This Dockerfile should contain all the dependencies required to test and run your code.
 
 > [!NOTE]
 > Docker is used to provide a safe execution environment for the agents. It does not affect the performance of the LLMs. The LLMs are running either locally or in the cloud, and the docker container is only used to run the code. This is done to ensure that the agents cannot access your local system. Kwaak itself runs locally.
 
-Additionally, it expects the following to be present:
+Additionally, the Dockerfile expects `git` and should be `ubuntu` based.
 
-- **git**: Required for git operations
-- **fd** [github](https://github.com/sharkdp/fd): Required for searching files. Note that it should be available as `fd`, some systems have it as `fdfind`.
-- **ripgrep** [github](https://github.com/BurntSushi/ripgrep): Required for searching _in_ files. Note that it should be available as `rg`.
+A simple example for Rust:
+
+```Dockerfile
+FROM rust:latest
+
+RUN apt-get update && apt install git -y --no-install-recommends
+
+COPY . /app
+
+WORKDIR /app
+```
 
 If you already have a Dockerfile for other purposes, you can either extend it or provide a new one and override the dockerfile path in the configuration.
 
 _For an example Dockerfile in Rust, see [this project's Dockerfile](/Dockerfile)_
 
-Additionally, you will need an OpenAI API key (if OpenAI is your LLM provider).
+#### Api keys
+
+Additionally, you will need an API key for your LLM of choice.
 
 If you'd like kwaak to be able to make pull requests, search github code, and automatically push to a remote, a [github token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
 
@@ -234,12 +246,11 @@ Kwaak uses tests, coverages, and lints as an additional opportunity to steer the
 
 #### LLM Configuration
 
-Configure LLMs such as OpenAI and Ollama by specifying models for different tasks:
-
 Supported providers:
 
 - OpenAI
 - Ollama
+- Anthropic
 - OpenRouter (no embeddings)
 - FastEmbed (embeddings only)
 
@@ -278,12 +289,39 @@ provider = "Ollama"
 embedding_model = { name = "bge-m3", vector_size = 1024 }
 ```
 
-For both you can provide a `base_url` to use a custom API endpoint.
+For both you can provide a `base_url` to use a custom API endpoint. The `api_key` can be set per provider, or globally.
 
 You can mix and match models from different providers for different tasks.
 
+#### Backoff Configuration
+
+Kwaak uses the exponential backoff strategy to handle retries. Currently, only
+OpenAI, OpenRouter, and Anthropic calls will make use of the backoff parameters.
+You can configure the backoff settings in the `kwaak.toml` file under a
+`[backoff]` section. These settings are optional, and default to the following
+values:
+
+- `initial_interval_sec`: Defaults to 15 seconds. This sets the initial waiting time between retries.
+- `multiplier`: Defaults to 2.0. This factor multiplies the interval on each retry attempt.
+- `randomization_factor`: Defaults to 0.05. Introduces randomness to avoid retry storms.
+- `max_elapsed_time_sec`: Defaults to 120 seconds. This total time all attempts are allowed.
+
+Example Configuration:
+
+```toml
+[backoff]
+initial_interval_sec = 15
+multiplier = 2.0
+randomization_factor = 0.05
+max_elapsed_time_sec = 120
+```
+
 #### Other configuration
 
+- **`agent_custom_constraints`**: Additional constraints / instructions for the agent.
+  These are passes to the agent in the system prompt and are rendered in a list. If you
+  intend to use more complicated instructions, consider adding a file to read in the
+  repository instead.
 - **`cache_dir`, `log_dir`**: Directories for cache and logs. Defaults are within your system's cache directory.
 - **`indexing_concurrency`**: Adjust concurrency for indexing, defaults based on CPU count.
 - **`indexing_batch_size`**: Batch size setting for indexing. Defaults to a higher value for Ollama and a lower value for OpenAI.
@@ -291,10 +329,16 @@ You can mix and match models from different providers for different tasks.
 - **`otel_enabled`**: Enables OpenTelemetry tracing if set and respects all the standard OpenTelemetry environment variables.
 - **`tool_executor`**: Defaults to `docker`. Can also be `local`. We **HIGHLY** recommend using `docker` for security reasons unless you are running in a secure environment.
 - **`tavily_api_key`**: Enables the agent to use [tavily](https://tavily.com) for web search. Their entry-level plan is free. (we are not affiliated)
-- `**agent_edit_mode**`: Defaults to `whole` (write full files at the time). If you experience issues with (very) large files, you can experiment with `line` edits.
+- **`agent_edit_mode`**: Defaults to `whole` (write full files at the time). If you experience issues with (very) large files, you can experiment with `line` edits.
 - **`git.auto_push_remote`**: Enabled by default if a github key is present. Automatically pushes to the remote repository after each chat completion. You can disable this by setting it to `false`.
-- `**git.auto_commit_disabled`: Opt-out of automatic commits after each chat completion.
-- **_`disabled_tools.pull_request`_**: Enables or disables the pull request tool. Defaults to `false`.
+- **`git.auto_commit_disabled`**: Opt-out of automatic commits after each chat completion.
+- **`disabled_tools.pull_request`**: Enables or disables the pull request tool. Defaults to `false`.
+- **`ui.hide_header`**: Optionally hide the top header in the UI. Defaults to `false`.
+- **`num_completions_for_summary`**: Number of completions before the agent summarizes the conversation. Defaults to 10; 
+- **`git.agent_user_name`**: Name which the kwaak agent will make commands with.
+  Defaults to "kwaak"` 
+- **`git.agent_user_email`**: Email which the kwaak agent will make commits
+  with. Defaults to "kwaak@bosun.ai"
 
 <!-- ROADMAP -->
 
@@ -310,6 +354,9 @@ You can mix and match models from different providers for different tasks.
 <!-- CONTRIBUTING -->
 
 ## Troubleshooting & FAQ
+
+**Q:** I get a lot of failures, errors, or otherwise unexpected behaviour from the agent.
+**A:** Make sure you are _not_ on a Tier 1 account with either OpenAI or Anthropic, the token limits are not enough to run coding agents. Additionally, you can also experiment with different edit modes. See `agent_edit_mode`. If you only have Tier 1 accounts, you can also consider using OpenRouter, which does not have these limits. It is generally a bit slower and less reliable.
 
 **Q:** Kwaak feels very slow
 
@@ -341,7 +388,7 @@ You can mix and match models from different providers for different tasks.
 
 **Q**: In my project, different contributors have different setups. How can I make sure kwaak works for everyone?
 
-**A**: You can use a `kwaak.local.toml` and add it to your `.gitignore`. Alternatively, all configuration can be overridden by environment variables, prefixed with `KWAAK_` and separated by underscores. For instance, `KWAAK_COMMAND_TEST=cargo nextest run`. Overwriting via environment currently does not work for the `llm` configuration.
+**A**: You can use a `kwaak.local.toml` and add it to your `.gitignore`. Alternatively, all configuration can be overridden by environment variables, prefixed with `KWAAK` and separated by double underscores. For instance, `KWAAK__COMMAND_TEST=cargo nextest run`. Overwriting via environment currently does not work for the `llm` configuration.
 
 ## Community
 

@@ -19,6 +19,7 @@ use crate::{
     chat::{Chat, ChatState},
     chat_message::ChatMessage,
     commands::{Command, CommandEvent},
+    config::UIConfig,
     frontend::actions,
 };
 
@@ -86,6 +87,9 @@ pub struct App<'a> {
 
     /// Max lines we can render in the chat messages
     pub chat_messages_max_lines: u16,
+
+    /// User configuration for the UI
+    pub ui_config: UIConfig,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -164,6 +168,7 @@ impl Default for App<'_> {
             boot_uuid: Uuid::new_v4(),
             input_width: None,
             chat_messages_max_lines: 0,
+            ui_config: UIConfig::default(),
         }
     }
 }
@@ -489,6 +494,10 @@ impl App<'_> {
     }
 
     fn draw_base_ui(&self, f: &mut Frame) -> Rect {
+        if self.ui_config.hide_header {
+            return f.area();
+        }
+
         let [top_area, main_area] =
             Layout::vertical([Constraint::Length(6), Constraint::Min(0)]).areas(f.area());
 

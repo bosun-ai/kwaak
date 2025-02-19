@@ -1,16 +1,14 @@
-use std::str::FromStr;
-
-#[cfg(debug_assertions)]
-use crate::test_utils::NoopLLM;
-
 use super::ApiKey;
+use crate::config::BackoffConfiguration;
 use anyhow::{Context as _, Result};
 use fastembed::{InitOptions, TextEmbedding};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use swiftide::{
     chat_completion::ChatCompletion,
     integrations::{
         self,
+        anthropic::Anthropic,
         fastembed::FastEmbed,
         ollama::{config::OllamaConfig, Ollama},
         open_router::{config::OpenRouterConfig, OpenRouter},
@@ -18,6 +16,9 @@ use swiftide::{
     traits::{EmbeddingModel, SimplePrompt},
 };
 use url::Url;
+
+#[cfg(debug_assertions)]
+use crate::test_utils::NoopLLM;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LLMConfigurations {
@@ -69,6 +70,10 @@ pub enum LLMConfiguration {
         // serialize/deserialize to all models, making a proper setup a lot easier.
         embedding_model: FastembedModel,
     },
+    Anthropic {
+        api_key: Option<ApiKey>,
+        prompt_model: AnthropicModel,
+    },
     #[cfg(debug_assertions)]
     Testing, // Groq {
              //     api_key: SecretString,
@@ -81,6 +86,27 @@ pub enum LLMConfiguration {
              //     embedding_model: String,
              //     vector_size: usize,
              // },
+}
+
+#[derive(
+    Debug,
+    Clone,
+    Deserialize,
+    Serialize,
+    PartialEq,
+    strum_macros::EnumString,
+    strum_macros::Display,
+    strum_macros::VariantNames,
+    Default,
+)]
+pub enum AnthropicModel {
+    #[strum(serialize = "claude-3-5-sonnet-latest")]
+    #[serde(rename = "claude-3-5-sonnet-latest")]
+    #[default]
+    Claude35Sonnet,
+    #[strum(serialize = "claude-3-5-haiku-latest")]
+    #[serde(rename = "claude-3-5-haiku-latest")]
+    Claude35Haiku,
 }
 
 #[derive(Debug, Clone)]
@@ -191,34 +217,6 @@ pub struct EmbeddingModelWithSize {
     pub vector_size: i32,
 }
 
-impl LLMConfiguration {
-    pub(crate) fn vector_size(&self) -> i32 {
-        match self {
-            LLMConfiguration::OpenAI {
-                embedding_model, ..
-            } => match embedding_model {
-                OpenAIEmbeddingModel::TextEmbedding3Small => 1536,
-                OpenAIEmbeddingModel::TextEmbedding3Large => 3072,
-            },
-            LLMConfiguration::Ollama {
-                embedding_model, ..
-            } => {
-                embedding_model
-                    .as_ref()
-                    .expect("Expected an embedding model for ollama")
-                    .vector_size
-            }
-            LLMConfiguration::OpenRouter { .. } => {
-                panic!("OpenRouter does not have an embedding model")
-            }
-            LLMConfiguration::FastEmbed { embedding_model } => embedding_model.vector_size(),
-
-            #[cfg(debug_assertions)]
-            LLMConfiguration::Testing => 1,
-        }
-    }
-}
-
 #[derive(
     Debug,
     Clone,
@@ -261,105 +259,156 @@ pub enum OpenAIEmbeddingModel {
     TextEmbedding3Large,
 }
 
-fn build_openai(
-    api_key: Option<&ApiKey>,
-    embedding_model: &OpenAIEmbeddingModel,
-    prompt_model: &OpenAIPromptModel,
-    base_url: Option<&Url>,
-) -> Result<integrations::openai::OpenAI> {
-    let api_key = api_key.context("Expected an api key")?;
-    let mut config =
-        async_openai::config::OpenAIConfig::default().with_api_key(api_key.expose_secret());
-
-    if let Some(base_url) = base_url {
-        config = config.with_api_base(base_url.to_string());
-    };
-
-    integrations::openai::OpenAI::builder()
-        .client(async_openai::Client::with_config(config))
-        .default_prompt_model(prompt_model.to_string())
-        .default_embed_model(embedding_model.to_string())
-        .build()
-        .context("Failed to build OpenAI client")
-}
-
-fn build_ollama(llm_config: &LLMConfiguration) -> Result<Ollama> {
-    let LLMConfiguration::Ollama {
-        prompt_model,
-        embedding_model,
-        base_url,
-        ..
-    } = llm_config
-    else {
-        anyhow::bail!("Expected Ollama configuration")
-    };
-
-    let mut config = OllamaConfig::default();
-
-    if let Some(base_url) = base_url {
-        config.with_api_base(base_url.as_str());
-    };
-
-    let mut builder = Ollama::builder()
-        .client(async_openai::Client::with_config(config))
-        .to_owned();
-
-    if let Some(embedding_model) = embedding_model {
-        builder.default_embed_model(embedding_model.name.clone());
-    }
-
-    if let Some(prompt_model) = prompt_model {
-        builder.default_prompt_model(prompt_model);
-    }
-
-    builder.build().context("Failed to build Ollama client")
-}
-
-fn build_open_router(llm_config: &LLMConfiguration) -> Result<OpenRouter> {
-    let LLMConfiguration::OpenRouter {
-        prompt_model,
-        api_key,
-    } = llm_config
-    else {
-        anyhow::bail!("Expected OpenRouter configuration")
-    };
-
-    let api_key = api_key.as_ref().context("Expected an api key")?;
-    let config = OpenRouterConfig::builder()
-        .api_key(api_key)
-        .site_url("https://github.com/bosun-ai/kwaak")
-        .site_name("Kwaak")
-        .build()?;
-
-    OpenRouter::builder()
-        .client(async_openai::Client::with_config(config))
-        .default_prompt_model(prompt_model)
-        .to_owned()
-        .build()
-        .context("Failed to build OpenRouter client")
-}
-
-impl TryInto<Box<dyn EmbeddingModel>> for &LLMConfiguration {
-    type Error = anyhow::Error;
-
-    fn try_into(self) -> std::result::Result<Box<dyn EmbeddingModel>, Self::Error> {
-        let boxed = match self {
+impl LLMConfiguration {
+    pub(crate) fn vector_size(&self) -> i32 {
+        match self {
             LLMConfiguration::OpenAI {
-                api_key,
-                embedding_model,
-                prompt_model,
-                base_url,
-            } => Box::new(build_openai(
-                api_key.as_ref(),
-                embedding_model,
-                prompt_model,
-                base_url.as_ref(),
-            )?) as Box<dyn EmbeddingModel>,
-            LLMConfiguration::Ollama { .. } => {
-                Box::new(build_ollama(self)?) as Box<dyn EmbeddingModel>
+                embedding_model, ..
+            } => match embedding_model {
+                OpenAIEmbeddingModel::TextEmbedding3Small => 1536,
+                OpenAIEmbeddingModel::TextEmbedding3Large => 3072,
+            },
+            LLMConfiguration::Ollama {
+                embedding_model, ..
+            } => {
+                embedding_model
+                    .as_ref()
+                    .expect("Expected an embedding model for ollama")
+                    .vector_size
             }
             LLMConfiguration::OpenRouter { .. } => {
                 panic!("OpenRouter does not have an embedding model")
+            }
+            LLMConfiguration::FastEmbed { embedding_model } => embedding_model.vector_size(),
+
+            #[cfg(debug_assertions)]
+            LLMConfiguration::Testing => 1,
+            LLMConfiguration::Anthropic { .. } => {
+                panic!("Anthropic does not have an embedding model")
+            }
+        }
+    }
+
+    fn build_openai(&self, backoff: BackoffConfiguration) -> Result<integrations::openai::OpenAI> {
+        let LLMConfiguration::OpenAI {
+            api_key,
+            embedding_model,
+            prompt_model,
+            base_url,
+        } = self
+        else {
+            anyhow::bail!("Expected Ollama configuration")
+        };
+
+        let api_key = api_key.as_ref().context("Expected an api key")?;
+
+        let mut config =
+            async_openai::config::OpenAIConfig::default().with_api_key(api_key.expose_secret());
+
+        if let Some(base_url) = base_url {
+            config = config.with_api_base(base_url.to_string());
+        };
+
+        let client = async_openai::Client::with_config(config).with_backoff(backoff.into());
+
+        integrations::openai::OpenAI::builder()
+            .client(client)
+            .default_prompt_model(prompt_model.to_string())
+            .default_embed_model(embedding_model.to_string())
+            .build()
+            .context("Failed to build OpenAI client")
+    }
+
+    fn build_ollama(&self) -> Result<Ollama> {
+        let LLMConfiguration::Ollama {
+            prompt_model,
+            embedding_model,
+            base_url,
+            ..
+        } = self
+        else {
+            anyhow::bail!("Expected Ollama configuration")
+        };
+
+        let mut config = OllamaConfig::default();
+
+        if let Some(base_url) = base_url {
+            config.with_api_base(base_url.as_str());
+        };
+
+        let mut builder = Ollama::builder()
+            .client(async_openai::Client::with_config(config))
+            .to_owned();
+
+        if let Some(embedding_model) = embedding_model {
+            builder.default_embed_model(embedding_model.name.clone());
+        }
+
+        if let Some(prompt_model) = prompt_model {
+            builder.default_prompt_model(prompt_model);
+        }
+
+        builder.build().context("Failed to build Ollama client")
+    }
+
+    fn build_anthropic(&self, backoff: BackoffConfiguration) -> Result<Anthropic> {
+        let LLMConfiguration::Anthropic {
+            api_key,
+            prompt_model,
+        } = self
+        else {
+            anyhow::bail!("Expected Anthropic configuration")
+        };
+
+        let api_key = api_key.as_ref().context("Expected an api key")?;
+        let client = async_anthropic::Client::from_api_key(api_key).with_backoff(backoff.into());
+
+        Anthropic::builder()
+            .client(client)
+            .default_prompt_model(prompt_model.to_string())
+            .build()
+            .context("Failed to build Anthropic client")
+    }
+
+    fn build_open_router(&self, backoff: BackoffConfiguration) -> Result<OpenRouter> {
+        let LLMConfiguration::OpenRouter {
+            prompt_model,
+            api_key,
+        } = self
+        else {
+            anyhow::bail!("Expected OpenRouter configuration")
+        };
+
+        let api_key = api_key.as_ref().context("Expected an api key")?;
+        let config = OpenRouterConfig::builder()
+            .api_key(api_key)
+            .site_url("https://github.com/bosun-ai/kwaak")
+            .site_name("Kwaak")
+            .build()?;
+
+        let client = async_openai::Client::with_config(config).with_backoff(backoff.into());
+
+        OpenRouter::builder()
+            .client(client)
+            .default_prompt_model(prompt_model)
+            .to_owned()
+            .build()
+            .context("Failed to build OpenRouter client")
+    }
+
+    pub fn get_embedding_model(
+        &self,
+        backoff_config: BackoffConfiguration,
+    ) -> Result<Box<dyn EmbeddingModel>> {
+        let boxed = match self {
+            LLMConfiguration::OpenAI { .. } => {
+                Box::new(self.build_openai(backoff_config)?) as Box<dyn EmbeddingModel>
+            }
+            LLMConfiguration::Ollama { .. } => {
+                Box::new(self.build_ollama()?) as Box<dyn EmbeddingModel>
+            }
+            LLMConfiguration::OpenRouter { .. } => {
+                anyhow::bail!("OpenRouter does not have an embedding model")
             }
             LLMConfiguration::FastEmbed { embedding_model } => Box::new(
                 FastEmbed::builder()
@@ -368,74 +417,65 @@ impl TryInto<Box<dyn EmbeddingModel>> for &LLMConfiguration {
             )
                 as Box<dyn EmbeddingModel>,
 
+            LLMConfiguration::Anthropic { .. } => {
+                anyhow::bail!("Anthropic does not have an embedding model")
+            }
+
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => Box::new(NoopLLM) as Box<dyn EmbeddingModel>,
         };
-
         Ok(boxed)
     }
-}
 
-impl TryInto<Box<dyn SimplePrompt>> for &LLMConfiguration {
-    type Error = anyhow::Error;
-    fn try_into(self) -> std::result::Result<Box<dyn SimplePrompt>, Self::Error> {
+    pub fn get_simple_prompt_model(
+        &self,
+        backoff: BackoffConfiguration,
+    ) -> Result<Box<dyn SimplePrompt>> {
         let boxed = match self {
-            LLMConfiguration::OpenAI {
-                api_key,
-                embedding_model,
-                prompt_model,
-                base_url,
-            } => Box::new(build_openai(
-                api_key.as_ref(),
-                embedding_model,
-                prompt_model,
-                base_url.as_ref(),
-            )?) as Box<dyn SimplePrompt>,
+            LLMConfiguration::OpenAI { .. } => {
+                Box::new(self.build_openai(backoff)?) as Box<dyn SimplePrompt>
+            }
             LLMConfiguration::Ollama { .. } => {
-                Box::new(build_ollama(self)?) as Box<dyn SimplePrompt>
+                Box::new(self.build_ollama()?) as Box<dyn SimplePrompt>
             }
             LLMConfiguration::OpenRouter { .. } => {
-                Box::new(build_open_router(self)?) as Box<dyn SimplePrompt>
+                Box::new(self.build_open_router(backoff)?) as Box<dyn SimplePrompt>
             }
             LLMConfiguration::FastEmbed { .. } => {
-                panic!("FastEmbed does not have a prompt model")
+                anyhow::bail!("FastEmbed does not have a simpl prompt model")
+            }
+            LLMConfiguration::Anthropic { .. } => {
+                Box::new(self.build_anthropic(backoff)?) as Box<dyn SimplePrompt>
             }
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => Box::new(NoopLLM) as Box<dyn SimplePrompt>,
         };
-
         Ok(boxed)
     }
-}
 
-impl TryInto<Box<dyn ChatCompletion>> for &LLMConfiguration {
-    type Error = anyhow::Error;
-    fn try_into(self) -> std::result::Result<Box<dyn ChatCompletion>, Self::Error> {
+    pub fn get_chat_completion_model(
+        &self,
+        backoff: BackoffConfiguration,
+    ) -> Result<Box<dyn ChatCompletion>> {
         let boxed = match self {
-            LLMConfiguration::OpenAI {
-                api_key,
-                embedding_model,
-                prompt_model,
-                base_url,
-            } => Box::new(build_openai(
-                api_key.as_ref(),
-                embedding_model,
-                prompt_model,
-                base_url.as_ref(),
-            )?) as Box<dyn ChatCompletion>,
+            LLMConfiguration::OpenAI { .. } => {
+                Box::new(self.build_openai(backoff)?) as Box<dyn ChatCompletion>
+            }
             LLMConfiguration::Ollama { .. } => {
-                Box::new(build_ollama(self)?) as Box<dyn ChatCompletion>
+                Box::new(self.build_ollama()?) as Box<dyn ChatCompletion>
             }
             LLMConfiguration::OpenRouter { .. } => {
-                Box::new(build_open_router(self)?) as Box<dyn ChatCompletion>
+                Box::new(self.build_open_router(backoff)?) as Box<dyn ChatCompletion>
             }
             LLMConfiguration::FastEmbed { .. } => {
-                panic!("FastEmbed does not have a prompt model")
+                anyhow::bail!("FastEmbed does not have a chat completion model")
+            }
+            LLMConfiguration::Anthropic { .. } => {
+                Box::new(self.build_anthropic(backoff)?) as Box<dyn ChatCompletion>
             }
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => Box::new(NoopLLM) as Box<dyn ChatCompletion>,
         };
-
         Ok(boxed)
     }
 }

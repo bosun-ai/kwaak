@@ -30,9 +30,15 @@ pub async fn query(repository: &Repository, query: impl AsRef<str>) -> Result<St
 pub fn build_query_pipeline<'b>(
     repository: &Repository,
 ) -> Result<query::Pipeline<'b, SimilaritySingleEmbedding, states::Answered>> {
-    let query_provider: Box<dyn SimplePrompt> = repository.config().query_provider().try_into()?;
-    let embedding_provider: Box<dyn EmbeddingModel> =
-        repository.config().embedding_provider().try_into()?;
+    let backoff = repository.config().backoff;
+    let query_provider: Box<dyn SimplePrompt> = repository
+        .config()
+        .query_provider()
+        .get_simple_prompt_model(backoff)?;
+    let embedding_provider: Box<dyn EmbeddingModel> = repository
+        .config()
+        .embedding_provider()
+        .get_embedding_model(backoff)?;
 
     let lancedb =
         storage::get_lancedb(repository) as Arc<dyn Retrieve<SimilaritySingleEmbedding<()>>>;

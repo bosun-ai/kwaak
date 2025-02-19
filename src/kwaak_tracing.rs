@@ -42,7 +42,7 @@ pub fn init(repository: &Repository) -> Result<Guard> {
     if cfg!(feature = "otel") && repository.config().otel_enabled {
         env_filter_layer = env_filter_layer
             .add_directive("swiftide=debug".parse().unwrap())
-            .add_directive("swiftide_docker_executor=info".parse().unwrap())
+            .add_directive("swiftide_docker_executor=debug".parse().unwrap())
             .add_directive("swiftide_indexing=debug".parse().unwrap())
             .add_directive("swiftide_integrations=debug".parse().unwrap())
             .add_directive("swiftide_query=debug".parse().unwrap())
@@ -93,6 +93,8 @@ use opentelemetry_sdk::trace::TracerProvider;
 
 #[cfg(feature = "otel")]
 fn init_otel() -> TracerProvider {
+    use std::collections::HashMap;
+
     use opentelemetry_sdk::runtime;
     use opentelemetry_sdk::trace::TracerProvider;
 
@@ -101,10 +103,27 @@ fn init_otel() -> TracerProvider {
         .build()
         .expect("failed to create otlp exporter");
 
+    let service_name = if let Ok(service_name) = std::env::var("OTEL_SERVICE_NAME") {
+        service_name
+    } else {
+        let resource_attributes = std::env::var("OTEL_RESOURCE_ATTRIBUTES")
+            .unwrap_or_default()
+            .split(',')
+            .filter(|s| !s.is_empty())
+            .map(|s| s.split_once('=').expect("invalid OTEL_RESOURCE_ATTRIBUTES"))
+            .map(|(key, value)| (key.to_string(), value.to_string()))
+            .collect::<HashMap<String, String>>();
+        if let Some(service_name) = resource_attributes.get("service.name") {
+            service_name.to_string()
+        } else {
+            "kwaak".to_string()
+        }
+    };
+
     TracerProvider::builder()
         .with_batch_exporter(exporter, runtime::Tokio)
         .with_resource(opentelemetry_sdk::Resource::new(vec![
-            opentelemetry::KeyValue::new("service.name", "kwaak"),
+            opentelemetry::KeyValue::new("service.name", service_name),
         ]))
         .build()
 }

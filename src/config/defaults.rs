@@ -46,9 +46,7 @@ pub fn default_docker_context() -> PathBuf {
 
 /// Determines the default branch
 ///
-/// # Panics
-///
-/// Panics if no git repository, no remote or no main/master branch
+/// Returns `main` if the default branch cannot be determined
 #[must_use]
 pub fn default_main_branch() -> String {
     git::util::main_branch(".")
