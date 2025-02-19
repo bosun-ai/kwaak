@@ -20,14 +20,20 @@ pub struct GarbageCollector<'repository> {
     repository: Cow<'repository, Repository>,
     lancedb: Arc<LanceDB>,
     redb: Arc<Redb>,
+    /// Extensions to consider for GC
+    file_extensions: Vec<&'repository str>,
 }
 
 impl<'repository> GarbageCollector<'repository> {
     pub fn from_repository(repository: &'repository Repository) -> Self {
+        let mut file_extensions = repository.config().language.file_extensions().to_vec();
+        file_extensions.push("md");
+
         Self {
             repository: Cow::Borrowed(repository),
             lancedb: storage::get_lancedb(repository),
             redb: storage::get_redb(repository),
+            file_extensions,
         }
     }
 
@@ -43,8 +49,8 @@ impl<'repository> GarbageCollector<'repository> {
     }
 
     fn update_last_cleaned_up_at(&self, date: SystemTime) {
-        if let Ok(e) = self.runtime_settings().set(LAST_CLEANED_UP_AT, date) {
-            tracing::error!("Failed to update last cleaned up at: {:?}", e);
+        if let Err(e) = self.runtime_settings().set(LAST_CLEANED_UP_AT, date) {
+            tracing::error!("Failed to update last cleaned up at: {:#}", e);
         }
     }
 
@@ -93,7 +99,16 @@ impl<'repository> GarbageCollector<'repository> {
 
         let deleted_files = String::from_utf8_lossy(&output.stdout);
         tracing::debug!("Deleted files detected: {deleted_files}");
-        deleted_files.lines().map(PathBuf::from).collect::<Vec<_>>()
+        deleted_files
+            .lines()
+            .filter_map(|p| {
+                // Only consider files with the given extensions
+                self.file_extensions
+                    .iter()
+                    .find(|ext| p.ends_with(*ext))
+                    .map(|_| PathBuf::from(p))
+            })
+            .collect::<Vec<_>>()
     }
 
     fn files_changed_since_last_index(&self) -> Vec<PathBuf> {
@@ -105,6 +120,22 @@ impl<'repository> GarbageCollector<'repository> {
             .filter_map(Result::ok)
             .filter(|entry| entry.file_type().is_some_and(|ft| ft.is_file()))
             .filter(|entry| {
+                // If the file does not have any of the extensions, skip it
+                if self.file_extensions.iter().all(|ext| {
+                    tracing::debug!(
+                        "Checking file extension: {} against {:?}",
+                        entry.path().display(),
+                        ext
+                    );
+                    !entry.path().to_string_lossy().ends_with(ext)
+                }) {
+                    tracing::debug!(
+                        "Skipping file with extension not in list: {}",
+                        entry.path().display()
+                    );
+                    return false;
+                }
+
                 // If no clean up is known, all files are considered changed
                 let Some(last_cleaned_up_at) = last_cleaned_up_at else {
                     tracing::warn!("No last clean up date found; assuming all files changed");
@@ -280,7 +311,7 @@ mod tests {
         let (repository, guard) = test_utils::test_repository();
 
         let dir = repository.path();
-        let tempfile = dir.join("test_file");
+        let tempfile = dir.join("test_file.md");
         std::fs::write(&tempfile, "Test node").unwrap();
 
         let relative_path = tempfile
@@ -320,6 +351,7 @@ mod tests {
             repository: Cow::Owned(repository.clone()),
             lancedb: lancedb.clone(),
             redb: redb.clone(),
+            file_extensions: vec!["md"],
         };
         TestContext {
             redb,
@@ -447,5 +479,44 @@ mod tests {
         // Since we hash on the content, we cannot get the cache key properly
         // If the file gets added again with the exact same content, it will not be indexed
         // assert!(!cache_result);
+    }
+
+    #[test_log::test(tokio::test)]
+    async fn test_file_extension_filtering() {
+        let context = setup().await;
+
+        // Add a file with an extension that should be filtered out
+        let filtered_file = context.repository.path().join("filtered_file.txt");
+        std::fs::write(&filtered_file, "This should be filtered out").unwrap();
+
+        // Add a file with an extension that should be included
+        let included_file = context.repository.path().join("included_file.md");
+        std::fs::write(&included_file, "This should be included").unwrap();
+
+        // Update the last cleaned up time to ensure both files are considered
+        context
+            .subject
+            .update_last_cleaned_up_at(SystemTime::now() - Duration::from_secs(60));
+
+        // Perform cleanup
+        context.subject.clean_up().await.unwrap();
+
+        // Check that the file with the filtered extension is not in the index
+        assert_rows_with_path_in_lancedb!(
+            &context,
+            filtered_file
+                .strip_prefix(context.repository.path())
+                .unwrap(),
+            0
+        );
+
+        // Check that the file with the included extension is in the index
+        assert_rows_with_path_in_lancedb!(
+            &context,
+            included_file
+                .strip_prefix(context.repository.path())
+                .unwrap(),
+            0
+        );
     }
 }
