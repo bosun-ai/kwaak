@@ -11,11 +11,14 @@
 //! and the current diff
 //!
 //! The agent completes messages since the last summary.
-use std::sync::{atomic::AtomicUsize, Arc};
+use std::{
+    collections::HashSet,
+    sync::{atomic::AtomicUsize, Arc},
+};
 
 use swiftide::{
     agents::hooks::AfterEachFn,
-    chat_completion::{ChatCompletion, ChatMessage, Tool},
+    chat_completion::{ChatCompletion, ChatCompletionRequest, ChatMessage, Tool},
     prompt::Prompt,
     traits::Command,
 };
@@ -69,6 +72,7 @@ impl ConversationSummarizer {
 
             let prompt = self.prompt();
             let git_start_sha = self.git_start_sha.clone();
+            let tools = self.available_tools.clone();
 
             Box::pin(
                 async move {
@@ -91,7 +95,17 @@ impl ConversationSummarizer {
                         filter_messages_since_summary(agent.context().history().await);
                     messages.push(ChatMessage::new_user(prompt));
 
-                    let summary = llm.complete(&messages.into()).await?;
+                    let chat_completion_request = ChatCompletionRequest::builder()
+                        .messages(messages)
+                        .tools_spec(
+                            tools
+                                .iter()
+                                .map(swiftide::chat_completion::Tool::tool_spec)
+                                .collect::<HashSet<_>>(),
+                        )
+                        .build()?;
+
+                    let summary = llm.complete(&chat_completion_request).await?;
 
                     if let Some(summary) = summary.message() {
                         tracing::debug!(summary = %summary, "Summarized tool output");
