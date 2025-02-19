@@ -83,10 +83,10 @@ class DockerInstance:
     repo = self.instance.repo.replace("/", "_")
     version = self.instance.version
 
-    self.cache_dir = os.path.join(results_dir, "..", "cache", repo, version)
+    self.cache_dir = os.path.join(results_dir, "..", "..", "cache", repo, version)
     os.makedirs(self.cache_dir, exist_ok=True)
 
-    self.log_dir = os.path.join(results_dir, "logs")
+    self.log_dir = os.path.join(results_dir, "..", "..", "logs")
     os.makedirs(self.log_dir, exist_ok=True)
 
   def run(self, run_id: str) -> Self:
@@ -128,16 +128,25 @@ class DockerInstance:
             "type": "bind",
             "source": self.instance_dir,
             "target": "/swe",
+            "bind": {
+              "create_host_path": True
+            }
           },
           {
             "type": "bind",
             "source": self.cache_dir,
             "target": "/root/.cache/kwaak",
+            "bind": {
+              "create_host_path": True
+            }
           },
           {
             "type": "bind",
             "source": self.log_dir,
             "target": "/root/.cache/kwaak/logs",
+            "bind": {
+              "create_host_path": True
+            }
           },
         ]
     )

@@ -52,6 +52,7 @@ class SWEBenchInstance:
     FAIL_TO_PASS: list[str] # A json list of strings that represent the set of tests resolved by the PR and tied to the issue resolution.
     PASS_TO_PASS: list[str] # A json list of strings that represent tests that should pass before and after the PR application.
     environment_setup_commit: str # commit hash to use for environment setup and installation.
+    difficulty: str # difficulty of the issue
 
     env_name = "testbed"
     repo_directory = "/testbed"
