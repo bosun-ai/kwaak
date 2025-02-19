@@ -416,21 +416,6 @@ dependencies = [
 
 [[package]]
 name = "async-anthropic"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d5ab06d2a635f46bfbc20de71461e3739448ba4ea52ad6aaad72532e8437f9a"
-dependencies = [
- "derive_builder",
- "reqwest",
- "secrecy",
- "serde",
- "serde_json",
- "thiserror 2.0.11",
- "tracing",
-]
-
-[[package]]
-name = "async-anthropic"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96beb82247804e3c488d955707ce5cefa2dc8a6256d78cda2e01498c3e025018"
@@ -3866,7 +3851,7 @@ dependencies = [
  "ansi-to-tui",
  "anyhow",
  "assert_cmd",
- "async-anthropic 0.3.0",
+ "async-anthropic",
  "async-openai",
  "async-trait",
  "backoff",
@@ -7230,9 +7215,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "swiftide"
-version = "0.19.0"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9362023f76b4e07aa8a9d107caa3768fdada4cf219bedd2644f3d36843fe777d"
+checksum = "43ca3e80c7eccfd400dc45431a09fbe0c8084b6d932aafaf67a0751ed8e7ade4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7248,9 +7233,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-agents"
-version = "0.19.0"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "621e34e5a2366f5c8ee79e40925287cf4fe950be8acc894857b7d28d427f74cb"
+checksum = "e84452950d7b8d36b9f12696db72fe60a162bd35faea879f4f9f70241c5cf022"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7270,9 +7255,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-core"
-version = "0.19.0"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c636381ef50e9a4754809a3f985ba80b4f67dc04b3d98eef5f4e7428ed430d25"
+checksum = "60ab860d3bc12a3ae77747aed577c8689740ca192c6eac618495b693e561b4a1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7298,9 +7283,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-docker-executor"
-version = "0.6.2"
+version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a486b515c27306b0d079cf0bc7427b35533b4a4e7b6d23ccf90f7842c2c2a4f0"
+checksum = "f9d046be7c1fa3b1f5c7dcd2476897e4f36ee555022566f4f689216bf7239e39"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7325,9 +7310,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-indexing"
-version = "0.19.0"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1deab2e1ce1b64f155193a4896d806bc28677a4be58d97614422913828598f8e"
+checksum = "ef415a1a7935d31634de74e6b9ee71436e916eba594cad500089afeba0e5e5aa"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7351,14 +7336,14 @@ dependencies = [
 
 [[package]]
 name = "swiftide-integrations"
-version = "0.19.0"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6682e8f59ca3538657f5b8120300e50e819166048e102a100d0ad9dd0d2c2d64"
+checksum = "0cac0f3ae483ddbff3fa497a0bc18d8cdfed9b18c0a4059a789eeeb23089c42d"
 dependencies = [
  "anyhow",
  "arrow",
  "arrow-array",
- "async-anthropic 0.2.1",
+ "async-anthropic",
  "async-openai",
  "async-trait",
  "chrono",
@@ -7378,6 +7363,7 @@ dependencies = [
  "strum_macros 0.27.1",
  "swiftide-core",
  "swiftide-macros",
+ "tera",
  "tokio",
  "tracing",
  "tree-sitter",
@@ -7393,9 +7379,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-macros"
-version = "0.19.0"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2e4c94e655475366b4cb3194d39e351e623a6864a5e6710b7342d1c01edf786"
+checksum = "0e8354cb7b562be2b2e284746f067021b5458dc61807f42329f94814d7919b86"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7405,14 +7391,15 @@ dependencies = [
  "quote",
  "serde",
  "serde_json",
+ "swiftide-core",
  "syn 2.0.98",
 ]
 
 [[package]]
 name = "swiftide-query"
-version = "0.19.0"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54d3e9c5cde8fc976bc299e7cd824d0dc8ec6e599255021858c643bfd3669f40"
+checksum = "c3afd6756f7fae01dd9a2bbdaf0b6bf69bc6554efecd4a1a25141bbc4592b1ec"
 dependencies = [
  "anyhow",
  "async-trait",
