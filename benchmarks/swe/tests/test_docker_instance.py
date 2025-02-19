@@ -39,7 +39,7 @@ def test_docker_instance_run(mock_swe_instance, temp_results_dir):
         assert len(mounts) == 1
         assert mounts[0]["Type"] == "bind"
         assert mounts[0]["Source"] == instance.instance_dir
-        assert mounts[0]["Destination"] == "/tmp"  # Docker API uses 'Destination' instead of 'Target'
+        assert mounts[0]["Destination"] == "/swe"  # Docker API uses 'Destination' instead of 'Target'
         
         # Verify platform
         assert instance.container.attrs["Platform"] == "linux"  # Docker API returns just 'linux'

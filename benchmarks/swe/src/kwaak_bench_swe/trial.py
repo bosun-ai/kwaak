@@ -137,22 +137,22 @@ class Trial:
         self.container.run(self.name)
 
         # Write the test_cmd to a shell script
-        test_cmd_path = "/tmp/test.sh"
+        test_cmd_path = "/swe/test.sh"
         test_cmd = f"#!/bin/bash\nset -e\n{self.item.test_cmd}\n"
         self.container.write_string_to_file(test_cmd, test_cmd_path)
         self.container.exec(f"chmod +x {test_cmd_path}")
 
         # Then apply the patch
-        self.container.write_string_to_file(self.item.test_patch, "/tmp/test.patch")
+        self.container.write_string_to_file(self.item.test_patch, "/swe/test.patch")
         # Try to apply the patch and get detailed error if it fails
-        patch_result = self.container.exec("git apply /tmp/test.patch")
+        patch_result = self.container.exec("git apply /swe/test.patch")
         if patch_result.exit_code != 0:
           # Get more details about the failure
           logging.info(f"Test Patch failed with code {patch_result.exit_code}")
           logging.info(f"Patch output: {patch_result.output}")
           
           # Try with -v for more details
-          verbose_result = self.container.exec("git apply -v /tmp/test.patch")
+          verbose_result = self.container.exec("git apply -v /swe/test.patch")
           logging.info(f"Verbose patch output: {verbose_result.output}")
           
           return TrialResult(
@@ -165,7 +165,7 @@ class Trial:
         # Establish initial git state
         initial_git_ref = self.establish_initial_git_ref()
         
-        pre_patch_results = self.container.exec("/tmp/test.sh")
+        pre_patch_results = self.container.exec("/swe/test.sh")
         pre_patch_results_path = os.path.join(self.results_dir, f"pre_patch_test_results.txt")
         
         # write results to file in results_dir
@@ -189,7 +189,7 @@ class Trial:
         with open(prediction_path, "w") as f:
           json.dump(prediction, f, indent=2)
 
-        test_results = self.container.exec("/tmp/test.sh").output.decode()
+        test_results = self.container.exec("/swe/test.sh").output.decode()
         test_results_path = os.path.join(self.results_dir, f"test_results.txt")
         
         with open(test_results_path, "w") as f:
@@ -283,9 +283,9 @@ class Trial:
     self.container.exec("apt-get install -y ripgrep fd-find")
 
     subprocess.run(["cp", agent_path, self.container.instance_dir])
-    self.container.exec("chmod +x /tmp/kwaak")
+    self.container.exec("chmod +x /swe/kwaak")
     logging.info("Copying agent to container")
-    self.container.exec("cp /tmp/kwaak /usr/local/bin/kwaak")
+    self.container.exec("cp /swe/kwaak /usr/local/bin/kwaak")
 
     # write kwaak execution script to container
     kwaak_script = """#!/bin/bash
@@ -295,12 +295,12 @@ class Trial:
       echo "Linking fdfind to fd"
       ln -s $(which fdfind) /usr/local/bin/fd
       echo "Dumping env.."
-      env > /tmp/env.log
+      env > /swe/env.log
       echo "Invoking kwaak.."
-      kwaak --config-path /tmp/kwaak.rendered.toml run-agent --initial-message "$PROMPT" 2>&1 | tee /tmp/kwaak.log
+      kwaak --config-path /swe/kwaak.rendered.toml run-agent --initial-message "$PROMPT" 2>&1 | tee /swe/kwaak.log
     """
-    self.container.write_string_to_file(kwaak_script, "/tmp/kwaak.sh")
-    self.container.exec("chmod +x /tmp/kwaak.sh")
+    self.container.write_string_to_file(kwaak_script, "/swe/kwaak.sh")
+    self.container.exec("chmod +x /swe/kwaak.sh")
 
   def run_agent(self) -> None:
     """Execute the Kwaak agent in the test environment.
@@ -326,10 +326,9 @@ class Trial:
     openai_api_key = os.environ["OPENAI_API_KEY"]
     prompt = self.render_prompt()
     result = self.container.exec(
-      "/tmp/kwaak.sh",
+      "/swe/kwaak.sh",
       env={
         "PROMPT": prompt,
-        "KWAAK_CACHE_DIR": f"/tmp/kwaak_cache/{self.item.repo}",
         "OPENAI_API_KEY": openai_api_key,
         "RUST_LOG": "debug",
         "RUST_BACKTRACE": "1"

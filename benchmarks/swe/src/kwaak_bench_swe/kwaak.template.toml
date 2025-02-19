@@ -8,7 +8,7 @@ owner = "bosun-ai"
 main_branch = "master"
 
 [commands]
-test = "/tmp/test.sh"
+test = "/swe/test.sh"
 
 [llm.indexing]
 provider = "OpenAI"

@@ -18,7 +18,6 @@ Typical usage:
 """
 
 import logging
-from time import sleep
 from typing import Self
 import os
 
@@ -67,6 +66,8 @@ class DockerInstance:
   container: Container
 
   instance_dir: str
+  cache_dir: str
+  log_dir: str
 
   def __init__(self, instance: SWEBenchInstance, results_dir: str):
     """Initialize a new Docker instance manager.
@@ -78,6 +79,15 @@ class DockerInstance:
     self.client = docker_from_env()
     self.instance = instance
     self.instance_dir = os.path.join(results_dir, "container")
+
+    repo = self.instance.repo.replace("/", "_")
+    version = self.instance.version
+
+    self.cache_dir = os.path.join(results_dir, "..", "cache", repo, version)
+    os.makedirs(self.cache_dir, exist_ok=True)
+
+    self.log_dir = os.path.join(results_dir, "logs")
+    os.makedirs(self.log_dir, exist_ok=True)
 
   def run(self, run_id: str) -> Self:
     """Create and start a Docker container for test execution.
@@ -98,7 +108,6 @@ class DockerInstance:
         ImageNotFound: If the required Docker image is not available
     """
     os.makedirs(self.instance_dir, exist_ok=True)
-    
 
     try:
       self.client.images.get(self.instance.instance_image_key)
@@ -118,8 +127,18 @@ class DockerInstance:
           {
             "type": "bind",
             "source": self.instance_dir,
-            "target": "/tmp",
-          }
+            "target": "/swe",
+          },
+          {
+            "type": "bind",
+            "source": self.cache_dir,
+            "target": "/root/.cache/kwaak",
+          },
+          {
+            "type": "bind",
+            "source": self.log_dir,
+            "target": "/root/.cache/kwaak/logs",
+          },
         ]
     )
     logging.info(f"Container for {self.instance.instance_id} created: {self.container.id}")
@@ -149,7 +168,7 @@ class DockerInstance:
     # Create target directory and copy file
     file_dir = os.path.dirname(filepath)
     self.container.exec_run(f"mkdir -p {file_dir}")
-    self.container.exec_run(f"cp /tmp/{tmp_name} {filepath}")
+    self.container.exec_run(f"cp /swe/{tmp_name} {filepath}")
 
   def cleanup(self) -> None:
     """Clean up container resources.
