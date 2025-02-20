@@ -22,15 +22,25 @@ uv run kwaak-bench-swe
 
 This will:
 1. Load the SWE-bench test dataset
-2. Take the first 10 items from each repository
+2. Take the first 2 items from each repository
 3. For each test case:
    - Create an isolated Docker container
    - Set up the test environment
    - Apply test patches
-   - Run the Kwaak agent
+   - Run the Kwaak agent (with 60-minute timeout)
    - Execute test suite
    - Evaluate results
 4. Generate predictions in SWE-bench submission format
+
+### Command-line Options
+
+```bash
+# Run a specific test case
+uv run kwaak-bench-swe --instance psf__requests-2317
+
+# Evaluate results for a specific trial
+uv run kwaak-bench-swe --evaluate psf__requests-2317 --results-path /path/to/results
+```
 
 ## Project Structure
 
@@ -49,7 +59,8 @@ The benchmark generates several outputs in the `results` directory:
 3. `{benchmark-name}/{trial-name}-test_results.txt` - Post-patch test results
 4. `{benchmark-name}/{trial-name}-patch.diff` - Generated patch
 5. `{benchmark-name}/{trial-name}-report.json` - Evaluation report
-6. `predictions.jsonl` - SWE-bench submission format predictions
+6. `{benchmark-name}/{trial-name}/agent_result.txt` - Kwaak agent output or timeout message
+7. `predictions.jsonl` - SWE-bench submission format predictions
 
 ## Development
 
