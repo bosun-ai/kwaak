@@ -159,7 +159,7 @@ class Trial:
             instance=self.item,
             run_failed=False,
             validation_failed=True,
-            error=f"Patch failed: {patch_result.output}",
+            error=f"Patch failed: {patch_result.output.decode()}",
           )
 
         # Establish initial git state

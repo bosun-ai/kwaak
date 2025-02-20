@@ -34,12 +34,24 @@ def test_docker_instance_run(mock_swe_instance, temp_results_dir):
         instance.container.reload()
         assert instance.container.status == "running"
         
-        # Verify mount point
+        # Verify mount points
         mounts = instance.container.attrs["Mounts"]
-        assert len(mounts) == 1
-        assert mounts[0]["Type"] == "bind"
-        assert mounts[0]["Source"] == instance.instance_dir
-        assert mounts[0]["Destination"] == "/swe"  # Docker API uses 'Destination' instead of 'Target'
+        assert len(mounts) == 3  # instance_dir, cache_dir, and log_dir
+        
+        # Check instance directory mount
+        instance_mount = next(m for m in mounts if m["Destination"] == "/swe")
+        assert instance_mount["Type"] == "bind"
+        assert instance_mount["Source"] == instance.instance_dir
+        
+        # Check cache directory mount
+        cache_mount = next(m for m in mounts if m["Destination"] == "/root/.cache/kwaak")
+        assert cache_mount["Type"] == "bind"
+        assert cache_mount["Source"] == instance.cache_dir
+        
+        # Check log directory mount
+        log_mount = next(m for m in mounts if m["Destination"] == "/root/.cache/kwaak/logs")
+        assert log_mount["Type"] == "bind"
+        assert log_mount["Source"] == os.path.join(temp_results_dir, "logs")
         
         # Verify platform
         assert instance.container.attrs["Platform"] == "linux"  # Docker API returns just 'linux'

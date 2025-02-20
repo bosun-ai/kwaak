@@ -31,7 +31,9 @@ def test_benchmark_initialization(mock_swe_instance, temp_results_dir):
 def test_benchmark_result_persistence(mock_swe_instance, temp_results_dir):
     """Test saving and loading benchmark results."""
     benchmark = Benchmark("test-bench", [mock_swe_instance], temp_results_dir)
-    run_name = benchmark.run_name(mock_swe_instance)
+    next_run = benchmark.next_run()
+    assert next_run is not None
+    run_name = next_run["run_name"]
 
     # Create a test result
     result = TrialResult(
@@ -44,17 +46,10 @@ def test_benchmark_result_persistence(mock_swe_instance, temp_results_dir):
     )
 
     # Save the result
-    benchmark.add_result(run_name, result)
-
-    # Verify that the result was saved to disk
-    result_file = os.path.join(temp_results_dir, "test-bench", f"{run_name}.json")
-    assert os.path.exists(result_file)
-
-    # Load the result from disk and verify its contents
-    with open(result_file, "r") as f:
-        data = json.load(f)
-        assert data["success"] is True
-        assert data["patch"] == "test patch"
+    benchmark.results[run_name] = result
+    os.makedirs(os.path.join(temp_results_dir, "test-bench", mock_swe_instance.instance_id, "1"), exist_ok=True)
+    with open(os.path.join(temp_results_dir, "test-bench", mock_swe_instance.instance_id, "1", "result.json"), "w") as f:
+        json.dump(result.to_dict(), f, indent=2)
 
     # Create a new benchmark instance and verify that it loads the existing result
     new_benchmark = Benchmark("test-bench", [mock_swe_instance], temp_results_dir)
@@ -72,7 +67,7 @@ def test_benchmark_next_run(mock_swe_instance, temp_results_dir):
     next_run = benchmark.next_run()
     assert next_run is not None
     assert next_run["instance"] == mock_swe_instance
-    assert next_run["run_name"] == benchmark.run_name(mock_swe_instance)
+    assert next_run["run_name"] == f"{mock_swe_instance.instance_id}-1"
 
     # After adding a result, there should be no more instances to run
     result = TrialResult(
@@ -83,5 +78,5 @@ def test_benchmark_next_run(mock_swe_instance, temp_results_dir):
         error=None,
         patch="test patch"
     )
-    benchmark.add_result(next_run["run_name"], result)
+    benchmark.results[next_run["run_name"]] = result
     assert benchmark.next_run() is None

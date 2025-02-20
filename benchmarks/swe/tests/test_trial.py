@@ -68,11 +68,12 @@ def test_trial_establish_git_ref(mock_swe_instance, temp_results_dir, mock_docke
     
     # Verify git commands were called
     calls = mock_docker_instance.container.exec.call_args_list
-    assert len(calls) == 4  # git config name, email, commit, and rev-parse
+    assert len(calls) == 5  # git config name, email, commit, add, and rev-parse
     assert "git config user.name" in calls[0].args[0]
     assert "git config user.email" in calls[1].args[0]
-    assert "git commit" in calls[2].args[0]
-    assert "git rev-parse" in calls[3].args[0]
+    assert "git add" in calls[2].args[0]
+    assert "git commit" in calls[3].args[0]
+    assert "git rev-parse" in calls[4].args[0]
 
 
 def test_trial_run(mock_swe_instance, temp_results_dir, mock_docker_instance, mocker):
@@ -80,11 +81,15 @@ def test_trial_run(mock_swe_instance, temp_results_dir, mock_docker_instance, mo
     trial = Trial(mock_swe_instance, "test-1", temp_results_dir)
     trial.container = mock_docker_instance.container
     
+    # Mock environment variables
+    mocker.patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key'})
+    
     # Mock successful container execution
     exec_mock = mocker.Mock()
     exec_mock.side_effect = [
         mocker.Mock(output=b"test output\n", exit_code=0),  # test patch
         mocker.Mock(output=b"test output\n", exit_code=0),  # git config
+        mocker.Mock(output=b"test output\n", exit_code=0),  # git add
         mocker.Mock(output=b"test output\n", exit_code=0),  # git commit
         mocker.Mock(output=b"test output\n", exit_code=0),  # git rev-parse
     ]
@@ -112,11 +117,39 @@ def test_trial_run_with_error(mock_swe_instance, temp_results_dir, mock_docker_i
     trial = Trial(mock_swe_instance, "test-1", temp_results_dir)
     trial.container = mock_docker_instance.container
     
-    # Mock establish_initial_git_ref to raise an exception
-    mocker.patch.object(trial, 'establish_initial_git_ref', side_effect=Exception("Test error"))
+    # Mock container.exec to fail when applying patch
+    mock_docker_instance.container.exec.return_value = mocker.Mock(
+        output=b"Test error",
+        exit_code=1
+    )
     
     result = trial.run()
     assert isinstance(result, TrialResult)
     assert result.failed()
-    assert result.run_failed
-    assert "Test error" in str(result.error)
+    assert result.error == "Patch failed: Test error"
+
+
+def test_trial_invoke_kwaak_timeout(mock_swe_instance, temp_results_dir, mock_docker_instance, mocker):
+    """Test that invoke_kwaak handles timeouts properly."""
+    import time
+    
+    # Mock environment variables
+    mocker.patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key'})
+    
+    trial = Trial(mock_swe_instance, "test-1", temp_results_dir)
+    trial.container = mock_docker_instance.container
+    
+    # Mock a long-running command that will timeout
+    def mock_exec(*args, **kwargs):
+        raise TimeoutError("Command timed out")
+    
+    mock_docker_instance.container.exec.side_effect = mock_exec
+    
+    # Run invoke_kwaak
+    trial.invoke_kwaak()
+    
+    # Check that timeout message was written to agent_result.txt
+    agent_result_path = os.path.join(temp_results_dir, "agent_result.txt")
+    with open(agent_result_path, "r") as f:
+        content = f.read()
+        assert content == "Error: Command timed out"
