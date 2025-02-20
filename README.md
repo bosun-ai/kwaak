@@ -402,7 +402,7 @@ If you have a great idea, please fork the repo and create a pull request.
 
 Don't forget to give the project a star! Thanks again!
 
-Testing agents is not a trivial matter. We have (for now) internal benchmarks to verify agent behaviour across larger datasets.
+Testing agents is not a trivial matter. We have benchmarks to verify agent behaviour across larger datasets. Check out the [Evaluations](EVALUATIONS.md) page for more information as well as the [SWE-Bench](benchmarks/swe/README.md) benchmark page for more information.
 
 If you just want to contribute (bless you!), see [our issues](https://github.com/bosun-ai/kwaak/issues) or join us on Discord.
 
