@@ -322,23 +322,71 @@ class Trial:
     self.invoke_kwaak()
 
   def invoke_kwaak(self):
+    import threading
+    import queue
+    import time
+    
     logging.info("Invoking kwaak")
     openai_api_key = os.environ["OPENAI_API_KEY"]
     prompt = self.render_prompt()
-    result = self.container.exec(
-      "/swe/kwaak.sh",
-      env={
-        "PROMPT": prompt,
-        "OPENAI_API_KEY": openai_api_key,
-        "RUST_LOG": "debug",
-        "RUST_BACKTRACE": "1"
-      }
-    )
+    
+    # Queue to store the result from the thread
+    result_queue = queue.Queue()
+    
+    def run_kwaak():
+      try:
+        result = self.container.exec(
+          "/swe/kwaak.sh",
+          env={
+            "PROMPT": prompt,
+            "OPENAI_API_KEY": openai_api_key,
+            "RUST_LOG": "debug",
+            "RUST_BACKTRACE": "1"
+          }
+        )
+        result_queue.put(result)
+      except Exception as e:
+        result_queue.put(e)
+    
+    # Start the thread
+    thread = threading.Thread(target=run_kwaak)
+    thread.daemon = True  # Make thread daemon so it will be killed when main thread exits
+    thread.start()
+    
+    # Wait for the thread with timeout
+    minutes = 60
+    timeout = minutes * 60
+    timeout_time = time.time() + timeout
+    
     agent_result_path = os.path.join(self.results_dir, "agent_result.txt")
     
-    with open(agent_result_path, "w") as f:
-      f.write(result.output.decode())
-      f.write(f"\nExit Code: {result.exit_code}")
+    try:
+      # Wait for the thread to complete or timeout
+      while thread.is_alive() and time.time() < timeout_time:
+        thread.join(1.0)  # Check every second
+        
+      if thread.is_alive():
+        # Timeout occurred
+        with open(agent_result_path, "w") as f:
+          f.write(f"Timeout Error {minutes} minutes")
+        return
+      
+      # Get the result if thread completed
+      result = result_queue.get_nowait()
+      if isinstance(result, Exception):
+        # Handle any exceptions that occurred in the thread
+        with open(agent_result_path, "w") as f:
+          f.write(f"Error: {str(result)}")
+      else:
+        # Write successful result
+        with open(agent_result_path, "w") as f:
+          f.write(result.output.decode())
+          f.write(f"\nExit Code: {result.exit_code}")
+          
+    except queue.Empty:
+      # This shouldn't happen since we already checked thread.is_alive()
+      with open(agent_result_path, "w") as f:
+        f.write("Unexpected error: No result from thread")
 
   def render_prompt(self):
     return (

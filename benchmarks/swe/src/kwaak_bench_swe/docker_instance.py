@@ -86,7 +86,7 @@ class DockerInstance:
     self.cache_dir = os.path.join(results_dir, "..", "..", "cache", repo, version)
     os.makedirs(self.cache_dir, exist_ok=True)
 
-    self.log_dir = os.path.join(results_dir, "..", "..", "logs")
+    self.log_dir = os.path.join(results_dir, "logs")
     os.makedirs(self.log_dir, exist_ok=True)
 
   def run(self, run_id: str) -> Self:
