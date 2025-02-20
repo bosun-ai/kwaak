@@ -105,110 +105,6 @@ def evaluate_trial(instance_id: str, results_path: str) -> None:
     logging.info(f"Error: {result.error or 'None'}")
     logging.info(f"Validation failed: {result.validation_failed}")
 
-
-def copy_kwaak_caches(benchmark_name: str = None):
-    """Copy kwaak caches from running containers to the cache directory.
-    
-    This function:
-    1. Gets all running containers with the sweb.eval prefix
-    2. For each container:
-        - Extracts the instance_id from the container name
-        - Looks up the repo from the dataset
-        - Creates the cache directory structure
-        - Copies the kwaak cache from the container
-        
-    Args:
-        benchmark_name: Optional name of the benchmark. If not provided, will use the default format.
-    """
-    # Load the dataset to get repo information
-    dataset = load_dataset(DATASET_NAME, split=SPLIT)
-    dataset_list = list(dataset)
-    
-    # Get Docker client
-    client = docker.from_env()
-    
-    # Get all running containers with sweb.eval prefix
-    containers = client.containers.list(filters={'name': 'sweb.eval'})
-    
-    for container in containers:
-        # Extract instance_id from container name
-        # Format: sweb.eval.<instance_id>.<instance_id>-1
-        parts = container.name.split('.')
-        if len(parts) != 4:
-            logging.warning(f"Unexpected container name format: {container.name}")
-            continue
-            
-        # The instance ID is in the format 'owner__repo-number'
-        instance_id = parts[2]  # This will be the full instance ID
-        if instance_id.endswith('-1'):
-            # If this is the first trial, remove the -1
-            instance_id = instance_id[:-2]
-        
-        # Find the dataset item
-        dataset_item = next((item for item in dataset_list if item['instance_id'] == instance_id), None)
-        if not dataset_item:
-            logging.warning(f"Could not find dataset item for instance {instance_id}")
-            continue
-            
-        # Get repo information and version
-        repo = dataset_item['repo']
-        version = dataset_item['version']
-        repo_dir = repo.replace('/', '_')
-        
-        # Get the benchmark name if not provided
-        if not benchmark_name:
-            kwaak_version = "0.10.0"
-            benchmark_name = f"swe-bench-kwaak-{kwaak_version}"
-            
-        # Construct cache directory path
-        results_dir = os.path.join(os.getcwd(), "results", benchmark_name)
-        cache_dir = os.path.join(results_dir, "cache")
-        repo_version_dir = os.path.join(cache_dir, repo_dir, version)
-        os.makedirs(repo_version_dir, exist_ok=True)
-        
-        # Copy the kwaak cache from the container
-        try:
-            # Create a temporary directory for extraction
-            temp_dir = os.path.join(cache_dir, f"{instance_id}_temp")
-            os.makedirs(temp_dir, exist_ok=True)
-            
-            # Create a temporary tar file
-            temp_tar = os.path.join(cache_dir, f"{instance_id}_cache.tar")
-            
-            # Get the cache from the container
-            bits, stat = container.get_archive('/root/.cache/kwaak')
-            
-            # Write the tar file
-            with open(temp_tar, 'wb') as f:
-                for chunk in bits:
-                    f.write(chunk)
-                    
-            # Extract the tar file to the temporary directory
-            subprocess.run(['tar', 'xf', temp_tar, '-C', temp_dir], check=True)
-            
-            # Move the contents of the kwaak directory to the repo version directory
-            kwaak_dir = os.path.join(temp_dir, 'kwaak')
-            if os.path.exists(kwaak_dir):
-                # Move all contents from kwaak_dir to repo_version_dir
-                for item in os.listdir(kwaak_dir):
-                    src = os.path.join(kwaak_dir, item)
-                    dst = os.path.join(repo_version_dir, item)
-                    if os.path.exists(dst):
-                        if os.path.isdir(dst):
-                            os.system(f'rm -rf {dst}')
-                        else:
-                            os.remove(dst)
-                    os.rename(src, dst)
-            
-            # Clean up temporary files
-            os.remove(temp_tar)
-            os.system(f'rm -rf {temp_dir}')
-            
-            logging.info(f"Successfully copied cache for {instance_id} to {repo_version_dir}")
-            
-        except Exception as e:
-            logging.error(f"Failed to copy cache for {instance_id}: {e}")
-
 def main():
     """Run the SWE-bench benchmark with the Kwaak agent.
 
@@ -243,13 +139,11 @@ def main():
     # Clean up any existing processes
     cleanup_processes()
     
-    
     # Set up argument parser
     parser = argparse.ArgumentParser(description='Run SWE-bench benchmark with Kwaak agent')
     parser.add_argument('--instance', type=str, help='Instance ID to run a single test case')
     parser.add_argument('--evaluate', type=str, help='Instance ID to evaluate results for')
     parser.add_argument('--results-path', type=str, help='Path to directory containing trial results')
-    parser.add_argument('--copy-caches', action='store_true', help='Copy kwaak caches from running containers')
     args = parser.parse_args()
     
     # If evaluating a specific trial
@@ -258,12 +152,6 @@ def main():
             logging.error("--results-path is required when using --evaluate")
             return
         evaluate_trial(args.evaluate, args.results_path)
-        return
-        
-    if args.copy_caches:
-        kwaak_version = "0.10.0"
-        benchmark_name = f"swe-bench-kwaak-{kwaak_version}"
-        copy_kwaak_caches(benchmark_name)
         return
     
     # Load the dataset
@@ -294,7 +182,6 @@ def main():
         logging.info(f"Running first 2 items from {len(all_repos)} repositories")
 
     dataset_items = SWEBenchInstance.from_dataset(raw_dataset_items)
-    instance_ids = [item.instance_id for item in dataset_items]
 
     test_specs = get_test_specs_from_dataset(raw_dataset_items, 'swebench', 'latest')
     for spec in test_specs:
@@ -313,6 +200,7 @@ def main():
         logging.info(f"Pulling image {image}")
         docker_client.images.pull(image)
 
+    # instance_ids = [item.instance_id for item in dataset_items]
     # prepare_images(
     #     DATASET_NAME,
     #     SPLIT,
