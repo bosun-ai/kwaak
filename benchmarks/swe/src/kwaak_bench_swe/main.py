@@ -34,27 +34,6 @@ from swebench.harness.test_spec.test_spec import (
 DATASET_NAME = "princeton-nlp/SWE-bench_Verified"
 SPLIT = "test"
 
-def cleanup_processes():
-    """Kill any existing LLM proxy and workspace provider processes.
-    
-    This function ensures a clean environment by terminating any running
-    instances of the Amsterdam LLM proxy and Derrick workspace provider.
-    It uses pkill to find and terminate these processes.
-    
-    The function is designed to be fault-tolerant and will not raise exceptions
-    if the processes are not found or cannot be killed.
-    
-    Returns:
-        None
-    """
-    try:
-        # Find and kill amsterdam processes
-        subprocess.run(["pkill", "-f", "amsterdam"], check=False)
-        # Find and kill derrick processes
-        subprocess.run(["pkill", "-f", "derrick"], check=False)
-    except Exception as e:
-        print(f"Warning: Error cleaning up processes: {e}")
-
 def evaluate_trial(instance_id: str, results_path: str) -> None:
     """Evaluate a specific trial's results.
     
@@ -133,9 +112,6 @@ def main():
 
     # Configure logging
     logging.basicConfig(level=logging.INFO)
-    
-    # Clean up any existing processes
-    cleanup_processes()
     
     # Set up argument parser
     parser = argparse.ArgumentParser(description='Run SWE-bench benchmark with Kwaak agent')
