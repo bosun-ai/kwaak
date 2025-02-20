@@ -112,7 +112,6 @@ def main():
     1. Run a single instance if --instance is specified
     2. Run a subset of the dataset (first 2 items per repository) by default
     3. Evaluate a specific trial's results if --evaluate and --results-path are specified
-    4. Copy kwaak caches from running containers if --copy-caches is specified
 
     Results are saved in both detailed JSON format and the SWE-bench 
     submission format (predictions.jsonl).
@@ -127,7 +126,6 @@ def main():
                    e.g., psf__requests-2317
         --evaluate: Instance ID to evaluate results for
         --results-path: Path to directory containing trial results
-        --copy-caches: Copy kwaak caches from running containers
 
     Returns:
         None
