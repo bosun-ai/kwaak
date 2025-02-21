@@ -24,7 +24,7 @@ impl Drop for Guard {
 /// # Panics
 ///
 /// Panics if setting up tracing fails
-pub fn init(repository: &Repository) -> Result<Guard> {
+pub fn init(repository: &Repository, tui_logger_enabled: bool) -> Result<Guard> {
     let log_dir = repository.config().log_dir();
 
     let file_appender = tracing_appender::rolling::daily(
@@ -57,10 +57,14 @@ pub fn init(repository: &Repository) -> Result<Guard> {
     } else {
         log::LevelFilter::Warn
     };
-    let tui_layer = tui_logger::tracing_subscriber_layer();
-    tui_logger::init_logger(default_level)?;
 
-    let mut layers = vec![tui_layer.boxed(), fmt_layer.boxed()];
+    let mut layers = vec![fmt_layer.boxed()];
+
+    if tui_logger_enabled {
+        let tui_layer = tui_logger::tracing_subscriber_layer();
+        tui_logger::init_logger(default_level)?;
+        layers.push(tui_layer.boxed());
+    }
 
     let mut provider_for_guard = None;
     if cfg!(feature = "otel") && repository.config().otel_enabled {

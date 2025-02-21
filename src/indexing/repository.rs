@@ -117,6 +117,8 @@ pub async fn index_repository(
 
     let batch_size = repository.config().indexing_batch_size();
     code.merge(markdown)
+        .log_errors()
+        .filter_errors()
         .then_in_batch(transformers::Embed::new(embedding_provider).with_batch_size(batch_size))
         .then(|mut chunk: Node| {
             chunk
