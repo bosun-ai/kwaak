@@ -428,11 +428,7 @@ impl GithubSearchCode {
         _context: &dyn AgentContext,
         query: &str,
     ) -> Result<ToolOutput, ToolError> {
-        let mut results = self
-            .github_session
-            .search_code(query)
-            .await
-            .map_err(anyhow::Error::from)?;
+        let mut results = self.github_session.search_code(query).await?;
 
         tracing::debug!(?results, "Github search results");
 
