@@ -84,6 +84,46 @@ def evaluate_trial(instance_id: str, results_path: str) -> None:
     logging.info(f"Error: {result.error or 'None'}")
     logging.info(f"Validation failed: {result.validation_failed}")
 
+def remove_results(results_dir: str, should_remove: callable, dry_run: bool = False) -> None:
+    """Remove result directories based on a condition.
+    
+    Args:
+        results_dir: Path to the root results directory
+        should_remove: Function that takes a result dict and returns True if the directory should be removed
+        dry_run: If True, only print the paths that would be removed without actually removing them
+    """
+    for benchmark_dir in os.listdir(results_dir):
+        benchmark_path = os.path.join(results_dir, benchmark_dir)
+        if not os.path.isdir(benchmark_path):
+            continue
+            
+        for instance_dir in os.listdir(benchmark_path):
+            instance_path = os.path.join(benchmark_path, instance_dir)
+            if not os.path.isdir(instance_path):
+                continue
+                
+            for run_dir in os.listdir(instance_path):
+                run_path = os.path.join(instance_path, run_dir)
+                if not os.path.isdir(run_path):
+                    continue
+                    
+                result_path = os.path.join(run_path, "result.json")
+                if not os.path.exists(result_path):
+                    continue
+                    
+                with open(result_path, "r") as f:
+                    try:
+                        result = json.load(f)
+                        if should_remove(result):
+                            if dry_run:
+                                logging.info(f"Would remove {run_path}")
+                            else:
+                                logging.info(f"Removing {run_path}")
+                                subprocess.run(["rm", "-rf", run_path])
+                    except json.JSONDecodeError:
+                        logging.error(f"Failed to parse {result_path}")
+                        continue
+
 def main():
     """Run the SWE-bench benchmark with the Kwaak agent.
 
@@ -91,6 +131,8 @@ def main():
     1. Run a single instance if --instance is specified
     2. Run a subset of the dataset (first 2 items per repository) by default
     3. Evaluate a specific trial's results if --evaluate and --results-path are specified
+    4. Remove failed trials if --remove-failed is specified
+    5. Remove unsuccessful trials if --remove-unsuccessful is specified
 
     Results are saved in both detailed JSON format and the SWE-bench 
     submission format (predictions.jsonl).
@@ -105,6 +147,8 @@ def main():
                    e.g., psf__requests-2317
         --evaluate: Instance ID to evaluate results for
         --results-path: Path to directory containing trial results
+        --remove-failed: Remove all failed trials from the results directory
+        --remove-unsuccessful: Remove all unsuccessful trials from the results directory
 
     Returns:
         None
@@ -118,6 +162,9 @@ def main():
     parser.add_argument('--instance', type=str, help='Instance ID to run a single test case')
     parser.add_argument('--evaluate', type=str, help='Instance ID to evaluate results for')
     parser.add_argument('--results-path', type=str, help='Path to directory containing trial results')
+    parser.add_argument('--remove-failed', action='store_true', help='Remove all failed trials')
+    parser.add_argument('--remove-unsuccessful', action='store_true', help='Remove all unsuccessful trials')
+    parser.add_argument('--dry-run', action='store_true', help='Print paths that would be removed without actually removing them')
     args = parser.parse_args()
     
     # If evaluating a specific trial
@@ -126,6 +173,22 @@ def main():
             logging.error("--results-path is required when using --evaluate")
             return
         evaluate_trial(args.evaluate, args.results_path)
+        return
+        
+    # If removing failed trials
+    if args.remove_failed:
+        results_dir = os.path.join(os.getcwd(), "results")
+        if args.results_path:
+            results_dir = args.results_path
+        remove_results(results_dir, lambda r: r.get("run_failed", False), args.dry_run)
+        return
+        
+    # If removing unsuccessful trials
+    if args.remove_unsuccessful:
+        results_dir = os.path.join(os.getcwd(), "results")
+        if args.results_path:
+            results_dir = args.results_path
+        remove_results(results_dir, lambda r: not r.get("success", False), args.dry_run)
         return
     
     # Load the dataset
