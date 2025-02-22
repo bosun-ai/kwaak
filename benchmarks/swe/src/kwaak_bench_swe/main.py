@@ -119,7 +119,8 @@ def remove_results(results_dir: str, should_remove: callable, dry_run: bool = Fa
                                 logging.info(f"Would remove {run_path}")
                             else:
                                 logging.info(f"Removing {run_path}")
-                                subprocess.run(["rm", "-rf", run_path])
+                                # sudo rm because the files are owned by their docker containers
+                                subprocess.run(["sudo", "rm", "-rf", run_path])
                     except json.JSONDecodeError:
                         logging.error(f"Failed to parse {result_path}")
                         continue
