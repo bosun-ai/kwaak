@@ -31,13 +31,10 @@ impl CommitAndPush {
 
             Box::pin(async move {
                 if auto_commit_enabled {
-                    // accept_non_zero_exit(
-                    agent
-                        .context()
-                        .exec_cmd(&Command::shell("git add ."))
-                        .await
-                        // )
-                        .context("Could not add files to git")?;
+                    accept_non_zero_exit(
+                        agent.context().exec_cmd(&Command::shell("git add .")).await,
+                    )
+                    .context("Could not add files to git")?;
 
                     accept_non_zero_exit(
                         agent
@@ -64,31 +61,20 @@ impl CommitAndPush {
 
 #[cfg(test)]
 mod tests {
-    use swiftide::agents::Agent;
     use tokio::process::Command;
 
-    use crate::test_utils::test_repository;
+    use crate::test_utils::{test_agent_for_repository, test_repository};
 
     use super::*;
 
     #[test_log::test(tokio::test)]
     async fn test_auto_commit() {
         let (repository, _guard) = test_repository();
-        dbg!(repository.config());
-
         let commit_and_push = CommitAndPush::new(&repository, &AgentEnvironment::default());
-        dbg!(&commit_and_push);
 
         std::fs::write(repository.path().join("test.txt"), "test").unwrap();
 
-        // noop agent
-        let llm = repository
-            .config()
-            .query_provider()
-            .get_chat_completion_model(repository.config().backoff)
-            .unwrap();
-        let mut agent = Agent::builder().llm(&llm).build().unwrap();
-
+        let mut agent = test_agent_for_repository(&repository);
         commit_and_push.hook()(&mut agent).await.unwrap();
 
         // verify commit, check if the the commit message is correct and no uncommitted changes
@@ -101,7 +87,7 @@ mod tests {
 
         assert_eq!(
             std::str::from_utf8(&commit.stdout).unwrap(),
-            "[kwaak]: Committed changes after completion\n"
+            "[kwaak]: Committed changes after completion\n\n"
         );
 
         let status = Command::new("git")
