@@ -58,7 +58,7 @@ impl ConversationSummarizer {
                 .num_completions_since_summary
                 .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 
-            if current_count < self.num_completions_for_summary {
+            if current_count < self.num_completions_for_summary || agent.is_stopped() {
                 tracing::debug!(current_count, "Not enough completions for summary");
 
                 return Box::pin(async move { Ok(()) });
