@@ -70,6 +70,7 @@ mod tests {
     #[test_log::test(tokio::test)]
     async fn test_auto_commit() {
         let (repository, _guard) = test_repository();
+        dbg!(repository.config());
 
         let commit_and_push = CommitAndPush::new(&repository, &AgentEnvironment::default());
 
