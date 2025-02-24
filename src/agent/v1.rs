@@ -19,7 +19,10 @@ use super::{
     tools, RunningAgent,
 };
 use crate::{
-    agent::util,
+    agent::{
+        commit_and_push::{self, CommitAndPush},
+        util,
+    },
     commands::Responder,
     config::{AgentEditMode, SupportedToolExecutors},
     git::github::GithubSession,
@@ -186,11 +189,9 @@ pub async fn start(
         &agent_env.start_ref,
         repository.config().num_completions_for_summary,
     );
-    let maybe_lint_fix_command = repository.config().commands.lint_and_fix.clone();
+    let commit_and_push = CommitAndPush::new(repository, &agent_env);
 
-    let push_to_remote_enabled =
-        agent_env.remote_enabled && repository.config().git.auto_push_remote;
-    let auto_commit_disabled = repository.config().git.auto_commit_disabled;
+    let maybe_lint_fix_command = repository.config().commands.lint_and_fix.clone();
 
     let context = Arc::new(context);
     let agent = Agent::builder()
@@ -260,28 +261,10 @@ pub async fn start(
                         .context("Could not run lint and fix")?;
                 };
 
-                if !auto_commit_disabled {
-                    accept_non_zero_exit(agent.context().exec_cmd(&Command::shell("git add .")).await)
-                        .context("Could not add files to git")?;
-
-                    accept_non_zero_exit(
-                        agent.context()
-                            .exec_cmd(&Command::shell(
-                                "git commit -m \"[kwaak]: Committed changes after completion\"",
-                            ))
-                            .await,
-                    )
-                    .context("Could not commit files to git")?;
-                }
-
-                if  push_to_remote_enabled {
-                    accept_non_zero_exit(agent.context().exec_cmd(&Command::shell("git push")).await)
-                        .context("Could not push changes to git")?;
-                }
-
                 Ok(())
             })
         })
+        .after_each(commit_and_push.hook())
         .after_each(conversation_summarizer.summarize_hook())
         .llm(&query_provider)
         .build()?;

@@ -1,3 +1,4 @@
+mod commit_and_push;
 mod conversation_summarizer;
 pub mod env_setup;
 mod running_agent;
