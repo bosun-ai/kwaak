@@ -191,13 +191,14 @@ impl ConversationSummarizer {
 }
 
 fn filter_messages_since_summary(messages: Vec<ChatMessage>) -> Vec<ChatMessage> {
+    // Filter out all messages up to and including the last summary
     let mut summary_found = false;
     let mut messages = messages
         .into_iter()
         .rev()
         .filter(|m| {
             if summary_found {
-                return matches!(m, ChatMessage::System(_));
+                return false;
             }
             if let ChatMessage::Summary(_) = m {
                 summary_found = true;
