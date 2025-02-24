@@ -31,10 +31,13 @@ impl CommitAndPush {
 
             Box::pin(async move {
                 if auto_commit_enabled {
-                    accept_non_zero_exit(
-                        agent.context().exec_cmd(&Command::shell("git add .")).await,
-                    )
-                    .context("Could not add files to git")?;
+                    // accept_non_zero_exit(
+                    agent
+                        .context()
+                        .exec_cmd(&Command::shell("git add ."))
+                        .await
+                        // )
+                        .context("Could not add files to git")?;
 
                     accept_non_zero_exit(
                         agent
