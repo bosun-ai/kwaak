@@ -2,7 +2,6 @@ use anyhow::{Context as _, Result};
 use swiftide::agents::hooks::AfterEachFn;
 use swiftide::traits::{Command, SimplePrompt};
 
-use crate::git;
 use crate::{repository::Repository, util::accept_non_zero_exit};
 
 use super::env_setup::AgentEnvironment;

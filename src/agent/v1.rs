@@ -19,10 +19,7 @@ use super::{
     tools, RunningAgent,
 };
 use crate::{
-    agent::{
-        commit_and_push::{self, CommitAndPush},
-        util,
-    },
+    agent::{commit_and_push::CommitAndPush, util},
     commands::Responder,
     config::{AgentEditMode, SupportedToolExecutors},
     git::github::GithubSession,
