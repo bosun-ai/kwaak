@@ -49,6 +49,7 @@ pub fn test_repository() -> (Repository, TestGuard) {
     config.cache_dir = tempdir.path().to_path_buf();
     config.log_dir = tempdir.path().join("logs");
     config.docker.context = tempdir.path().join("app");
+    config.git.auto_push_remote = false;
 
     // Copy this dockerfile to the context
     std::fs::create_dir_all(&config.docker.context).unwrap();
