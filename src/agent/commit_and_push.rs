@@ -6,6 +6,7 @@ use crate::{repository::Repository, util::accept_non_zero_exit};
 
 use super::env_setup::AgentEnvironment;
 
+#[derive(Debug)]
 pub struct CommitAndPush {
     auto_commit_enabled: bool,
     push_to_remote_enabled: bool,
@@ -73,6 +74,7 @@ mod tests {
         dbg!(repository.config());
 
         let commit_and_push = CommitAndPush::new(&repository, &AgentEnvironment::default());
+        dbg!(&commit_and_push);
 
         std::fs::write(repository.path().join("test.txt"), "test").unwrap();
 
