@@ -189,7 +189,7 @@ pub async fn start(
         &agent_env.start_ref,
         repository.config().num_completions_for_summary,
     );
-    let commit_and_push = CommitAndPush::new(repository, &agent_env);
+    let commit_and_push = CommitAndPush::try_new(repository, &agent_env)?;
 
     let maybe_lint_fix_command = repository.config().commands.lint_and_fix.clone();
 
