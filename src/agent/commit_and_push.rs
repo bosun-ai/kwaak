@@ -94,8 +94,8 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            commit.stdout,
-            b"[kwaak]: Committed changes after completion\n"
+            std::str::from_utf8(&commit.stdout).unwrap(),
+            "[kwaak]: Committed changes after completion\n"
         );
 
         let status = Command::new("git")
