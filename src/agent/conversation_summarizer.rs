@@ -196,18 +196,114 @@ fn filter_messages_since_summary(messages: Vec<ChatMessage>) -> Vec<ChatMessage>
     let mut messages = messages
         .into_iter()
         .rev()
-        .filter(|m| {
+        .filter_map(|m| {
             if summary_found {
-                return false;
+                return None;
+            }
+            if m.is_tool_output() {
+                return None;
+            }
+            if let ChatMessage::Assistant(message, Some(..)) = &m {
+                if message.is_some() {
+                    return Some(ChatMessage::Assistant(message.clone(), None));
+                }
             }
             if let ChatMessage::Summary(_) = m {
                 summary_found = true;
             }
-            true
+            Some(m)
         })
         .collect::<Vec<_>>();
 
     messages.reverse();
 
     messages
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use swiftide::chat_completion::{ChatMessage, ToolCallBuilder};
+
+    #[test]
+    fn test_filter_messages_since_summary_no_summary() {
+        let messages = vec![
+            ChatMessage::new_user("User message 1"),
+            ChatMessage::new_assistant(Some("Assistant message 1"), None),
+            ChatMessage::new_user("User message 2"),
+        ];
+
+        let filtered_messages = filter_messages_since_summary(messages.clone());
+        assert_eq!(filtered_messages, messages);
+    }
+
+    #[test]
+    fn test_filter_messages_since_summary_with_summary() {
+        let messages = vec![
+            ChatMessage::new_user("User message 1"),
+            ChatMessage::new_assistant(Some("Assistant message 1"), None),
+            ChatMessage::new_summary("Summary message"),
+            ChatMessage::new_user("User message 2"),
+            ChatMessage::new_assistant(Some("Assistant message 2"), None),
+        ];
+
+        let filtered_messages = filter_messages_since_summary(messages);
+        assert_eq!(
+            filtered_messages,
+            vec![
+                ChatMessage::new_summary("Summary message"),
+                ChatMessage::new_user("User message 2"),
+                ChatMessage::new_assistant(Some("Assistant message 2"), None),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_filter_messages_since_summary_with_tool_output() {
+        let tool_call = ToolCallBuilder::default()
+            .name("run_tests")
+            .id("1")
+            .build()
+            .unwrap();
+        let messages = vec![
+            ChatMessage::new_user("User message 1"),
+            ChatMessage::new_assistant(Some("Assistant message 1"), None),
+            ChatMessage::new_summary("Summary message"),
+            ChatMessage::new_user("User message 2"),
+            ChatMessage::new_assistant(Some("Assistant message 2"), Some(vec![tool_call.clone()])),
+            ChatMessage::new_tool_output(tool_call, "Tool output me_ssage"),
+        ];
+
+        let filtered_messages = filter_messages_since_summary(messages);
+        assert_eq!(
+            filtered_messages,
+            vec![
+                ChatMessage::new_summary("Summary message"),
+                ChatMessage::new_user("User message 2"),
+                ChatMessage::new_assistant(Some("Assistant message 2"), None),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_filter_messages_since_summary_multiple_summaries() {
+        let messages = vec![
+            ChatMessage::new_user("User message 1"),
+            ChatMessage::new_summary("Summary message 1"),
+            ChatMessage::new_user("User message 2"),
+            ChatMessage::new_summary("Summary message 2"),
+            ChatMessage::new_user("User message 3"),
+            ChatMessage::new_assistant(Some("Assistant message 3"), None),
+        ];
+
+        let filtered_messages = filter_messages_since_summary(messages);
+        assert_eq!(
+            filtered_messages,
+            vec![
+                ChatMessage::new_summary("Summary message 2"),
+                ChatMessage::new_user("User message 3"),
+                ChatMessage::new_assistant(Some("Assistant message 3"), None),
+            ]
+        );
+    }
 }
