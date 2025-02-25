@@ -32,13 +32,10 @@ pub async fn llm_questions(context: &mut tera::Context) -> Result<()> {
         LLMConfiguration::OpenAI { .. } => openai_questions(context)?,
         LLMConfiguration::Ollama { .. } => ollama_questions(context)?,
         LLMConfiguration::OpenRouter { .. } => open_router_questions(context).await?,
-<<<<<<< HEAD
         LLMConfiguration::AzureOpenAI { .. } => {
             println!("{valid_llm} is not selectable yet, skipping configuration");
         }
-=======
         LLMConfiguration::Anthropic { .. } => anthropic_questions(context)?,
->>>>>>> master
         LLMConfiguration::FastEmbed { .. } => {
             println!("{valid_llm} is not selectable yet, skipping configuration");
         }
