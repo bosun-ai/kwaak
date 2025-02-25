@@ -94,7 +94,7 @@ impl ConversationSummarizer {
                     let summary = llm.complete(&messages.into()).await?;
 
                     if let Some(summary) = summary.message() {
-                        tracing::debug!(summary = %summary, "Summarized tool output");
+                        tracing::debug!(summary = %summary, "Summarized conversation");
                         agent
                             .context()
                             .add_message(ChatMessage::new_summary(summary))
@@ -205,13 +205,14 @@ fn filter_messages_since_summary(messages: Vec<ChatMessage>) -> Vec<ChatMessage>
                 return None;
             }
             if let ChatMessage::ToolOutput(tool_call,tool_output) = &m {
-                let message = format!("You ran a tool called: {} with the following arguments: {}\n The tool returned:\n{}", tool_call.name(), tool_call.args().unwrap_or("No arguments"), tool_output.content().unwrap_or("No output"));
+                let message = format!("I ran a tool called: {} with the following arguments: {}\n The tool returned:\n{}", tool_call.name(), tool_call.args().unwrap_or("No arguments"), tool_output.content().unwrap_or("No output"));
                 return Some(ChatMessage::Assistant(Some(message), None));
             }
             if let ChatMessage::Assistant(message, Some(..)) = &m {
                 if message.is_some() {
                     return Some(ChatMessage::Assistant(message.clone(), None));
                 }
+                return None;
             }
             if let ChatMessage::Summary(_) = m {
                 summary_found = true;
@@ -286,7 +287,7 @@ mod tests {
                 ChatMessage::new_summary("Summary message"),
                 ChatMessage::new_user("User message 2"),
                 ChatMessage::new_assistant(Some("Assistant message 2"), None),
-                ChatMessage::new_assistant(Some("You ran a tool called: run_tests with the following arguments: No arguments\n The tool returned:\nTool output message"), None)
+                ChatMessage::new_assistant(Some("I ran a tool called: run_tests with the following arguments: No arguments\n The tool returned:\nTool output message"), None)
             ]
         );
     }
@@ -309,6 +310,33 @@ mod tests {
                 ChatMessage::new_summary("Summary message 2"),
                 ChatMessage::new_user("User message 3"),
                 ChatMessage::new_assistant(Some("Assistant message 3"), None),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_filters_assistant_messages_with_only_tool_outputs() {
+        let tool_call = ToolCallBuilder::default()
+            .name("run_tests")
+            .id("1")
+            .build()
+            .unwrap();
+        let messages = vec![
+            ChatMessage::new_user("User message 1"),
+            ChatMessage::new_assistant(Some("Assistant message 1"), None),
+            ChatMessage::new_summary("Summary message"),
+            ChatMessage::new_user("User message 2"),
+            ChatMessage::new_assistant(None::<String>, Some(vec![tool_call.clone()])),
+            ChatMessage::new_tool_output(tool_call, "Tool output message"),
+        ];
+
+        let filtered_messages = filter_messages_since_summary(messages);
+        assert_eq!(
+            filtered_messages,
+            vec![
+                ChatMessage::new_summary("Summary message"),
+                ChatMessage::new_user("User message 2"),
+                ChatMessage::new_assistant(Some("I ran a tool called: run_tests with the following arguments: No arguments\n The tool returned:\nTool output message"), None)
             ]
         );
     }
