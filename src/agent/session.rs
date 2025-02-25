@@ -263,6 +263,10 @@ pub struct RunningSession {
 
 impl RunningSession {
     /// Get a cheap copy of the active agent
+    ///
+    /// # Panics
+    ///
+    /// Panics if the agent mutex is poisoned
     #[must_use]
     pub fn active_agent(&self) -> RunningAgent {
         self.active_agent.lock().unwrap().clone()
@@ -278,6 +282,11 @@ impl RunningSession {
         self.active_agent().run().await
     }
 
+    /// Swap the current active agent with a new one
+    ///
+    /// # Panics
+    ///
+    /// Panics if the agent mutex is poisoned
     pub fn swap_agent(&self, running_agent: RunningAgent) {
         let mut lock = self.active_agent.lock().unwrap();
         *lock = running_agent;
@@ -293,16 +302,31 @@ impl RunningSession {
         &self.agent_environment
     }
 
+    /// Retrieve a copy of the cancel token
+    ///
+    /// # Panics
+    ///
+    /// Panics if the cancel token mutex is poisoned
     #[must_use]
     pub fn cancel_token(&self) -> CancellationToken {
         self.cancel_token.lock().unwrap().clone()
     }
 
+    /// Resets the cancel token
+    ///
+    /// # Panics
+    ///
+    /// Panics if the agent mutex is poisoned
     pub fn reset_cancel_token(&self) {
         let mut lock = self.cancel_token.lock().unwrap();
         *lock = CancellationToken::new();
     }
 
+    /// Stops the active agent
+    ///
+    /// # Panics
+    ///
+    /// Panics if the agent mutex is poisoned
     pub async fn stop(&self) {
         // When sessions have multiple agents, they should be stopped here
         self.reset_cancel_token();

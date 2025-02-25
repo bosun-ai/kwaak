@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use anyhow::{Context as _, Result};
+use anyhow::Result;
 use swiftide::{
     agents::{system_prompt::SystemPrompt, Agent, DefaultContext},
     chat_completion::{self, ChatCompletion, Tool},
@@ -19,7 +19,6 @@ use crate::{
     },
     commands::Responder,
     repository::Repository,
-    util::accept_non_zero_exit,
 };
 
 pub async fn start(
@@ -136,6 +135,7 @@ pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
         "Tool calls are in parallel. You can run multiple tool calls at the same time, but they must not rely on each other",
         "Your first response to ANY user message, must ALWAYS be your thoughts on how to solve the problem",
         "Keep a neutral tone, refrain from using superlatives and unnecessary adjectives",
+        "Think step by step",
 
         // Knowledge
         "Do NOT rely on your own knowledge, always research and verify!",
@@ -168,7 +168,8 @@ pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
                 .into(),
         );
         constraints.push(
-            "Before delegating to an agent, always ask the user for confirmation first".into(),
+            "Before delegating to an agent, you MUST ask the user if they agree to your plan"
+                .into(),
         );
     }
 

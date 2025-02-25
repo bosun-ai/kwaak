@@ -61,7 +61,7 @@ pub async fn index_repository(
         .split_by(|node| {
             let Ok(node) = node else { return true };
 
-            node.path.extension().map_or(true, |ext| ext == "md")
+            node.path.extension().is_none_or(|ext| ext == "md")
         });
 
     code = code

@@ -8,10 +8,7 @@ use swiftide::{
     traits::AgentContext,
 };
 
-use crate::agent::{
-    running_agent::RunningAgent,
-    session::{RunningSession, Session},
-};
+use crate::agent::{running_agent::RunningAgent, session::Session};
 
 /// A tool that delegates to an agent
 ///
@@ -24,7 +21,6 @@ use crate::agent::{
 #[derive(Clone, Builder)]
 pub struct DelegateAgent {
     session: Arc<Session>,
-    // TODO: Can it be just an agent?
     agent: RunningAgent,
 
     tool_spec: ToolSpec,
@@ -41,7 +37,6 @@ impl DelegateAgent {
         _context: &dyn AgentContext,
         task: &str,
     ) -> Result<ToolOutput, ToolError> {
-        // TODO: Prompting, etc
         self.session.swap_agent(self.agent.clone())?;
         self.agent.query(task).await?;
 

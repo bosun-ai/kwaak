@@ -186,6 +186,7 @@ pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
         "Tool calls are in parallel. You can run multiple tool calls at the same time, but they must not rely on each other",
         "Your first response to ANY user message, must ALWAYS be your thoughts on how to solve the problem",
         "Keep a neutral tone, refrain from using superlatives and unnecessary adjectives",
+        "Think step by step",
 
         // Knowledge
         "Do NOT rely on your own knowledge, always research and verify!",
