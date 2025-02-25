@@ -180,6 +180,7 @@ pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
         "If you create a pull request, you must ensure the tests pass",
         "If you just want to run the tests, prefer running the tests over running coverage, as running tests is faster",
         "NEVER write or edit a file before having read it",
+        "After every tool use, include your observations, reasoning, and the next step",
 
         // Code writing
         "When writing code or tests, make sure this is idiomatic for the language",

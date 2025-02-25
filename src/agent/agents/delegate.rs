@@ -154,6 +154,7 @@ pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
         "When delegating to an agent, reference your instructions with full paths to the files involved",
         "When delegating to an agent, provide a clear definition of done",
         "When delegating to an agent, clearly state edge cases",
+        "After every tool use, include your observations, reasoning, and the next step",
 
         // Workflow
         "Focus on completing the task fully as requested by the user",

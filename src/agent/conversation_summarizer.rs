@@ -143,9 +143,9 @@ impl ConversationSummarizer {
         * If a previous solution did not work, include that in your response. If a reason was
             given, include that as well.
         * Include any previous summaries in your response
-        * Include every step so far taken concisely and clearly state where the agent is at,
-            especially in relation to the initial goal.
-        * Be extra detailed on the last step taken
+        * Include every step so far taken and clearly state where the agent is at,
+            especially in relation to the initial goal. Include any observations or information made, and include your own where relevant to achieving the goal.
+        * Be extra detailed on the last steps taken
         * Provide clear instructions on how to proceed. If applicable, include the tools that
             should be used.
         * Identify the bigger goal the user wanted to achieve and clearly restate it
@@ -175,14 +175,17 @@ impl ConversationSummarizer {
         <Your goal>
 
         ## Previously you did
-        * <concise summary of each step>
+        * <summary of each step>
         * You tried to run the tests but they failed. Here is why <...>
+        * You read a file called `file.txt` and here is what you learned <...>
 
         ## Since then you did
-        * <Summary of steps since the last summary>
+        * <summary of each step>
+        * You tried to run the tests but they failed. Here is why <...>
+        * You read a file called `file.txt` and here is what you learned <...>
 
         ## Reflection
-        <Concise reflection on the steps you took and why you took them>
+        <Reflection on the steps you took and why you took them. What have you observed and what have you learned so far>
         
         ## Suggested next steps
         1. <Suggested step>
@@ -201,13 +204,23 @@ fn filter_messages_since_summary(messages: Vec<ChatMessage>) -> Vec<ChatMessage>
         .into_iter()
         .rev()
         .filter_map(|m| {
+            // If we have found a summary, we are good
             if summary_found {
                 return None;
             }
+
+            // Ignore the system prompt, it only misdirects
+            if matches!(m, ChatMessage::System(..)) {
+                return None;
+            }
+
+            // Tool outputs are formatted as assistant messages
             if let ChatMessage::ToolOutput(tool_call,tool_output) = &m {
                 let message = format!("I ran a tool called: {} with the following arguments: {}\n The tool returned:\n{}", tool_call.name(), tool_call.args().unwrap_or("No arguments"), tool_output.content().unwrap_or("No output"));
                 return Some(ChatMessage::Assistant(Some(message), None));
             }
+
+            // For assistant mesages, we only keep those with messages in them
             if let ChatMessage::Assistant(message, Some(..)) = &m {
                 if message.is_some() {
                     return Some(ChatMessage::Assistant(message.clone(), None));
@@ -246,6 +259,7 @@ mod tests {
     #[test]
     fn test_filter_messages_since_summary_with_summary() {
         let messages = vec![
+            ChatMessage::new_system("System message 1"),
             ChatMessage::new_user("User message 1"),
             ChatMessage::new_assistant(Some("Assistant message 1"), None),
             ChatMessage::new_summary("Summary message"),
