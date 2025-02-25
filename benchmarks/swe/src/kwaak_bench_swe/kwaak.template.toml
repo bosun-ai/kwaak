@@ -1,0 +1,23 @@
+language = "Python"
+tool_executor = "local"
+openai_api_key = "env:OPENAI_API_KEY"
+otel_enabled = false
+
+[git]
+owner = "bosun-ai"
+main_branch = "master"
+
+[commands]
+test = "/swe/test.sh"
+
+[llm.indexing]
+provider = "OpenAI"
+prompt_model = "gpt-4o-mini"
+
+[llm.query]
+provider = "OpenAI"
+prompt_model = "gpt-4o"
+
+[llm.embedding]
+provider = "OpenAI"
+embedding_model = "text-embedding-3-large"

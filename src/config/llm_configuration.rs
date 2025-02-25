@@ -102,11 +102,14 @@ pub enum LLMConfiguration {
 pub enum AnthropicModel {
     #[strum(serialize = "claude-3-5-sonnet-latest")]
     #[serde(rename = "claude-3-5-sonnet-latest")]
-    #[default]
     Claude35Sonnet,
     #[strum(serialize = "claude-3-5-haiku-latest")]
     #[serde(rename = "claude-3-5-haiku-latest")]
     Claude35Haiku,
+    #[strum(serialize = "claude-3-7-sonnet-latest")]
+    #[serde(rename = "claude-3-7-sonnet-latest")]
+    #[default]
+    Clause37Sonnet,
 }
 
 #[derive(Debug, Clone)]

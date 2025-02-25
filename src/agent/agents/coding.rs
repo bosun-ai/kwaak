@@ -10,8 +10,9 @@ use swiftide::{
 
 use crate::{
     agent::{
-        conversation_summarizer::ConversationSummarizer, env_setup::AgentEnvironment,
-        running_agent::RunningAgent, session::Session, tool_summarizer::ToolSummarizer,
+        commit_and_push::CommitAndPush, conversation_summarizer::ConversationSummarizer,
+        env_setup::AgentEnvironment, running_agent::RunningAgent, session::Session,
+        tool_summarizer::ToolSummarizer,
     },
     commands::Responder,
     repository::Repository,
@@ -73,11 +74,9 @@ pub async fn start(
         &agent_env.start_ref,
         session.repository.config().num_completions_for_summary,
     );
-    let maybe_lint_fix_command = session.repository.config().commands.lint_and_fix.clone();
+    let commit_and_push = CommitAndPush::try_new(repository, &agent_env)?;
 
-    let push_to_remote_enabled =
-        agent_env.remote_enabled && session.repository.config().git.auto_push_remote;
-    let auto_commit_disabled = session.repository.config().git.auto_commit_disabled;
+    let maybe_lint_fix_command = repository.config().commands.lint_and_fix.clone();
 
     let context = Arc::new(context);
     let agent = Agent::builder()
@@ -147,28 +146,10 @@ pub async fn start(
                         .context("Could not run lint and fix")?;
                 };
 
-                if !auto_commit_disabled {
-                    accept_non_zero_exit(agent.context().exec_cmd(&Command::shell("git add .")).await)
-                        .context("Could not add files to git")?;
-
-                    accept_non_zero_exit(
-                        agent.context()
-                            .exec_cmd(&Command::shell(
-                                "git commit -m \"[kwaak]: Committed changes after completion\"",
-                            ))
-                            .await,
-                    )
-                    .context("Could not commit files to git")?;
-                }
-
-                if  push_to_remote_enabled {
-                    accept_non_zero_exit(agent.context().exec_cmd(&Command::shell("git push")).await)
-                        .context("Could not push changes to git")?;
-                }
-
                 Ok(())
             })
         })
+        .after_each(commit_and_push.hook())
         .after_each(conversation_summarizer.summarize_hook())
         .llm(&query_provider)
         .build()?;

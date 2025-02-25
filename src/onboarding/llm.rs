@@ -106,7 +106,7 @@ fn anthropic_questions(context: &mut tera::Context) -> Result<()> {
     let query_model = prompt_select(
         "Model used for querying and code generation",
         AnthropicModel::VARIANTS.to_vec(),
-        Some(&AnthropicModel::Claude35Sonnet.to_string()),
+        Some(&AnthropicModel::default().to_string()),
     )?;
 
     context.insert("anthropic_api_key", &api_key);
