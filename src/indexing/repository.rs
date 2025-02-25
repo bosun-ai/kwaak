@@ -37,10 +37,16 @@ pub async fn index_repository(
 
     let loader = loaders::FileLoader::new(repository.path()).with_extensions(&extensions);
 
-    let indexing_provider: Box<dyn SimplePrompt> =
-        repository.config().indexing_provider().try_into()?;
-    let embedding_provider: Box<dyn EmbeddingModel> =
-        repository.config().embedding_provider().try_into()?;
+    let backoff = repository.config().backoff;
+
+    let indexing_provider: Box<dyn SimplePrompt> = repository
+        .config()
+        .indexing_provider()
+        .get_simple_prompt_model(backoff)?;
+    let embedding_provider: Box<dyn EmbeddingModel> = repository
+        .config()
+        .embedding_provider()
+        .get_embedding_model(backoff)?;
 
     let lancedb = storage::get_lancedb(repository);
     let redb = storage::get_redb(repository) as Arc<dyn NodeCache>;
@@ -55,7 +61,7 @@ pub async fn index_repository(
         .split_by(|node| {
             let Ok(node) = node else { return true };
 
-            node.path.extension().map_or(true, |ext| ext == "md")
+            node.path.extension().is_none_or(|ext| ext == "md")
         });
 
     code = code
@@ -111,6 +117,8 @@ pub async fn index_repository(
 
     let batch_size = repository.config().indexing_batch_size();
     code.merge(markdown)
+        .log_errors()
+        .filter_errors()
         .then_in_batch(transformers::Embed::new(embedding_provider).with_batch_size(batch_size))
         .then(|mut chunk: Node| {
             chunk

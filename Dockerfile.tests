@@ -1,7 +1,7 @@
 # A lightweight image used for tests
-FROM alpine:latest
+FROM ubuntu:latest
 
-RUN apk add git fd ripgrep
+RUN apt-get update && apt install git -y --no-install-recommends
 
 COPY . /app
 

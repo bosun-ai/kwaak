@@ -18,8 +18,11 @@ env:
 
 jobs:
   test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest] # Macos-latest does not properly support docker.
     name: Test
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -32,9 +35,16 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       # Required for copypasta builds on linux
       - name: Install deps
+        if: ${{matrix.os == 'ubuntu-latest'}}
         run: sudo apt install libxcb1-dev libxcb-shape0-dev libxcb-xfixes0-dev ripgrep fd-find
+      - name: Install deps
+        if: ${{matrix.os == 'macos-latest'}}
+        run: |
+          brew update
+          brew install ripgrep fd
       # Temporary fix until docker runs properly in ci
       - name: copy fdfind
+        if: ${{matrix.os == 'ubuntu-latest'}}
         run: sudo cp /usr/bin/fdfind /usr/bin/fd
       - name: "Test"
         run: cargo test -j 2

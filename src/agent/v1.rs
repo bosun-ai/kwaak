@@ -19,7 +19,7 @@ use super::{
     tools, RunningAgent,
 };
 use crate::{
-    agent::util,
+    agent::{commit_and_push::CommitAndPush, util},
     commands::Responder,
     config::{AgentEditMode, SupportedToolExecutors},
     git::github::GithubSession,
@@ -104,7 +104,7 @@ async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Arc<
             }
             let running_executor = executor
                 .with_context_path(&repository.config().docker.context)
-                .with_image_name(&repository.config().project_name)
+                .with_image_name(repository.config().project_name.to_lowercase())
                 .with_dockerfile(dockerfile)
                 .with_container_uuid(uuid)
                 .to_owned()
@@ -125,10 +125,15 @@ pub async fn start(
     repository: &Repository,
     command_responder: Arc<dyn Responder>,
 ) -> Result<RunningAgent> {
-    let query_provider: Box<dyn ChatCompletion> =
-        repository.config().query_provider().try_into()?;
-    let fast_query_provider: Box<dyn SimplePrompt> =
-        repository.config().indexing_provider().try_into()?;
+    let backoff = repository.config().backoff;
+    let query_provider: Box<dyn ChatCompletion> = repository
+        .config()
+        .query_provider()
+        .get_chat_completion_model(backoff)?;
+    let fast_query_provider: Box<dyn SimplePrompt> = repository
+        .config()
+        .indexing_provider()
+        .get_simple_prompt_model(backoff)?;
 
     let github_session = match repository.config().github_api_key {
         Some(_) => Some(Arc::new(GithubSession::from_repository(&repository)?)),
@@ -175,13 +180,15 @@ pub async fn start(
         &tools,
         &agent_env.start_ref,
     );
-    let conversation_summarizer =
-        ConversationSummarizer::new(query_provider.clone(), &tools, &agent_env.start_ref);
-    let maybe_lint_fix_command = repository.config().commands.lint_and_fix.clone();
+    let conversation_summarizer = ConversationSummarizer::new(
+        query_provider.clone(),
+        &tools,
+        &agent_env.start_ref,
+        repository.config().num_completions_for_summary,
+    );
+    let commit_and_push = CommitAndPush::try_new(repository, &agent_env)?;
 
-    let push_to_remote_enabled =
-        agent_env.remote_enabled && repository.config().git.auto_push_remote;
-    let auto_commit_disabled = repository.config().git.auto_commit_disabled;
+    let maybe_lint_fix_command = repository.config().commands.lint_and_fix.clone();
 
     let context = Arc::new(context);
     let agent = Agent::builder()
@@ -251,28 +258,10 @@ pub async fn start(
                         .context("Could not run lint and fix")?;
                 };
 
-                if !auto_commit_disabled {
-                    accept_non_zero_exit(agent.context().exec_cmd(&Command::shell("git add .")).await)
-                        .context("Could not add files to git")?;
-
-                    accept_non_zero_exit(
-                        agent.context()
-                            .exec_cmd(&Command::shell(
-                                "git commit -m \"[kwaak]: Committed changes after completion\"",
-                            ))
-                            .await,
-                    )
-                    .context("Could not commit files to git")?;
-                }
-
-                if  push_to_remote_enabled {
-                    accept_non_zero_exit(agent.context().exec_cmd(&Command::shell("git push")).await)
-                        .context("Could not push changes to git")?;
-                }
-
                 Ok(())
             })
         })
+        .after_each(commit_and_push.hook())
         .after_each(conversation_summarizer.summarize_hook())
         .llm(&query_provider)
         .build()?;

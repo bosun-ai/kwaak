@@ -1,6 +1,9 @@
 use config::{Config as ConfigRs, Environment, File};
-use std::path::{Path, PathBuf};
-use std::str::FromStr;
+use std::{
+    path::{Path, PathBuf},
+    str::FromStr,
+    time::Duration,
+};
 
 use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
@@ -44,6 +47,11 @@ pub struct Config {
     #[serde(default)]
     pub docker: DockerConfiguration,
 
+    /// Optional: Backoff configuration for api calls
+    /// this is currently only used for open-ai and open-router
+    #[serde(default)]
+    pub backoff: BackoffConfiguration,
+
     pub git: GitConfiguration,
 
     /// Optional: Use tavily as a search tool
@@ -59,9 +67,17 @@ pub struct Config {
     #[serde(default)]
     pub openai_api_key: Option<ApiKey>,
 
+    /// Required if using 'Anthropic'
+    #[serde(default)]
+    pub anthropic_api_key: Option<ApiKey>,
+
     /// Required if using `Open Router`
     #[serde(default)]
     pub open_router_api_key: Option<ApiKey>,
+
+    /// Required if using `Azure OpenAI`
+    #[serde(default)]
+    pub azure_openai_api_key: Option<ApiKey>,
 
     #[serde(default)]
     pub tool_executor: SupportedToolExecutors,
@@ -102,6 +118,18 @@ pub struct Config {
 
     #[serde(default)]
     pub ui: UIConfig,
+
+    /// Number of completions before the agent summarizes the conversation.
+    /// This is used to steer the agent to focus on the current task. If this value is too small
+    /// the agent will have clear loss of context when performing tasks. If this value is too large
+    /// the agent will not have focus and not understand what is relevant and important.
+    ///
+    /// Additionally, summarizing the conversation will reduce the context window which can be
+    /// beneficial for APIs with stringent limits on context tokens.
+    ///
+    /// Defaults to 10.
+    #[serde(default = "default_num_completions_for_summary")]
+    pub num_completions_for_summary: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -112,6 +140,10 @@ pub struct UIConfig {
 
 fn default_otel_enabled() -> bool {
     false
+}
+
+fn default_num_completions_for_summary() -> usize {
+    10
 }
 
 /// Opt out of certain tools an agent can use
@@ -161,6 +193,44 @@ impl Default for DockerConfiguration {
     }
 }
 
+/// Backoff configuration for api calls.
+/// Each time an api call fails backoff will wait an increasing period of time for each subsequent
+/// retry attempt. see <https://docs.rs/backoff/latest/backoff/> for more details.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct BackoffConfiguration {
+    /// Initial interval in seconds between retries
+    pub initial_interval_sec: u64,
+    /// The factor by which the interval is multiplied on each retry attempt
+    pub multiplier: f64,
+    /// Introduces randomness to avoid retry storms
+    pub randomization_factor: f64,
+    /// Total time all attempts are allowed in seconds. Once a retry must wait longer than this,
+    /// the request is considered to have failed.
+    pub max_elapsed_time_sec: u64,
+}
+
+impl Default for BackoffConfiguration {
+    fn default() -> Self {
+        Self {
+            initial_interval_sec: 15,
+            multiplier: 2.0,
+            randomization_factor: 0.05,
+            max_elapsed_time_sec: 120,
+        }
+    }
+}
+
+impl From<BackoffConfiguration> for backoff::ExponentialBackoff {
+    fn from(from_backoff: BackoffConfiguration) -> Self {
+        backoff::ExponentialBackoffBuilder::default()
+            .with_initial_interval(Duration::from_secs(from_backoff.initial_interval_sec))
+            .with_multiplier(from_backoff.multiplier)
+            .with_randomization_factor(from_backoff.randomization_factor)
+            .with_max_elapsed_time(Some(Duration::from_secs(from_backoff.max_elapsed_time_sec)))
+            .build()
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GitConfiguration {
     // TODO: Repo and owner can probably be derived from the origin url
@@ -177,6 +247,22 @@ pub struct GitConfiguration {
     /// Opt out of automatically committing changes after each completion
     #[serde(default)]
     pub auto_commit_disabled: bool,
+
+    /// The git user name to use for the agent when committing changes
+    #[serde(default = "default_agent_user_name")]
+    pub agent_user_name: String,
+
+    /// The git email to use for the agent when committing changes
+    #[serde(default = "default_agent_user_email")]
+    pub agent_user_email: String,
+}
+
+fn default_agent_user_name() -> String {
+    "kwaak".to_string()
+}
+
+fn default_agent_user_email() -> String {
+    "kwaak@bosun.ai".to_string()
 }
 
 impl FromStr for Config {
@@ -239,6 +325,8 @@ impl Config {
         match provider {
             LLMConfiguration::OpenAI { .. } => self.openai_api_key.as_ref(),
             LLMConfiguration::OpenRouter { .. } => self.open_router_api_key.as_ref(),
+            LLMConfiguration::Anthropic { .. } => self.anthropic_api_key.as_ref(),
+            LLMConfiguration::AzureOpenAI { .. } => self.azure_openai_api_key.as_ref(),
             _ => None,
         }
     }
@@ -283,6 +371,7 @@ impl Config {
             LLMConfiguration::OpenRouter { .. } => num_cpus::get() * 4,
             LLMConfiguration::Ollama { .. } => num_cpus::get(),
             LLMConfiguration::FastEmbed { .. } => num_cpus::get(),
+            LLMConfiguration::Anthropic { .. } => num_cpus::get() * 4,
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => num_cpus::get(),
         }
@@ -300,6 +389,7 @@ impl Config {
             LLMConfiguration::Ollama { .. } => 256,
             LLMConfiguration::OpenRouter { .. } => 12,
             LLMConfiguration::FastEmbed { .. } => 256,
+            LLMConfiguration::Anthropic { .. } => 12,
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => 1,
         }
@@ -330,6 +420,15 @@ fn fill_llm(llm: &mut LLMConfiguration, root_key: Option<&ApiKey>) -> Result<()>
                     *api_key = Some(root.clone());
                 } else {
                     anyhow::bail!("AzureOpenAI config requires an `api_key`, and none was provided or available in the root");
+                }
+            }
+        }
+        LLMConfiguration::Anthropic { api_key, .. } => {
+            if api_key.is_none() {
+                if let Some(root) = root_key {
+                    *api_key = Some(root.clone());
+                } else {
+                    anyhow::bail!("Anthropic config requires an `api_key`, and none was provided or available in the root");
                 }
             }
         }

@@ -5,7 +5,9 @@ use serde_json::json;
 use strum::VariantNames as _;
 
 use crate::{
-    config::{FastembedModel, LLMConfiguration, OpenAIEmbeddingModel, OpenAIPromptModel},
+    config::{
+        AnthropicModel, FastembedModel, LLMConfiguration, OpenAIEmbeddingModel, OpenAIPromptModel,
+    },
     onboarding::util::prompt_text,
 };
 
@@ -30,9 +32,13 @@ pub async fn llm_questions(context: &mut tera::Context) -> Result<()> {
         LLMConfiguration::OpenAI { .. } => openai_questions(context)?,
         LLMConfiguration::Ollama { .. } => ollama_questions(context)?,
         LLMConfiguration::OpenRouter { .. } => open_router_questions(context).await?,
+<<<<<<< HEAD
         LLMConfiguration::AzureOpenAI { .. } => {
             println!("{valid_llm} is not selectable yet, skipping configuration");
         }
+=======
+        LLMConfiguration::Anthropic { .. } => anthropic_questions(context)?,
+>>>>>>> master
         LLMConfiguration::FastEmbed { .. } => {
             println!("{valid_llm} is not selectable yet, skipping configuration");
         }
@@ -89,6 +95,39 @@ fn openai_questions(context: &mut tera::Context) -> Result<()> {
     );
 
     Ok(())
+}
+
+fn anthropic_questions(context: &mut tera::Context) -> Result<()> {
+    let api_key = prompt_api_key(
+        "Where can we find your anthropic api key? (https://console.anthropic.com/account/keys)",
+        Some("env:ANTHROPIC_API_KEY"),
+    )
+    .prompt()?;
+
+    let indexing_model = prompt_select(
+        "Model used for fast operations (like indexing)",
+        AnthropicModel::VARIANTS.to_vec(),
+        Some(&AnthropicModel::Claude35Haiku.to_string()),
+    )?;
+    let query_model = prompt_select(
+        "Model used for querying and code generation",
+        AnthropicModel::VARIANTS.to_vec(),
+        Some(&AnthropicModel::default().to_string()),
+    )?;
+
+    context.insert("anthropic_api_key", &api_key);
+    context.insert(
+        "llm",
+        &json!({
+            "provider": "Anthropic",
+            "indexing_model": indexing_model,
+            "query_model": query_model,
+            "base_url": None::<String>,
+        }),
+    );
+
+    println!("\nAnthropic does not provide embeddings. Currently we suggest to use FastEmbed. If you want to use a different provider you can change it in your config later.");
+    fastembed_questions(context)
 }
 
 async fn get_open_router_models() -> Option<Vec<HashMap<String, serde_json::Value>>> {

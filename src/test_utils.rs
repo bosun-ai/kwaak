@@ -1,9 +1,13 @@
 #![allow(dead_code)]
 #![allow(clippy::missing_panics_doc)]
+use std::sync::Arc;
+
 use anyhow::Result;
 use ratatui::{backend::TestBackend, Terminal};
+use swiftide::agents::tools::local_executor::LocalExecutor;
+use swiftide::agents::{Agent, DefaultContext};
 use swiftide::chat_completion::{ChatCompletion, ChatCompletionResponse};
-use swiftide::traits::{EmbeddingModel, Persist as _, SimplePrompt};
+use swiftide::traits::{EmbeddingModel, Persist as _, SimplePrompt, ToolExecutor};
 use tokio_util::task::AbortOnDropHandle;
 use uuid::Uuid;
 
@@ -49,6 +53,7 @@ pub fn test_repository() -> (Repository, TestGuard) {
     config.cache_dir = tempdir.path().to_path_buf();
     config.log_dir = tempdir.path().join("logs");
     config.docker.context = tempdir.path().join("app");
+    config.git.auto_push_remote = false;
 
     // Copy this dockerfile to the context
     std::fs::create_dir_all(&config.docker.context).unwrap();
@@ -134,6 +139,21 @@ pub fn test_repository() -> (Repository, TestGuard) {
     tracing::debug!("Initial commit: {:?}", initial);
 
     (repository, TestGuard { tempdir })
+}
+
+// Creates a noop test agent based on a repository
+// useful for ie hooks
+#[must_use]
+pub fn test_agent_for_repository(repository: &Repository) -> Agent {
+    let llm = repository
+        .config()
+        .query_provider()
+        .get_chat_completion_model(repository.config().backoff)
+        .unwrap();
+    let context = DefaultContext::from_executor(
+        Arc::new(LocalExecutor::new(repository.path())) as Arc<dyn ToolExecutor>
+    );
+    Agent::builder().context(context).llm(&llm).build().unwrap()
 }
 
 #[derive(Debug, Clone)]

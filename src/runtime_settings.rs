@@ -47,16 +47,24 @@ impl RuntimeSettings {
     }
 
     pub fn set<VALUE: Serialize>(&self, key: &str, value: VALUE) -> Result<()> {
-        let write_tx = self.db.database().begin_write()?;
+        let write_tx = self
+            .db
+            .database()
+            .begin_write()
+            .context("failed to open write transaction")?;
 
         {
             let value = serde_json::to_value(&value)
                 .context("Could not serialize value")?
                 .to_string();
-            write_tx.open_table(TABLE)?.insert(key, value.as_str())?;
+            write_tx
+                .open_table(TABLE)
+                .context("failed to open table")?
+                .insert(key, value.as_str())
+                .context("failed to insert value")?;
         }
 
-        write_tx.commit()?;
+        write_tx.commit().context("failed to commit transaction")?;
 
         Ok(())
     }
