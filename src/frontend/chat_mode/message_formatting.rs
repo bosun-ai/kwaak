@@ -198,6 +198,7 @@ fn pretty_format_tool(tool_call: &swiftide::chat_completion::ToolCall) -> Option
             get_value(parsed_args, "file_name")?
         ),
         "fetch_url" => format!("fetching url `{}`", get_value(parsed_args, "url")?),
+        "delegate_coding_agent" => "delegating task to coding agent".into(),
         _ => return None,
     })
 }

@@ -334,9 +334,9 @@ max_elapsed_time_sec = 120
 - **`git.auto_commit_disabled`**: Opt-out of automatic commits after each chat completion.
 - **`disabled_tools.pull_request`**: Enables or disables the pull request tool. Defaults to `false`.
 - **`ui.hide_header`**: Optionally hide the top header in the UI. Defaults to `false`.
-- **`num_completions_for_summary`**: Number of completions before the agent summarizes the conversation. Defaults to 10; 
+- **`num_completions_for_summary`**: Number of completions before the agent summarizes the conversation. Defaults to 10;
 - **`git.agent_user_name`**: Name which the kwaak agent will make commands with.
-  Defaults to "kwaak"` 
+  Defaults to "kwaak"`
 - **`git.agent_user_email`**: Email which the kwaak agent will make commits
   with. Defaults to "kwaak@bosun.ai"
 
@@ -402,7 +402,7 @@ If you have a great idea, please fork the repo and create a pull request.
 
 Don't forget to give the project a star! Thanks again!
 
-Testing agents is not a trivial matter. We have (for now) internal benchmarks to verify agent behaviour across larger datasets.
+See also `ARCHICTECTURE.md`.
 
 If you just want to contribute (bless you!), see [our issues](https://github.com/bosun-ai/kwaak/issues) or join us on Discord.
 
