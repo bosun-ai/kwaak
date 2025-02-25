@@ -143,6 +143,8 @@ impl ConversationSummarizer {
         * If a previous solution did not work, include that in your response. If a reason was
             given, include that as well.
         * Include any previous summaries in your response
+        * Include every step so far taken concisely and clearly state where the agent is at,
+            especially in relation to the initial goal.
         * Be extra detailed on the last step taken
         * Provide clear instructions on how to proceed. If applicable, include the tools that
             should be used.
