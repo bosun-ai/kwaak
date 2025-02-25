@@ -6,21 +6,22 @@ All notable changes to this project will be documented in this file.
 
 ### 🚀 Features
 
-- Only enable the tui logger if the tui is enabled
-- Log and then ignore errors when indexing
-- SWE-bench test harness (#297)
-- *(benchmarks)* Command to remove failed/unsuccesful SWE-bench results (#319)
 - Add support for Claude Sonnet 3.7 (#323)
-- Generate commit messages with llm (#321)
 - Add support for azure openapi configuration (#270)
+- User friendly generated commit messages (#321)
+- SWE-bench test harness (#297)
+- Command to remove failed/unsuccesful SWE-bench results (#319)
+- Log and then ignore errors when indexing
 - Agent sessions with multiple agents in a single chat (#245)
 - Significant improvements to Chain-of-Thought prompts  (#334)
 
 ### 🐛 Bug Fixes
 
 - Ensure debug error is in logs when running agent
+- Anthropic works a lot more smoothly now
 - Handle indexing invalid utf-8 files gracefully
 - Do not include system prompt when summarizing and skip summary if agent stopped (#320)
+- Only enable the tui logger if the tui is enabled
 - *(anthropic)* Remove tool uses when summarizing context; fixes breaking issue (#329)
 
 ### 📚 Documentation
@@ -31,7 +32,6 @@ All notable changes to this project will be documented in this file.
 
 - Update Dockerfile rust version (#314)
 - *(ci)* Add PR linting
-- Clippy
 - Update own dockerfile to 1.85
 - Add `just` shortcut for running swe
 
