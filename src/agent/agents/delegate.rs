@@ -149,7 +149,7 @@ pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
         // Tool usage
         "If you just want to run the tests, prefer running the tests over running coverage, as running tests is faster",
         "When delegating to an agent, research thoroughly how to solve the problem",
-        "When delegating to an agent, provide a clear description of the task, requirements, and constriants",
+        "When delegating to an agent, provide a clear description of the task, requirements, and constraints",
         "When delegating to an agent, reference your instructions with full paths to the files involved",
         "When delegating to an agent, provide a clear definition of done",
         "When delegating to an agent, clearly state edge cases",

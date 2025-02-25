@@ -402,7 +402,7 @@ If you have a great idea, please fork the repo and create a pull request.
 
 Don't forget to give the project a star! Thanks again!
 
-See also `ARCHICTECTURE.md`.
+See also `ARCHITECTURE.md`.
 
 If you just want to contribute (bless you!), see [our issues](https://github.com/bosun-ai/kwaak/issues) or join us on Discord.
 
