@@ -220,7 +220,7 @@ fn filter_messages_since_summary(messages: Vec<ChatMessage>) -> Vec<ChatMessage>
                 return Some(ChatMessage::Assistant(Some(message), None));
             }
 
-            // For assistant mesages, we only keep those with messages in them
+            // For assistant messages, we only keep those with messages in them
             if let ChatMessage::Assistant(message, Some(..)) = &m {
                 if message.is_some() {
                     return Some(ChatMessage::Assistant(message.clone(), None));
