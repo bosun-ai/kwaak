@@ -10,7 +10,7 @@ use swiftide::{
 use swiftide_docker_executor::DockerExecutor;
 use tavily::Tavily;
 use tokio::sync::mpsc::UnboundedSender;
-use tokio_util::sync::CancellationToken;
+use tokio_util::{sync::CancellationToken, task::AbortOnDropHandle};
 use uuid::Uuid;
 
 use crate::{
@@ -151,7 +151,7 @@ impl SessionBuilder {
             }
         }?;
 
-        let running_session = RunningSession {
+        let mut running_session = RunningSession {
             active_agent: Arc::new(Mutex::new(active_agent)),
             session,
             github_session,
@@ -159,13 +159,16 @@ impl SessionBuilder {
             agent_environment,
             available_tools: available_tools.into(),
             cancel_token: Arc::new(Mutex::new(CancellationToken::new())),
+            message_task_handle: None,
         };
 
         // TODO: Consider how this might be dropped
-        tokio::spawn(running_message_handler(
+        let handle = tokio::spawn(running_message_handler(
             running_session.clone(),
             running_session_rx,
         ));
+
+        running_session.message_task_handle = Some(Arc::new(AbortOnDropHandle::new(handle)));
 
         Ok(running_session)
     }
@@ -252,6 +255,7 @@ async fn start_plan_and_act(
 pub struct RunningSession {
     session: Arc<Session>,
     active_agent: Arc<Mutex<RunningAgent>>,
+    message_task_handle: Option<Arc<AbortOnDropHandle<()>>>,
 
     github_session: Option<Arc<GithubSession>>,
     executor: Arc<dyn ToolExecutor>,

@@ -40,9 +40,6 @@ pub async fn start(
 
     // TODO: Feels a bit off to have EnvSetup return an Env, just to pass it to tool creation to
     // get the ref/branch name
-    //
-    // Probably nicer to have a `ChatSession` or `AgentSession` that encapsulates all the
-    // complexity
     let system_prompt = build_system_prompt(&session.repository)?;
 
     let mut context = DefaultContext::from_executor(Arc::clone(&executor));
@@ -74,9 +71,9 @@ pub async fn start(
         &agent_env.start_ref,
         session.repository.config().num_completions_for_summary,
     );
-    let commit_and_push = CommitAndPush::try_new(repository, &agent_env)?;
+    let commit_and_push = CommitAndPush::try_new(&session.repository, &agent_env)?;
 
-    let maybe_lint_fix_command = repository.config().commands.lint_and_fix.clone();
+    let maybe_lint_fix_command = session.repository.config().commands.lint_and_fix.clone();
 
     let context = Arc::new(context);
     let agent = Agent::builder()
