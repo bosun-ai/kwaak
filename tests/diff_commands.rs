@@ -1,6 +1,6 @@
 use kwaak::commands::Command;
-use kwaak::frontend::{ui, DiffVariant, UIEvent, UserInputCommand};
-use kwaak::test_utils::{setup_integration, IntegrationContext};
+use kwaak::frontend::{DiffVariant, UIEvent, UserInputCommand, ui};
+use kwaak::test_utils::{IntegrationContext, setup_integration};
 use kwaak::{assert_command_done, git};
 
 /// Tests showing the diff of an agent workspace, and then pulling the diff into a local branch

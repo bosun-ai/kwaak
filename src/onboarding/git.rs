@@ -11,7 +11,9 @@ pub fn git_questions(context: &mut tera::Context) -> Result<()> {
     let default_branch = default_main_branch();
     let branch_input = prompt_text("Default git branch", Some(&default_branch)).prompt()?;
 
-    println!("\nWith a github token, Kwaak can create pull requests, search github code, and automatically push to the remote. Kwaak will never push to the main branch.");
+    println!(
+        "\nWith a github token, Kwaak can create pull requests, search github code, and automatically push to the remote. Kwaak will never push to the main branch."
+    );
 
     let github_api_key = prompt_api_key("Github token (optional, <esc> to skip)", None)
         .with_placeholder("env:GITHUB_token")

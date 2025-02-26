@@ -14,7 +14,9 @@ use crate::{
 use super::util::{prompt_api_key, prompt_select};
 
 pub async fn llm_questions(context: &mut tera::Context) -> Result<()> {
-    println!("\nKwaak supports multiple LLM providers and uses multiple models for various tasks. What providers would you like to use?");
+    println!(
+        "\nKwaak supports multiple LLM providers and uses multiple models for various tasks. What providers would you like to use?"
+    );
     let valid_llms = LLMConfiguration::VARIANTS
         .iter()
         .map(AsRef::as_ref) // Kinda weird that we need to do this
@@ -123,7 +125,9 @@ fn anthropic_questions(context: &mut tera::Context) -> Result<()> {
         }),
     );
 
-    println!("\nAnthropic does not provide embeddings. Currently we suggest to use FastEmbed. If you want to use a different provider you can change it in your config later.");
+    println!(
+        "\nAnthropic does not provide embeddings. Currently we suggest to use FastEmbed. If you want to use a different provider you can change it in your config later."
+    );
     fastembed_questions(context)
 }
 
@@ -146,7 +150,9 @@ async fn get_open_router_models() -> Option<Vec<HashMap<String, serde_json::Valu
     models.get("data").map(Vec::to_owned)
 }
 async fn open_router_questions(context: &mut tera::Context) -> Result<()> {
-    println!("\nOpenRouter allows you to use a variety of managed models via a single api. You can find models at https://openrouter.ai/models.");
+    println!(
+        "\nOpenRouter allows you to use a variety of managed models via a single api. You can find models at https://openrouter.ai/models."
+    );
 
     let api_key = prompt_api_key(
         "Where can we find your OpenRouter api key? (https://openrouter.ai/settings/keys)",
@@ -206,7 +212,9 @@ async fn open_router_questions(context: &mut tera::Context) -> Result<()> {
         }),
     );
 
-    println!("\nOpenRouter does not support embeddings yet. Currently we suggest to use FastEmbed. If you want to use a different provider you can change it in your config later.");
+    println!(
+        "\nOpenRouter does not support embeddings yet. Currently we suggest to use FastEmbed. If you want to use a different provider you can change it in your config later."
+    );
     fastembed_questions(context)
 }
 
@@ -269,7 +277,9 @@ fn ollama_questions(context: &mut tera::Context) -> Result<()> {
 }
 
 pub fn fastembed_questions(context: &mut tera::Context) -> Result<()> {
-    println!("\nFastEmbed provides embeddings that are generated quickly locally. Unless you have a specific need for a different model, the default is a good choice.");
+    println!(
+        "\nFastEmbed provides embeddings that are generated quickly locally. Unless you have a specific need for a different model, the default is a good choice."
+    );
 
     let embedding_model: FastembedModel = prompt_select(
         "Embedding model",

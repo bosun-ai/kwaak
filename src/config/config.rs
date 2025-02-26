@@ -416,7 +416,9 @@ fn fill_llm(llm: &mut LLMConfiguration, root_key: Option<&ApiKey>) -> Result<()>
                 if let Some(root) = root_key {
                     *api_key = Some(root.clone());
                 } else {
-                    anyhow::bail!("OpenAI config requires an `api_key`, and none was provided or available in the root");
+                    anyhow::bail!(
+                        "OpenAI config requires an `api_key`, and none was provided or available in the root"
+                    );
                 }
             }
         }
@@ -425,7 +427,9 @@ fn fill_llm(llm: &mut LLMConfiguration, root_key: Option<&ApiKey>) -> Result<()>
                 if let Some(root) = root_key {
                     *api_key = Some(root.clone());
                 } else {
-                    anyhow::bail!("AzureOpenAI config requires an `api_key`, and none was provided or available in the root");
+                    anyhow::bail!(
+                        "AzureOpenAI config requires an `api_key`, and none was provided or available in the root"
+                    );
                 }
             }
         }
@@ -434,7 +438,9 @@ fn fill_llm(llm: &mut LLMConfiguration, root_key: Option<&ApiKey>) -> Result<()>
                 if let Some(root) = root_key {
                     *api_key = Some(root.clone());
                 } else {
-                    anyhow::bail!("Anthropic config requires an `api_key`, and none was provided or available in the root");
+                    anyhow::bail!(
+                        "Anthropic config requires an `api_key`, and none was provided or available in the root"
+                    );
                 }
             }
         }
@@ -443,7 +449,9 @@ fn fill_llm(llm: &mut LLMConfiguration, root_key: Option<&ApiKey>) -> Result<()>
                 if let Some(root) = root_key {
                     *api_key = Some(root.clone());
                 } else {
-                    anyhow::bail!("OpenRouter config requires an `api_key`, and none was provided or available in the root");
+                    anyhow::bail!(
+                        "OpenRouter config requires an `api_key`, and none was provided or available in the root"
+                    );
                 }
             }
             // Nothing to do for OpenRouter

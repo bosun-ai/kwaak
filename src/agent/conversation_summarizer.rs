@@ -11,7 +11,7 @@
 //! and the current diff
 //!
 //! The agent completes messages since the last summary.
-use std::sync::{atomic::AtomicUsize, Arc};
+use std::sync::{Arc, atomic::AtomicUsize};
 
 use swiftide::{
     agents::hooks::AfterEachFn,
@@ -301,7 +301,12 @@ mod tests {
                 ChatMessage::new_summary("Summary message"),
                 ChatMessage::new_user("User message 2"),
                 ChatMessage::new_assistant(Some("Assistant message 2"), None),
-                ChatMessage::new_assistant(Some("I ran a tool called: run_tests with the following arguments: No arguments\n The tool returned:\nTool output message"), None)
+                ChatMessage::new_assistant(
+                    Some(
+                        "I ran a tool called: run_tests with the following arguments: No arguments\n The tool returned:\nTool output message"
+                    ),
+                    None
+                )
             ]
         );
     }
@@ -350,7 +355,12 @@ mod tests {
             vec![
                 ChatMessage::new_summary("Summary message"),
                 ChatMessage::new_user("User message 2"),
-                ChatMessage::new_assistant(Some("I ran a tool called: run_tests with the following arguments: No arguments\n The tool returned:\nTool output message"), None)
+                ChatMessage::new_assistant(
+                    Some(
+                        "I ran a tool called: run_tests with the following arguments: No arguments\n The tool returned:\nTool output message"
+                    ),
+                    None
+                )
             ]
         );
     }
