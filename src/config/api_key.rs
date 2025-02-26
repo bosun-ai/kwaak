@@ -109,9 +109,10 @@ impl Into<SecretString> for &ApiKey {
 
 #[cfg(test)]
 mod tests {
+    use crate::test_utils::temp_env;
+
     use super::*;
     use serde::Deserialize;
-    use std::env;
 
     #[derive(Debug, Deserialize)]
     struct Config {
@@ -130,7 +131,7 @@ mod tests {
 
     #[test]
     fn test_deserialize_api_key_from_env() {
-        env::set_var("MY_SECRET_KEY", "env-secret-key");
+        let _temp_env = temp_env("MY_SECRET_KEY", "env-secret-key");
 
         let toml = r#"
             api_key = "env:MY_SECRET_KEY"
@@ -138,8 +139,6 @@ mod tests {
 
         let config: Config = toml::from_str(toml).unwrap();
         assert_eq!(config.api_key.expose_secret(), "env-secret-key");
-
-        env::remove_var("MY_SECRET_KEY");
     }
 
     #[test]
@@ -187,7 +186,5 @@ mod tests {
         let err = result.unwrap_err();
         dbg!(&err);
         assert!(err.to_string().contains("environment variable not found"));
-
-        env::remove_var("MY_SECRET_KEY_MISSING");
     }
 }
