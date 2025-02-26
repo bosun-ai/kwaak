@@ -326,17 +326,14 @@ mod tests {
         node.metadata
             .insert(metadata_qa_code::NAME, "test".to_string());
 
-        let redb = storage::build_redb(&repository).unwrap().build().unwrap();
+        let redb = storage::build_redb(&repository).unwrap();
 
         {
             redb.set(&node).await;
         }
         assert!(redb.get(&node).await);
 
-        let lancedb = storage::build_lancedb(&repository)
-            .unwrap()
-            .build()
-            .unwrap();
+        let lancedb = storage::build_lancedb(&repository).unwrap();
 
         if let Err(error) = lancedb.setup().await {
             tracing::warn!(%error, "Error setting up LanceDB");
