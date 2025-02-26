@@ -9,8 +9,6 @@ use swiftide::indexing::loaders;
 use swiftide::indexing::transformers;
 use swiftide::indexing::Node;
 use swiftide::traits::EmbeddingModel;
-use swiftide::traits::NodeCache;
-use swiftide::traits::Persist;
 use swiftide::traits::SimplePrompt;
 
 use super::garbage_collection::GarbageCollector;
@@ -49,7 +47,7 @@ pub async fn index_repository(
         .get_embedding_model(backoff)?;
 
     let lancedb = storage::get_lancedb(repository);
-    let redb = storage::get_redb(repository) as Arc<dyn NodeCache>;
+    let redb = storage::get_redb(repository);
 
     let total_chunks = Arc::new(AtomicU64::new(0));
     let processed_chunks = Arc::new(AtomicU64::new(0));
@@ -146,7 +144,7 @@ pub async fn index_repository(
                 Ok(node)
             }
         })
-        .then_store_with(Arc::clone(&lancedb) as Arc<dyn Persist>)
+        .then_store_with(lancedb)
         .run()
         .await?;
 

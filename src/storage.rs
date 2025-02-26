@@ -2,7 +2,7 @@
 //!
 //! Handled as statics to avoid multiple instances of the same storage provider
 
-use std::sync::{Arc, OnceLock};
+use std::sync::OnceLock;
 
 use anyhow::Result;
 use swiftide::indexing::{transformers, EmbeddedField};
@@ -11,23 +11,23 @@ use swiftide::integrations::redb::{Redb, RedbBuilder};
 
 use crate::repository::Repository;
 
-static LANCE_DB: OnceLock<Arc<LanceDB>> = OnceLock::new();
-static REDB: OnceLock<Arc<Redb>> = OnceLock::new();
+static LANCE_DB: OnceLock<LanceDB> = OnceLock::new();
+static REDB: OnceLock<Redb> = OnceLock::new();
 
 /// Retrieves a static lancedb
 ///
 /// # Panics
 ///
 /// Panics if it cannot setup lancedb
-pub fn get_lancedb(repository: &Repository) -> Arc<LanceDB> {
-    Arc::clone(LANCE_DB.get_or_init(|| {
-        Arc::new(
+pub fn get_lancedb(repository: &Repository) -> LanceDB {
+    LANCE_DB
+        .get_or_init(|| {
             build_lancedb(repository)
                 .expect("Failed to build LanceDB")
                 .build()
-                .expect("Failed to build LanceDB"),
-        )
-    }))
+                .expect("Failed to build LanceDB")
+        })
+        .to_owned()
 }
 
 /// Retrieves a static redb
@@ -35,15 +35,14 @@ pub fn get_lancedb(repository: &Repository) -> Arc<LanceDB> {
 /// # Panics
 ///
 /// Panic if it cannot setup redb, i.e. its already open
-pub fn get_redb(repository: &Repository) -> Arc<Redb> {
-    Arc::clone(REDB.get_or_init(|| {
-        Arc::new(
-            build_redb(repository)
-                .expect("Failed to build Redb")
-                .build()
-                .expect("Failed to build Redb"),
-        )
-    }))
+pub fn get_redb(repository: &Repository) -> Redb {
+    REDB.get_or_init(|| {
+        build_redb(repository)
+            .expect("Failed to build Redb")
+            .build()
+            .expect("Failed to build Redb")
+    })
+    .to_owned()
 }
 
 pub(crate) fn build_lancedb(repository: &Repository) -> Result<LanceDBBuilder> {
