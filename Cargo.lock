@@ -3856,7 +3856,7 @@ dependencies = [
 
 [[package]]
 name = "kwaak"
-version = "0.11.0"
+version = "0.11.1"
 dependencies = [
  "ansi-to-tui",
  "anyhow",
