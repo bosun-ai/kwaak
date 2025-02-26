@@ -3,7 +3,7 @@ use crossterm::event::{KeyCode, KeyEvent};
 use crate::{
     chat_message::ChatMessage,
     commands::Command,
-    frontend::{ui_event::UIEvent, ui_input_command::UserInputCommand, App},
+    frontend::{App, ui_event::UIEvent, ui_input_command::UserInputCommand},
 };
 
 pub fn on_key(app: &mut App, key: &KeyEvent) {

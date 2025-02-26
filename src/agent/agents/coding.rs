@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::{Context as _, Result};
 use swiftide::{
-    agents::{system_prompt::SystemPrompt, Agent, DefaultContext},
+    agents::{Agent, DefaultContext, system_prompt::SystemPrompt},
     chat_completion::{self, ChatCompletion, Tool},
     prompt::Prompt,
     traits::{AgentContext, Command, SimplePrompt, ToolExecutor},
@@ -244,11 +244,13 @@ mod tests {
         repository.config_mut().endless_mode = true;
         let prompt = build_system_prompt(&repository).unwrap();
 
-        assert!(prompt
-            .render()
-            .await
-            .unwrap()
-            .contains("You cannot ask for feedback and have to try to complete the given task"));
+        assert!(
+            prompt
+                .render()
+                .await
+                .unwrap()
+                .contains("You cannot ask for feedback and have to try to complete the given task")
+        );
     }
 
     #[tokio::test]

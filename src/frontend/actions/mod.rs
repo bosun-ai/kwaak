@@ -8,7 +8,7 @@ use strum::{EnumMessage, IntoEnumIterator};
 
 use crate::{chat::Chat, chat_message::ChatMessage, commands::Command, templates::Templates};
 
-use super::{ui_input_command::UserInputCommand, App};
+use super::{App, ui_input_command::UserInputCommand};
 
 mod diff;
 mod scroll;
@@ -51,7 +51,7 @@ pub fn copy_last_message(app: &mut App) {
         );
         return;
     }; // Replace with actual retrieval of the last message
-       //
+    //
     if let Err(e) =
         ClipboardContext::new().and_then(|mut ctx| ctx.set_contents(last_message.to_string()))
     {

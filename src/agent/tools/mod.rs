@@ -9,11 +9,11 @@ use swiftide::traits::CommandError;
 
 use anyhow::{Context as _, Result};
 use swiftide::{
-    chat_completion::{errors::ToolError, ToolOutput},
+    chat_completion::{ToolOutput, errors::ToolError},
     query::{search_strategies, states},
     traits::{AgentContext, Command},
 };
-use swiftide_macros::{tool, Tool};
+use swiftide_macros::{Tool, tool};
 use tavily::Tavily;
 use tokio::sync::Mutex;
 

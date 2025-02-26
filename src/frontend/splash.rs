@@ -2,8 +2,8 @@ use std::borrow::Cow;
 
 use layout::Flex;
 use ratatui::{
-    widgets::{Block, Padding},
     Frame,
+    widgets::{Block, Padding},
 };
 use ratatui_splash_screen::{SplashConfig, SplashScreen};
 

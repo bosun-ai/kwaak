@@ -26,8 +26,7 @@ pub fn main_branch(workdir: impl AsRef<Path>) -> String {
     const DEFAULT_BRANCH: &str = "main";
     // Tries to get it from the ref if present, otherwise sets it, the uses rev-parse to get the branch
     // The ref can be missing if the repo was never cloned (i.e. author and pushed to github directly)
-    const MAIN_BRANCH_CMD: &str =
-    "(git symbolic-ref refs/remotes/origin/HEAD >/dev/null 2>&1 || git remote set-head origin --auto >/dev/null 2>&1) && git rev-parse --abbrev-ref origin/HEAD";
+    const MAIN_BRANCH_CMD: &str = "(git symbolic-ref refs/remotes/origin/HEAD >/dev/null 2>&1 || git remote set-head origin --auto >/dev/null 2>&1) && git rev-parse --abbrev-ref origin/HEAD";
 
     let Ok(output) = std::process::Command::new("sh")
         .arg("-c")

@@ -5,7 +5,7 @@
 use std::sync::{Arc, OnceLock};
 
 use anyhow::Result;
-use swiftide::indexing::{transformers, EmbeddedField};
+use swiftide::indexing::{EmbeddedField, transformers};
 use swiftide::integrations::lancedb::{LanceDB, LanceDBBuilder};
 use swiftide::integrations::redb::{Redb, RedbBuilder};
 

@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use ratatui::{backend::TestBackend, Terminal};
+use ratatui::{Terminal, backend::TestBackend};
 use swiftide::agents::tools::local_executor::LocalExecutor;
 use swiftide::agents::{Agent, DefaultContext};
 use swiftide::chat_completion::{ChatCompletion, ChatCompletionResponse};
@@ -275,19 +275,21 @@ pub struct TempEnv<'a> {
 }
 #[must_use]
 // Sets a temporary env variable, when dropped it will be reset to the original value
+#[allow(unsafe_code)]
 pub fn temp_env<'a>(key: &'a str, value: &str) -> TempEnv<'a> {
     let original = std::env::var(key).ok();
-    std::env::set_var(key, value);
+    unsafe { std::env::set_var(key, value) };
 
     TempEnv { key, original }
 }
 
+#[allow(unsafe_code)]
 impl Drop for TempEnv<'_> {
     fn drop(&mut self) {
         if let Some(original) = self.original.take() {
-            std::env::set_var(self.key, original);
+            unsafe { std::env::set_var(self.key, original) };
         } else {
-            std::env::remove_var(self.key);
+            unsafe { std::env::remove_var(self.key) };
         }
     }
 }

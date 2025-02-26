@@ -76,7 +76,9 @@ impl EnvSetup<'_> {
             .await
             .map(|t| t.output)
         else {
-            anyhow::bail!("Could not get origin url; does the repository have a remote of origin enabled? Github integration will be disabled");
+            anyhow::bail!(
+                "Could not get origin url; does the repository have a remote of origin enabled? Github integration will be disabled"
+            );
         };
 
         let url_with_token = github_session.add_token_to_url(&origin_url)?;

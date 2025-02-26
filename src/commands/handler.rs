@@ -131,7 +131,7 @@ impl CommandHandler {
             Command::ShowConfig => event
                 .responder()
                 .system_message(&toml::to_string_pretty(repository.config())?),
-            Command::Chat { ref message } => {
+            Command::Chat { message } => {
                 let message = message.clone();
                 let session = self
                     .find_or_start_agent_by_uuid(event.uuid(), &message, event.clone_responder())

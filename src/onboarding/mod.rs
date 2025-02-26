@@ -41,7 +41,10 @@ pub async fn run(file: Option<PathBuf>, dry_run: bool) -> Result<()> {
 
     println!("Welcome to Kwaak! Let's get started by initializing a new configuration file.");
     println!("\n");
-    println!("We have a few questions to ask you to get started, you can always change these later in the `{}` file.", file.display());
+    println!(
+        "We have a few questions to ask you to get started, you can always change these later in the `{}` file.",
+        file.display()
+    );
 
     let mut context = tera::Context::new();
     project_questions(&mut context)?;
@@ -63,7 +66,10 @@ pub async fn run(file: Option<PathBuf>, dry_run: bool) -> Result<()> {
         println!("\nDry run, would have written the following to kwaak.toml:\n\n{config}");
     } else {
         std::fs::write(&file, &config)?;
-        println!("\nInitialized kwaak project in current directory, please review and customize the created `{}` file.\n Kwaak also needs a `Dockerfile` to execute your code in, with `ripgrep` and `fd` installed. Refer to https://github.com/bosun-ai/kwaak for an up to date list.", file.display());
+        println!(
+            "\nInitialized kwaak project in current directory, please review and customize the created `{}` file.\n Kwaak also needs a `Dockerfile` to execute your code in, with `ripgrep` and `fd` installed. Refer to https://github.com/bosun-ai/kwaak for an up to date list.",
+            file.display()
+        );
     }
 
     Ok(())
