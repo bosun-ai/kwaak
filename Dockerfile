@@ -2,10 +2,6 @@
 ARG RUST_VERSION=1.85-slim
 FROM rust:${RUST_VERSION} as builder
 
-RUN rustup component add clippy rustfmt
-
-RUN cargo install cargo-llvm-cov
-
 # These are needed for kwaak itself to compile and run
 RUN apt-get update && apt-get install -y --no-install-recommends \
   ssh curl  \
@@ -21,6 +17,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   git \
   # Then clean up
   && rm -rf /var/lib/apt/lists/*
+
+RUN rustup component add clippy rustfmt
+RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+RUN cargo binstall cargo-llvm-cov
 
 COPY . /app
 
