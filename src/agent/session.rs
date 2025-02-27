@@ -78,6 +78,7 @@ impl Session {
 
 impl SessionBuilder {
     /// Starts a session
+    #[tracing::instrument(skip_all)]
     pub async fn start(&mut self) -> Result<RunningSession> {
         let (running_session_tx, running_session_rx) = tokio::sync::mpsc::unbounded_channel();
 
@@ -339,6 +340,7 @@ impl RunningSession {
     }
 }
 
+#[tracing::instrument(skip_all)]
 async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Arc<dyn ToolExecutor>> {
     let boxed = match repository.config().tool_executor {
         SupportedToolExecutors::Docker => {
@@ -366,6 +368,7 @@ async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Arc<
     Ok(boxed)
 }
 
+#[tracing::instrument(skip_all)]
 async fn generate_initial_context(repository: &Repository, query: &str) -> Result<String> {
     let retrieved_context = indexing::query(repository, &query).await?;
     let formatted_context = format!("Additional information:\n\n{retrieved_context}");
