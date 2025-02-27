@@ -5,6 +5,7 @@ use uuid::Uuid;
 
 use crate::commands::Responder;
 
+#[tracing::instrument(skip_all)]
 pub async fn rename_chat(
     query: &str,
     fast_query_provider: &dyn SimplePrompt,
@@ -27,6 +28,7 @@ pub async fn rename_chat(
     Ok(())
 }
 
+#[tracing::instrument(skip_all)]
 pub async fn create_branch_name(
     query: &str,
     uuid: &Uuid,
