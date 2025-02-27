@@ -66,13 +66,13 @@ async fn main() -> Result<()> {
 
     let app_result = {
         // Only enable the tui logger if we're running the tui
-        let tui_logger_enabled = matches!(args.command, Some(cli::Commands::Tui));
+        let command = args.command.as_ref().unwrap_or(&cli::Commands::Tui);
+
+        let tui_logger_enabled = matches!(command, cli::Commands::Tui);
 
         let _guard = kwaak::kwaak_tracing::init(&repository, tui_logger_enabled)?;
 
         let _root_span = tracing::info_span!("main", "otel.name" = "main").entered();
-
-        let command = args.command.as_ref().unwrap_or(&cli::Commands::Tui);
 
         if git::util::is_dirty(repository.path()).await && !args.allow_dirty {
             eprintln!(
