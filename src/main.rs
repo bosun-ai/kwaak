@@ -83,7 +83,7 @@ async fn main() -> Result<()> {
 
         match command {
             cli::Commands::RunAgent { initial_message } => {
-                start_agent(repository, initial_message).await
+                start_agent(repository, initial_message, &args).await
             }
             cli::Commands::Tui => start_tui(&repository, &args).await,
             cli::Commands::Index => index_repository(&repository, None).await,
@@ -92,7 +92,7 @@ async fn main() -> Result<()> {
                 tool_args,
             } => test_tool(&repository, tool_name, tool_args.as_deref()).await,
             cli::Commands::Query { query: query_param } => {
-                let result = indexing::query(&repository, query_param.clone()).await;
+                let result = indexing::query(&repository, query_param).await;
 
                 if let Ok(result) = result.as_deref() {
                     println!("{result}");
@@ -150,10 +150,16 @@ async fn test_tool(
 }
 
 #[instrument(skip_all)]
-async fn start_agent(mut repository: repository::Repository, initial_message: &str) -> Result<()> {
+async fn start_agent(
+    mut repository: repository::Repository,
+    initial_message: &str,
+    args: &cli::Args,
+) -> Result<()> {
     repository.config_mut().endless_mode = true;
 
-    indexing::index_repository(&repository, None).await?;
+    if !args.skip_indexing {
+        indexing::index_repository(&repository, None).await?;
+    }
 
     let (tx, mut rx) = mpsc::unbounded_channel();
 
