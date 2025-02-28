@@ -1,9 +1,7 @@
 use kwaak::commands::Command;
 use kwaak::frontend::{ui, UIEvent};
 use kwaak::test_utils::{setup_integration, IntegrationContext};
-use kwaak::{assert_agent_responded, assert_command_done};
-use std::sync::Arc;
-use std::time::Duration;
+use kwaak::assert_command_done;
 
 /// Test for the GitHub issue command
 ///
