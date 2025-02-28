@@ -4,7 +4,7 @@ Kwaak has a lightweight, ratatui based frontend that interacts with a backend th
 
 When kwaak starts, by default it will index the repository using Swiftide (for RAG). After indexation is done, the TUI is started.
 
-When starting the initial chat, a docker container is build, initial context is generated (RAG), the environment is configured, and then the agent is started. A chat corresponds to a session in the backend. Chats are sessions, a session does not have to be a chat.
+When starting the initial chat, a docker container is built, initial context is generated (RAG), the environment is configured, and then the agent is started. A chat corresponds to a session in the backend. Chats are sessions, a session does not have to be a chat.
 
 Agents run in a continuous feedback loop with an LLM until their task is completed.
 
