@@ -304,7 +304,6 @@ impl GithubSession {
         summary
     }
 }
-}
 
 // Temporarily disabled, if messages get too large the PR can't be created.
 //
