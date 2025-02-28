@@ -194,6 +194,14 @@ Or compile from source with Cargo:
 cargo install kwaak
 ```
 
+### Arch Linux
+
+The package is available in the [extra repositories](https://archlinux.org/packages/extra/x86_64/kwaak/) and can be installed with [pacman](https://wiki.archlinux.org/title/Pacman):
+
+```shell
+pacman -S kwaak
+```
+
 #### Setup
 
 Once installed, you can run `kwaak init` in the project you want to use Kwaak in. This will guide you through the setup process and it will help you create a configuration file. See [Configuration](#configuration) for more customization options.
