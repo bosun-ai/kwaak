@@ -180,11 +180,6 @@ impl ConversationSummarizer {
         ## Your goal
         <Your goal>
 
-        ## Previously you did
-        * <summary of each step>
-        * You tried to run the tests but they failed. Here is why <...>
-        * You read a file called `full/path/to/file.txt` and here is what you learned <...>
-
         ## Since then you did
         * <summary of each step>
         * You tried to run the tests but they failed. Here is why <...>
