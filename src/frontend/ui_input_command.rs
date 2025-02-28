@@ -86,6 +86,7 @@ impl UserInputCommand {
             UserInputCommand::ShowConfig => Some(Command::ShowConfig),
             UserInputCommand::IndexRepository => Some(Command::IndexRepository),
             UserInputCommand::Retry => Some(Command::RetryChat),
+            UserInputCommand::GithubIssue(number) => Some(Command::GithubIssue { number: *number }),
             _ => None,
         }
     }
