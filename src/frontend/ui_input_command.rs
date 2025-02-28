@@ -193,3 +193,32 @@ mod tests {
         }
     }
 }
+
+    #[test]
+    fn test_parse_github_issue_input() {
+        let test_cases = vec![
+            ("/gh_issue 123", UserInputCommand::GithubIssue(123)),
+            ("/gh_issue 456", UserInputCommand::GithubIssue(456)),
+        ];
+
+        for (input, expected_command) in test_cases {
+            let parsed_command = UserInputCommand::parse_from_input(input).unwrap();
+            assert_eq!(
+                parsed_command, expected_command,
+                "expected: {expected_command:?} for: {input:?}",
+            );
+        }
+    }
+
+    #[test]
+    fn test_github_issue_command_mapping() {
+        let user_command = UserInputCommand::GithubIssue(123);
+        let cmd = user_command.to_command().unwrap();
+        
+        match cmd {
+            Command::GithubIssue { number } => {
+                assert_eq!(number, 123);
+            }
+            _ => panic!("Expected Command::GithubIssue, got {:?}", cmd),
+        }
+    }
