@@ -49,6 +49,11 @@ pub enum UserInputCommand {
     Retry,
     /// Print help
     Help,
+    /// Fetch and summarize a GitHub issue
+    ///
+    /// Usage:
+    ///     /gh_issue 123 - Fetches the issue #123 and displays it
+    GithubIssue(u64),
 }
 
 #[derive(
