@@ -3,8 +3,6 @@
 //! Unlike the configuration, these can during runtime, and are only intended to be used for
 //! internal operation of kwaak.
 
-use std::sync::Arc;
-
 use anyhow::{Context, Result};
 use redb::TableDefinition;
 use serde::{Deserialize, Serialize};
@@ -15,7 +13,7 @@ use crate::{repository::Repository, storage};
 const TABLE: TableDefinition<&str, &str> = TableDefinition::new("runtime_settings");
 
 pub struct RuntimeSettings {
-    db: Arc<Redb>,
+    db: Redb,
 }
 
 impl RuntimeSettings {
@@ -27,7 +25,7 @@ impl RuntimeSettings {
     }
 
     #[must_use]
-    pub fn from_db(db: Arc<Redb>) -> Self {
+    pub fn from_db(db: Redb) -> Self {
         Self { db }
     }
 

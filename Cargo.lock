@@ -2693,6 +2693,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c2141d6d6c8512188a7891b4b01590a45f6dac67afb4f255c4124dbb86d4eaa"
 
 [[package]]
+name = "fs-err"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f89bda4c2a21204059a977ed3bfe746677dfd137b83c339e702b0ac91d482aa"
+dependencies = [
+ "autocfg",
+ "tokio",
+]
+
+[[package]]
 name = "fs4"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7284,15 +7294,16 @@ dependencies = [
 
 [[package]]
 name = "swiftide-docker-executor"
-version = "0.6.4"
+version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "781560d9efac11632637a132efbd16e715a69172d06fdf503e1473d21f4dd859"
+checksum = "ebcc098413a83f8486422b7e320a563202a14fdad9d0c855d94e731c679c74b7"
 dependencies = [
  "anyhow",
  "async-trait",
  "bollard",
  "dirs 6.0.0",
  "flate2",
+ "fs-err",
  "http-body-util",
  "ignore",
  "indoc",

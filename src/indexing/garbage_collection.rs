@@ -4,7 +4,7 @@
 //! NOTE: If more general settings are added to Redb, better extract this to a more general place.
 
 use anyhow::Result;
-use std::{borrow::Cow, path::PathBuf, sync::Arc, time::SystemTime};
+use std::{borrow::Cow, path::PathBuf, time::SystemTime};
 use swiftide::{
     integrations::{lancedb::LanceDB, redb::Redb},
     traits::Persist,
@@ -18,8 +18,8 @@ const LAST_CLEANED_UP_AT: &str = "last_cleaned_up_at";
 pub struct GarbageCollector<'repository> {
     /// The last index date
     repository: Cow<'repository, Repository>,
-    lancedb: Arc<LanceDB>,
-    redb: Arc<Redb>,
+    lancedb: LanceDB,
+    redb: Redb,
     /// Extensions to consider for GC
     file_extensions: Vec<&'repository str>,
 }
@@ -296,8 +296,8 @@ mod tests {
     use super::*;
 
     struct TestContext {
-        redb: Arc<Redb>,
-        lancedb: Arc<LanceDB>,
+        redb: Redb,
+        lancedb: LanceDB,
         node: Node,
         subject: GarbageCollector<'static>,
         _guard: TestGuard,
@@ -326,19 +326,15 @@ mod tests {
         node.metadata
             .insert(metadata_qa_code::NAME, "test".to_string());
 
-        let redb = Arc::new(storage::build_redb(&repository).unwrap().build().unwrap());
+        let redb = storage::build_redb(&repository).unwrap();
 
         {
             redb.set(&node).await;
         }
         assert!(redb.get(&node).await);
 
-        let lancedb = Arc::new(
-            storage::build_lancedb(&repository)
-                .unwrap()
-                .build()
-                .unwrap(),
-        );
+        let lancedb = storage::build_lancedb(&repository).unwrap();
+
         if let Err(error) = lancedb.setup().await {
             tracing::warn!(%error, "Error setting up LanceDB");
         }

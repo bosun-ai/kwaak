@@ -14,11 +14,11 @@ mod message_styles {
         .fg(Color::Rgb(200, 160, 255))
         .add_modifier(Modifier::BOLD);
 
-    pub const SYSTEM: Style = Style::new().fg(Color::DarkGray).add_modifier(Modifier::DIM);
+    pub const SYSTEM: Style = Style::new().add_modifier(Modifier::DIM);
 
     pub const TOOL_DONE: Style = Style::new().fg(Color::Green).add_modifier(Modifier::DIM);
 
-    pub const TOOL_CALLED: Style = Style::new().fg(Color::DarkGray).add_modifier(Modifier::DIM);
+    pub const TOOL_CALLED: Style = Style::new().add_modifier(Modifier::DIM);
 
     pub const COMMAND: Style = Style::new()
         .fg(Color::LightMagenta)
