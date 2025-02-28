@@ -1,13 +1,13 @@
-use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
 
 use crate::commands::Responder;
 use crate::repository::Repository;
 use crate::storage;
 use anyhow::Result;
+use swiftide::indexing::Node;
 use swiftide::indexing::loaders;
 use swiftide::indexing::transformers;
-use swiftide::indexing::Node;
 use swiftide::traits::EmbeddingModel;
 use swiftide::traits::SimplePrompt;
 

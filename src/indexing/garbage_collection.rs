@@ -287,7 +287,7 @@ mod tests {
     use std::time::Duration;
 
     use swiftide::{
-        indexing::{transformers::metadata_qa_code, Node},
+        indexing::{Node, transformers::metadata_qa_code},
         traits::{NodeCache, Persist},
     };
 

@@ -3,7 +3,7 @@ use anyhow::Result;
 use tracing::level_filters::LevelFilter;
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::prelude::*;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 
 pub struct Guard {
     otel: Option<SdkTracerProvider>,

@@ -3,7 +3,7 @@ use swiftide::traits::CommandError;
 
 use anyhow::Result;
 use swiftide::{
-    chat_completion::{errors::ToolError, ToolOutput},
+    chat_completion::{ToolOutput, errors::ToolError},
     traits::{AgentContext, Command},
 };
 use swiftide_macros::tool;
@@ -158,14 +158,18 @@ fn replace_content(
     let content_first_line = content_lines[0];
 
     if start_line > 1 && !first_line.contains(content_first_line) {
-        anyhow::bail!("The line on line number {start_line} reads: `{first_line}`, which does not match the first line of the content: `{content_first_line}`.");
+        anyhow::bail!(
+            "The line on line number {start_line} reads: `{first_line}`, which does not match the first line of the content: `{content_first_line}`."
+        );
     }
 
     let last_line = lines[end_line - 1];
     let content_last_line = content_lines[content_lines.len() - 1];
 
     if end_line < lines.len() && !last_line.contains(content_last_line) {
-        anyhow::bail!("The line on line number {end_line} reads: `{last_line}`, which does not match the last line of the content: `{content_last_line}`.");
+        anyhow::bail!(
+            "The line on line number {end_line} reads: `{last_line}`, which does not match the last line of the content: `{content_last_line}`."
+        );
     }
 
     let first_line_indentation_mismatch: usize = first_line.find(content_first_line).unwrap_or(0);

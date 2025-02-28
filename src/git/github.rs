@@ -4,8 +4,8 @@
 use std::sync::Mutex;
 
 use anyhow::{Context, Result};
-use octocrab::{models::pulls::PullRequest, Octocrab, Page};
-use reqwest::header::{HeaderMap, ACCEPT};
+use octocrab::{Octocrab, Page, models::pulls::PullRequest};
+use reqwest::header::{ACCEPT, HeaderMap};
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
