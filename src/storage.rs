@@ -6,7 +6,7 @@ use std::sync::OnceLock;
 
 use anyhow::{Context, Result};
 use swiftide::{
-    indexing::{transformers, EmbeddedField},
+    indexing::{EmbeddedField, transformers},
     integrations::{lancedb::LanceDB, redb::Redb},
 };
 

@@ -2,8 +2,8 @@ use anyhow::Result;
 use indoc::formatdoc;
 use swiftide::{
     query::{
-        self, answers, query_transformers, search_strategies::SimilaritySingleEmbedding, states,
-        Query,
+        self, Query, answers, query_transformers, search_strategies::SimilaritySingleEmbedding,
+        states,
     },
     traits::{EmbeddingModel, SimplePrompt},
 };
