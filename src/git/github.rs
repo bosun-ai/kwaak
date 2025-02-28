@@ -167,6 +167,7 @@ impl GithubSession {
 
         Ok(pull_request)
     }
+}
 /// A struct to hold a GitHub issue and its comments
 #[derive(Debug, Clone)]
 pub struct GithubIssueWithComments {
