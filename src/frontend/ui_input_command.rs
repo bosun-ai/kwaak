@@ -138,6 +138,17 @@ impl UserInputCommand {
                     .with_context(|| format!("failed to parse diff subcommand {subcommand}"))?;
                 Ok(UserInputCommand::Diff(diff_variant))
             }
+            UserInputCommand::GithubIssue(_) => {
+                let Some(issue_number) = subcommand else {
+                    return Err(anyhow::anyhow!("GitHub issue number is required"));
+                };
+                
+                let issue_number = issue_number
+                    .parse::<u64>()
+                    .with_context(|| format!("failed to parse GitHub issue number {issue_number}"))?;
+                    
+                Ok(UserInputCommand::GithubIssue(issue_number))
+            }
             _ => Ok(input_cmd),
         }
     }
