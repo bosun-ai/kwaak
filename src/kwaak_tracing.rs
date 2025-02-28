@@ -1,5 +1,6 @@
 use crate::repository::Repository;
 use anyhow::Result;
+use opentelemetry_otlp::{Protocol, WithExportConfig as _};
 use tracing::level_filters::LevelFilter;
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::prelude::*;
@@ -100,6 +101,7 @@ fn init_otel() -> SdkTracerProvider {
 
     let exporter = opentelemetry_otlp::SpanExporter::builder()
         .with_http()
+        .with_protocol(Protocol::HttpBinary)
         .build()
         .expect("failed to create otlp exporter");
 

@@ -5271,7 +5271,6 @@ dependencies = [
  "opentelemetry_sdk",
  "prost",
  "reqwest",
- "serde_json",
  "thiserror 2.0.11",
  "tracing",
 ]
@@ -5282,12 +5281,9 @@ version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56f8870d3024727e99212eb3bb1762ec16e255e3e6f58eeb3dc8db1aa226746d"
 dependencies = [
- "base64 0.22.1",
- "hex",
  "opentelemetry",
  "opentelemetry_sdk",
  "prost",
- "serde",
  "tonic",
 ]
 
