@@ -140,6 +140,12 @@ impl ConversationSummarizer {
         * If any, mention every file changed
         * When mentioning files include the full path
         * Be very precise and critical
+        * If the agent was reading files in order to understand a solution, provide a detailed
+            summary of any specific relevant code which will be useful for the agents next steps
+            such that the agent can more selectively reread specific files. Do not summarize code
+            or files which are not directly relevant to the agents next steps. When summarizing
+            code include the exact names of objects and functions, as well as detailed explanations
+            of what they are used for and how they work.
         * If a previous solution did not work, include that in your response. If a reason was
             given, include that as well.
         * Include any previous summaries in your response
@@ -177,12 +183,15 @@ impl ConversationSummarizer {
         ## Previously you did
         * <summary of each step>
         * You tried to run the tests but they failed. Here is why <...>
-        * You read a file called `file.txt` and here is what you learned <...>
+        * You read a file called `full/path/to/file.txt` and here is what you learned <...>
 
         ## Since then you did
         * <summary of each step>
         * You tried to run the tests but they failed. Here is why <...>
-        * You read a file called `file.txt` and here is what you learned <...>
+        * You read a file called `full/path/to/file.txt` and here is what you learned <...>
+
+        ## Relevant files
+        <summary of relevant code which was read including the exact names of objects and functions>
 
         ## Reflection
         <Reflection on the steps you took and why you took them. What have you observed and what have you learned so far>
