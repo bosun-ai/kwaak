@@ -12,12 +12,17 @@ use crate::git;
 #[must_use]
 pub fn default_project_name() -> String {
     // Infer from the current directory
-    std::env::current_dir()
-        .expect("Failed to get current directory")
-        .file_name()
-        .expect("Failed to get current directory name")
-        .to_string_lossy()
-        .to_string()
+    default_owner_and_repo().map_or_else(
+        || {
+            let current_dir = std::env::current_dir().expect("Failed to get current directory");
+            current_dir
+                .file_name()
+                .expect("Failed to get current directory name")
+                .to_string_lossy()
+                .to_string()
+        },
+        |(_, repo)| repo,
+    )
 }
 
 pub(super) fn default_cache_dir() -> PathBuf {
@@ -122,5 +127,12 @@ mod test {
     fn test_default_main_branch() {
         let branch = default_main_branch();
         assert_eq!(branch, "master");
+    }
+
+    #[test]
+    fn test_default_project_name() {
+        // At least we got half of this beauty
+        let name = default_project_name();
+        assert_eq!(name, "kwaak");
     }
 }
