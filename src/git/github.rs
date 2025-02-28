@@ -167,6 +167,142 @@ impl GithubSession {
 
         Ok(pull_request)
     }
+/// A struct to hold a GitHub issue and its comments
+#[derive(Debug, Clone)]
+pub struct GithubIssueWithComments {
+    /// The issue
+    pub issue: octocrab::models::issues::Issue,
+    /// The comments on the issue
+    pub comments: Vec<octocrab::models::issues::Comment>,
+}
+
+impl GithubSession {
+    /// Fetches a GitHub issue and its comments
+    ///
+    /// # Arguments
+    ///
+    /// * `issue_number` - The number of the issue to fetch
+    ///
+    /// # Returns
+    ///
+    /// The issue and its comments
+    #[tracing::instrument(skip(self), err)]
+    pub async fn fetch_issue(&self, issue_number: u64) -> Result<GithubIssueWithComments> {
+        if !self.repository.config().is_github_enabled() {
+            return Err(anyhow::anyhow!("Github is not enabled"));
+        }
+        
+        // Above checks make the unwrap infallible
+        let owner = self.repository.config().git.owner.as_deref().unwrap();
+        let repo = self.repository.config().git.repository.as_deref().unwrap();
+
+        let issue = self
+            .octocrab
+            .issues(owner, repo)
+            .get(issue_number)
+            .await
+            .context("Failed to fetch issue")?;
+
+        let comments = self
+            .octocrab
+            .issues(owner, repo)
+            .list_comments(issue_number)
+            .send()
+            .await
+            .context("Failed to fetch issue comments")?
+            .items;
+
+        Ok(GithubIssueWithComments { issue, comments })
+    }
+
+    /// Generates a summary of a GitHub issue
+    ///
+    /// # Arguments
+    ///
+    /// * `issue_with_comments` - The issue and its comments to summarize
+    ///
+    /// # Returns
+    ///
+    /// A summary of the issue
+    pub fn summarize_issue(&self, issue_with_comments: &GithubIssueWithComments) -> String {
+        let GithubIssueWithComments { issue, comments } = issue_with_comments;
+        
+        let mut summary = format!(
+            "# Issue #{}: {}\n\n",
+            issue.number, issue.title
+        );
+        
+        // Add issue state (open/closed)
+        summary.push_str(&format!("**State**: {}\n", issue.state));
+        
+        // Add issue author if available
+        if let Some(user) = &issue.user {
+            summary.push_str(&format!("**Author**: {}\n", user.login));
+        }
+        
+        // Add issue creation date
+        if let Some(created_at) = &issue.created_at {
+            summary.push_str(&format!("**Created**: {}\n", created_at));
+        }
+        
+        // Add labels if any
+        if !issue.labels.is_empty() {
+            summary.push_str("\n**Labels**: ");
+            for (i, label) in issue.labels.iter().enumerate() {
+                if i > 0 {
+                    summary.push_str(", ");
+                }
+                summary.push_str(&label.name);
+            }
+            summary.push('\n');
+        }
+        
+        // Add assignees if any
+        if let Some(assignees) = &issue.assignees {
+            if !assignees.is_empty() {
+                summary.push_str("\n**Assignees**: ");
+                for (i, assignee) in assignees.iter().enumerate() {
+                    if i > 0 {
+                        summary.push_str(", ");
+                    }
+                    summary.push_str(&assignee.login);
+                }
+                summary.push('\n');
+            }
+        }
+        
+        // Add issue body
+        if let Some(body) = &issue.body {
+            summary.push_str("\n## Issue Description\n\n");
+            summary.push_str(body);
+            summary.push_str("\n\n");
+        }
+        
+        // Add comments if any
+        if !comments.is_empty() {
+            summary.push_str("## Comments\n\n");
+            for (i, comment) in comments.iter().enumerate() {
+                if let Some(user) = &comment.user {
+                    summary.push_str(&format!("### Comment #{} by {}\n\n", i + 1, user.login));
+                } else {
+                    summary.push_str(&format!("### Comment #{}\n\n", i + 1));
+                }
+                
+                if let Some(body) = &comment.body {
+                    summary.push_str(body);
+                    summary.push_str("\n\n");
+                }
+            }
+        }
+        
+        // Add a section describing what needs to be done
+        summary.push_str("## Task Analysis\n\n");
+        summary.push_str("Based on the issue and comments, the following needs to be done:\n\n");
+        summary.push_str("1. [Analysis will be completed by the agent]\n");
+        
+        summary
+    }
+}
 }
 
 // Temporarily disabled, if messages get too large the PR can't be created.
