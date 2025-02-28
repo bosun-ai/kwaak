@@ -261,6 +261,10 @@ pub struct GitConfiguration {
     /// The git email to use for the agent when committing changes
     #[serde(default = "default_agent_user_email")]
     pub agent_user_email: String,
+
+    /// Generate commit messages with an LLM; if disabled, the agent will use a default message
+    #[serde(default = "default_generate_commit_message")]
+    pub generate_commit_message: bool,
 }
 
 fn default_agent_user_name() -> String {
@@ -269,6 +273,10 @@ fn default_agent_user_name() -> String {
 
 fn default_agent_user_email() -> String {
     "kwaak@bosun.ai".to_string()
+}
+
+fn default_generate_commit_message() -> bool {
+    true
 }
 
 impl FromStr for Config {

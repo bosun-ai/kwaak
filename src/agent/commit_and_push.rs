@@ -10,6 +10,7 @@ use super::env_setup::AgentEnvironment;
 pub struct CommitAndPush {
     auto_commit_enabled: bool,
     push_to_remote_enabled: bool,
+    generate_commit_message: bool,
     llm: Box<dyn SimplePrompt>,
 }
 
@@ -18,6 +19,8 @@ impl CommitAndPush {
         let auto_commit_enabled = !repository.config().git.auto_commit_disabled;
         let push_to_remote_enabled =
             agent_env.remote_enabled && repository.config().git.auto_push_remote;
+        let generate_commit_message = repository.config().git.generate_commit_message;
+
         let llm = repository
             .config()
             .indexing_provider()
@@ -27,6 +30,7 @@ impl CommitAndPush {
         Ok(Self {
             auto_commit_enabled,
             push_to_remote_enabled,
+            generate_commit_message,
             llm,
         })
     }
@@ -36,6 +40,7 @@ impl CommitAndPush {
         move |agent| {
             let auto_commit_enabled = self.auto_commit_enabled;
             let push_to_remote_enabled = self.push_to_remote_enabled;
+            let generate_commit_message = self.generate_commit_message;
             let llm = llm.clone();
 
             Box::pin(async move {
@@ -59,16 +64,20 @@ impl CommitAndPush {
                     )
                     .context("Could not add files to git")?;
 
-                    let diff = accept_non_zero_exit(
-                        agent
-                            .context()
-                            .exec_cmd(&Command::shell("git diff --color=never --staged"))
-                            .await,
-                    )?;
+                    let commit_message = if generate_commit_message {
+                        let diff = accept_non_zero_exit(
+                            agent
+                                .context()
+                                .exec_cmd(&Command::shell("git diff --color=never --staged"))
+                                .await,
+                        )?;
 
-                    let commit_message = llm.prompt(format!("Please generate a conventional commit message for the following changes:\n\n{}", diff.output).into())
+                        llm.prompt(format!("Please generate a conventional commit message for the following changes:\n\n{}", diff.output).into())
                         .await
-                        .context("Could not prompt for commit message")?;
+                        .context("Could not prompt for commit message")?
+                    } else {
+                        "kwaak: Committed changes for completion".to_string()
+                    };
 
                     accept_non_zero_exit(
                         agent
@@ -135,6 +144,39 @@ mod tests {
     #[test_log::test(tokio::test)]
     async fn test_skips_commit_if_no_changes() {
         let (repository, _guard) = test_repository();
+        let commit_and_push =
+            CommitAndPush::try_new(&repository, &AgentEnvironment::default()).unwrap();
+
+        let mut agent = test_agent_for_repository(&repository);
+        commit_and_push.hook()(&mut agent).await.unwrap();
+
+        // verify commit, check if the the commit message is correct and no uncommitted changes
+        let commit = Command::new("git")
+            .args(["log", "-1", "--pretty=%B"])
+            .current_dir(repository.path())
+            .output()
+            .await
+            .unwrap();
+        let commit = std::str::from_utf8(&commit.stdout).unwrap();
+
+        dbg!(&commit);
+        assert!(commit.contains("Initial commit"));
+
+        let status = Command::new("git")
+            .args(["status", "--porcelain"])
+            .current_dir(repository.path())
+            .output()
+            .await
+            .unwrap();
+
+        assert!(status.stdout.is_empty());
+    }
+
+    #[test_log::test(tokio::test)]
+    async fn test_uses_default_message_if_generate_disabled() {
+        let (mut repository, _guard) = test_repository();
+        repository.config_mut().git.generate_commit_message = false;
+
         let commit_and_push =
             CommitAndPush::try_new(&repository, &AgentEnvironment::default()).unwrap();
 
