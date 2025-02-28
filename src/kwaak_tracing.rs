@@ -6,7 +6,7 @@ use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 
 pub struct Guard {
-    otel: Option<TracerProvider>,
+    otel: Option<SdkTracerProvider>,
 }
 
 impl Drop for Guard {
@@ -39,7 +39,7 @@ pub fn init(repository: &Repository, tui_logger_enabled: bool) -> Result<Guard> 
         .with_default_directive(LevelFilter::ERROR.into())
         .from_env_lossy();
 
-    if cfg!(feature = "otel") && repository.config().otel_enabled {
+    if repository.config().otel_enabled {
         env_filter_layer = env_filter_layer
             .add_directive("swiftide=debug".parse().unwrap())
             .add_directive("swiftide_docker_executor=debug".parse().unwrap())
@@ -67,7 +67,7 @@ pub fn init(repository: &Repository, tui_logger_enabled: bool) -> Result<Guard> 
     }
 
     let mut provider_for_guard = None;
-    if cfg!(feature = "otel") && repository.config().otel_enabled {
+    if repository.config().otel_enabled {
         println!("OpenTelemetry tracing enabled");
         let provider = init_otel();
         let tracer = provider.tracer("kwaak");
@@ -90,17 +90,13 @@ pub fn init(repository: &Repository, tui_logger_enabled: bool) -> Result<Guard> 
     })
 }
 
-#[cfg(feature = "otel")]
 use opentelemetry::trace::TracerProvider as _;
-#[cfg(feature = "otel")]
-use opentelemetry_sdk::trace::TracerProvider;
+use opentelemetry_sdk::trace::SdkTracerProvider;
 
-#[cfg(feature = "otel")]
-fn init_otel() -> TracerProvider {
+fn init_otel() -> SdkTracerProvider {
     use std::collections::HashMap;
 
-    use opentelemetry_sdk::runtime;
-    use opentelemetry_sdk::trace::TracerProvider;
+    use opentelemetry_sdk::trace::SdkTracerProvider;
 
     let exporter = opentelemetry_otlp::SpanExporter::builder()
         .with_http()
@@ -124,10 +120,12 @@ fn init_otel() -> TracerProvider {
         }
     };
 
-    TracerProvider::builder()
-        .with_batch_exporter(exporter, runtime::Tokio)
-        .with_resource(opentelemetry_sdk::Resource::new(vec![
-            opentelemetry::KeyValue::new("service.name", service_name),
-        ]))
+    SdkTracerProvider::builder()
+        .with_batch_exporter(exporter)
+        .with_resource(
+            opentelemetry_sdk::Resource::builder()
+                .with_service_name(service_name)
+                .build(),
+        )
         .build()
 }

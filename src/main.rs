@@ -119,10 +119,6 @@ async fn main() -> Result<()> {
         }
     };
 
-    if cfg!(feature = "otel") {
-        opentelemetry::global::shutdown_tracer_provider();
-    }
-
     if let Err(error) = app_result {
         ::tracing::error!(?error, "Kwaak encountered an error\n {error:#}");
         eprintln!("Kwaak encountered an error\n {error:#}");
@@ -247,9 +243,6 @@ pub fn init_panic_hook() {
         ::tracing::error!("Panic: {:?}", panic_info);
         let _ = restore_tui();
 
-        if cfg!(feature = "otel") {
-            opentelemetry::global::shutdown_tracer_provider();
-        }
         original_hook(panic_info);
     }));
 }
