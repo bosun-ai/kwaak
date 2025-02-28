@@ -234,15 +234,15 @@ impl GithubSession {
         );
         
         // Add issue state (open/closed)
-        summary.push_str(&format!("**State**: {}\n", issue.state));
+        summary.push_str(&format!("**State**: {:?}\n", issue.state));
         
         // Add issue author if available
-        if let Some(user) = &issue.user {
+        if let Some(user) = issue.user.as_ref() {
             summary.push_str(&format!("**Author**: {}\n", user.login));
         }
         
         // Add issue creation date
-        if let Some(created_at) = &issue.created_at {
+        if let Some(created_at) = issue.created_at {
             summary.push_str(&format!("**Created**: {}\n", created_at));
         }
         
@@ -259,7 +259,7 @@ impl GithubSession {
         }
         
         // Add assignees if any
-        if let Some(assignees) = &issue.assignees {
+        if let Some(assignees) = issue.assignees.as_ref() {
             if !assignees.is_empty() {
                 summary.push_str("\n**Assignees**: ");
                 for (i, assignee) in assignees.iter().enumerate() {
@@ -283,7 +283,7 @@ impl GithubSession {
         if !comments.is_empty() {
             summary.push_str("## Comments\n\n");
             for (i, comment) in comments.iter().enumerate() {
-                if let Some(user) = &comment.user {
+                if let Some(user) = comment.user.as_ref() {
                     summary.push_str(&format!("### Comment #{} by {}\n\n", i + 1, user.login));
                 } else {
                     summary.push_str(&format!("### Comment #{}\n\n", i + 1));
