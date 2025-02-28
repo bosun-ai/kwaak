@@ -236,15 +236,11 @@ impl GithubSession {
         // Add issue state (open/closed)
         summary.push_str(&format!("**State**: {:?}\n", issue.state));
         
-        // Add issue author if available
-        if let Some(user) = &issue.user {
-            summary.push_str(&format!("**Author**: {}\n", user.login));
-        }
+        // Add issue author
+        summary.push_str(&format!("**Author**: {}\n", issue.user.login));
         
         // Add issue creation date
-        if let Some(created_at) = issue.created_at {
-            summary.push_str(&format!("**Created**: {}\n", created_at));
-        }
+        summary.push_str(&format!("**Created**: {}\n", issue.created_at));
         
         // Add labels if any
         if !issue.labels.is_empty() {
@@ -259,17 +255,15 @@ impl GithubSession {
         }
         
         // Add assignees if any
-        if let Some(assignees) = &issue.assignees {
-            if !assignees.is_empty() {
-                summary.push_str("\n**Assignees**: ");
-                for (i, assignee) in assignees.iter().enumerate() {
-                    if i > 0 {
-                        summary.push_str(", ");
-                    }
-                    summary.push_str(&assignee.login);
+        if !issue.assignees.is_empty() {
+            summary.push_str("\n**Assignees**: ");
+            for (i, assignee) in issue.assignees.iter().enumerate() {
+                if i > 0 {
+                    summary.push_str(", ");
                 }
-                summary.push('\n');
+                summary.push_str(&assignee.login);
             }
+            summary.push('\n');
         }
         
         // Add issue body
@@ -283,11 +277,7 @@ impl GithubSession {
         if !comments.is_empty() {
             summary.push_str("## Comments\n\n");
             for (i, comment) in comments.iter().enumerate() {
-                if let Some(user) = &comment.user {
-                    summary.push_str(&format!("### Comment #{} by {}\n\n", i + 1, user.login));
-                } else {
-                    summary.push_str(&format!("### Comment #{}\n\n", i + 1));
-                }
+                summary.push_str(&format!("### Comment #{} by {}\n\n", i + 1, comment.user.login));
                 
                 if let Some(body) = &comment.body {
                     summary.push_str(body);
