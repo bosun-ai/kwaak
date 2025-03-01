@@ -78,18 +78,16 @@ impl CommitAndPush {
                         .await
                         .context("Could not prompt for commit message")?
                     } else {
-                        "kwaak: Committed changes for completion".to_string()
+                        DEFAULT_COMMIT_MESSAGE.to_string()
                     };
 
+                    let escaped = shell_escape::escape(commit_message.into()); //.replace('\'', "\\\'").replace('\"', "\\\"");
                     accept_non_zero_exit(
                         agent
                             .context()
-                            .exec_cmd(&Command::shell(format!(
-                                "git commit -m \"{commit_message}\""
-                            )))
+                            .exec_cmd(&Command::shell(format!("git commit -m {escaped}")))
                             .await,
-                    )
-                    .context("Could not commit files to git")?;
+                    )?;
                 }
 
                 if push_to_remote_enabled {
@@ -108,7 +106,7 @@ impl CommitAndPush {
 mod tests {
     use tokio::process::Command;
 
-    use crate::test_utils::{test_agent_for_repository, test_repository};
+    use crate::test_utils::{test_agent_for_repository, test_repository, NoopLLM};
 
     use super::*;
 
@@ -196,6 +194,43 @@ mod tests {
 
         dbg!(&commit);
         assert!(commit.contains("Initial commit"));
+
+        let status = Command::new("git")
+            .args(["status", "--porcelain"])
+            .current_dir(repository.path())
+            .output()
+            .await
+            .unwrap();
+
+        assert!(status.stdout.is_empty());
+    }
+
+    #[test_log::test(tokio::test)]
+    async fn test_bad_quotes() {
+        let (repository, _guard) = test_repository();
+
+        let mut commit_and_push =
+            CommitAndPush::try_new(&repository, &AgentEnvironment::default()).unwrap();
+
+        let message = "feat(quotes): this \"should'not break\n";
+        commit_and_push.llm = Box::new(NoopLLM::new(message.into()));
+
+        std::fs::write(repository.path().join("test.txt"), "test").unwrap();
+
+        let mut agent = test_agent_for_repository(&repository);
+        commit_and_push.hook()(&mut agent).await.unwrap();
+
+        // verify commit, check if the the commit message is correct and no uncommitted changes
+        let commit = Command::new("git")
+            .args(["log", "-1", "--pretty=%B"])
+            .current_dir(repository.path())
+            .output()
+            .await
+            .unwrap();
+        let commit = std::str::from_utf8(&commit.stdout).unwrap();
+
+        // Double check that the newline doesn't break any quotes
+        assert_eq!(commit.trim(), message.trim());
 
         let status = Command::new("git")
             .args(["status", "--porcelain"])

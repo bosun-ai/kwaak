@@ -156,13 +156,36 @@ pub fn test_agent_for_repository(repository: &Repository) -> Agent {
     Agent::builder().context(context).llm(&llm).build().unwrap()
 }
 
+/// A fake LLM that always returns the same message, for testing purposes.
 #[derive(Debug, Clone)]
-pub struct NoopLLM;
+pub struct NoopLLM {
+    response: String,
+}
+
+impl Default for NoopLLM {
+    fn default() -> Self {
+        Self {
+            response: "Kwek".to_string(),
+        }
+    }
+}
+
+impl NoopLLM {
+    #[must_use]
+    pub fn new(response: String) -> Self {
+        Self { response }
+    }
+
+    pub fn with_response(&mut self, response: String) -> &mut Self {
+        self.response = response;
+        self
+    }
+}
 
 #[async_trait::async_trait]
 impl SimplePrompt for NoopLLM {
     async fn prompt(&self, _prompt: swiftide::prompt::Prompt) -> anyhow::Result<String> {
-        Ok("Kwek".to_string())
+        Ok(self.response.clone())
     }
 }
 
@@ -183,7 +206,7 @@ impl ChatCompletion for NoopLLM {
         swiftide::chat_completion::errors::ChatCompletionError,
     > {
         ChatCompletionResponse::builder()
-            .message("Kwek kwek")
+            .message(&self.response)
             .build()
             .map_err(std::convert::Into::into)
     }

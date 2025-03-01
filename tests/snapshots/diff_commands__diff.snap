@@ -3,7 +3,7 @@ source: tests/diff_commands.rs
 expression: terminal.backend()
 ---
 "┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────↑─────────────Chats─────────────┐"
-"│ ✦ Kwek kwek                                                                                                                  █ 󰍩  Kwek                       │"
+"│ ✦ Kwek                                                                                                                       █ 󰍩  Kwek                       │"
 "│ ℹ Command chat successful in 0 seconds                                                                                       █                               │"
 "│ No changes                                                                                                                   █                               │"
 "│ ℹ Command diff successful in 0 seconds                                                                                       █                               │"

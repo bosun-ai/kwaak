@@ -91,6 +91,7 @@ strip-ansi-escapes = "0.2.1"
 inquire = "0.7.5"
 config = { version = "0.15.6", features = ["toml", "convert-case"] }
 dyn-clone = "1.0.17"
+shell-escape = "0.1.5"
 
 # Something is still pulling in libssl, this is a quickfix and should be investigated
 [target.'cfg(linux)'.dependencies]

@@ -484,7 +484,7 @@ impl LLMConfiguration {
             }
 
             #[cfg(debug_assertions)]
-            LLMConfiguration::Testing => Box::new(NoopLLM) as Box<dyn EmbeddingModel>,
+            LLMConfiguration::Testing => Box::new(NoopLLM::default()) as Box<dyn EmbeddingModel>,
         };
         Ok(boxed)
     }
@@ -513,7 +513,7 @@ impl LLMConfiguration {
                 Box::new(self.build_anthropic(backoff)?) as Box<dyn SimplePrompt>
             }
             #[cfg(debug_assertions)]
-            LLMConfiguration::Testing => Box::new(NoopLLM) as Box<dyn SimplePrompt>,
+            LLMConfiguration::Testing => Box::new(NoopLLM::default()) as Box<dyn SimplePrompt>,
         };
         Ok(boxed)
     }
@@ -542,7 +542,7 @@ impl LLMConfiguration {
                 Box::new(self.build_anthropic(backoff)?) as Box<dyn ChatCompletion>
             }
             #[cfg(debug_assertions)]
-            LLMConfiguration::Testing => Box::new(NoopLLM) as Box<dyn ChatCompletion>,
+            LLMConfiguration::Testing => Box::new(NoopLLM::default()) as Box<dyn ChatCompletion>,
         };
         Ok(boxed)
     }
