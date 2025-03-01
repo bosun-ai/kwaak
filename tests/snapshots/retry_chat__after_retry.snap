@@ -3,9 +3,9 @@ source: tests/retry_chat.rs
 expression: terminal.backend()
 ---
 "┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────↑─────────────Chats─────────────┐"
-"│ ✦ Kwek kwek                                                                                                                  █ 󰍩  Kwek                       │"
+"│ ✦ Kwek                                                                                                                       █ 󰍩  Kwek                       │"
 "│ ℹ Command chat successful in 0 seconds                                                                                       █                               │"
-"│ ✦ Kwek kwek                                                                                                                  █                               │"
+"│ ✦ Kwek                                                                                                                       █                               │"
 "│ ℹ Command retry_chat successful in 0 seconds                                                                                 █                               │"
 "│                                                                                                                              █                               │"
 "│                                                                                                                              █                               │"
