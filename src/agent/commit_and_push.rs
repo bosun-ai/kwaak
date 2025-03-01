@@ -72,7 +72,7 @@ impl CommitAndPush {
                                 .await,
                         )?;
 
-                        llm.prompt(format!("Please generate a conventional commit message for the following changes:\n\n{}", diff.output).into())
+                        llm.prompt(format!("Please generate a conventional commit message for the following changes. Only respond with the commit message and nothing else. Keep it under 100 characters:\n\n{}", diff.output).into())
                         .await
                         .context("Could not prompt for commit message")?
                     } else {
