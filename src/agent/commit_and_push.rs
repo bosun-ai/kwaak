@@ -14,6 +14,8 @@ pub struct CommitAndPush {
     llm: Box<dyn SimplePrompt>,
 }
 
+const DEFAULT_COMMIT_MESSAGE: &str = "kwaak: Committed changes for completion";
+
 impl CommitAndPush {
     pub fn try_new(repository: &Repository, agent_env: &AgentEnvironment) -> Result<Self> {
         let auto_commit_enabled = !repository.config().git.auto_commit_disabled;
