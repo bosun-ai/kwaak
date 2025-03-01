@@ -192,8 +192,7 @@ mod tests {
             );
         }
     }
-}
-
+    
     #[test]
     fn test_parse_github_issue_input() {
         let test_cases = vec![
@@ -222,3 +221,4 @@ mod tests {
             _ => panic!("Expected Command::GithubIssue, got {:?}", cmd),
         }
     }
+}
