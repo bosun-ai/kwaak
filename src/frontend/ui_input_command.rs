@@ -49,11 +49,10 @@ pub enum UserInputCommand {
     Retry,
     /// Print help
     Help,
-    /// Fetch and summarize a GitHub issue
-    ///
-    /// Usage:
+    #[allow(clippy::doc_markdown)]
+    /// Fetch and summarize a GitHub issue. Example usage:
     ///     /gh_issue 123 - Fetches the issue #123 and displays it
-    #[strum(serialize = "gh_issue", to_string = "github_issue")]
+    #[strum(serialize = "gh_issue")]
     GithubIssue(u64),
 }
 
@@ -143,11 +142,11 @@ impl UserInputCommand {
                 let Some(issue_number) = subcommand else {
                     return Err(anyhow::anyhow!("GitHub issue number is required"));
                 };
-                
-                let issue_number = issue_number
-                    .parse::<u64>()
-                    .with_context(|| format!("failed to parse GitHub issue number {issue_number}"))?;
-                    
+
+                let issue_number = issue_number.parse::<u64>().with_context(|| {
+                    format!("failed to parse GitHub issue number {issue_number}")
+                })?;
+
                 Ok(UserInputCommand::GithubIssue(issue_number))
             }
             _ => Ok(input_cmd),
@@ -193,7 +192,7 @@ mod tests {
             );
         }
     }
-    
+
     #[test]
     fn test_parse_github_issue_input() {
         let test_cases = vec![
@@ -214,12 +213,12 @@ mod tests {
     fn test_github_issue_command_mapping() {
         let user_command = UserInputCommand::GithubIssue(123);
         let cmd = user_command.to_command().unwrap();
-        
+
         match cmd {
             Command::GithubIssue { number } => {
                 assert_eq!(number, 123);
             }
-            _ => panic!("Expected Command::GithubIssue, got {:?}", cmd),
+            _ => panic!("Expected Command::GithubIssue, got {cmd:?}"),
         }
     }
 }
