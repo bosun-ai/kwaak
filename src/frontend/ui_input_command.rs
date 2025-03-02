@@ -49,9 +49,7 @@ pub enum UserInputCommand {
     Retry,
     /// Print help
     Help,
-    #[allow(clippy::doc_markdown)]
-    /// Fetch and summarize a GitHub issue. Example usage:
-    ///     /gh_issue 123 - Fetches the issue #123 and displays it
+    /// Fetch, analyze, and fix a GitHub issue. Example usage: `/gh_issue 123`
     #[strum(serialize = "gh_issue")]
     GithubIssue(u64),
 }
