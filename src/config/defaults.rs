@@ -100,7 +100,8 @@ mod test {
     #[test]
     fn test_extract_owner_and_repo() {
         // Use a static URL instead of relying on git remote
-        let (owner, repo) = extract_owner_and_repo("https://github.com/bosun-ai/kwaak.git").unwrap();
+        let (owner, repo) =
+            extract_owner_and_repo("https://github.com/bosun-ai/kwaak.git").unwrap();
 
         assert_eq!(owner, "bosun-ai");
         assert_eq!(repo, "kwaak");
