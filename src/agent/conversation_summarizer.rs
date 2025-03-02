@@ -30,6 +30,7 @@ pub struct ConversationSummarizer {
     num_completions_since_summary: Arc<AtomicUsize>,
     git_start_sha: String,
     num_completions_for_summary: usize,
+    initial_context: String, // original prompt
 }
 
 impl ConversationSummarizer {
@@ -38,6 +39,7 @@ impl ConversationSummarizer {
         available_tools: &[Box<dyn Tool>],
         git_start_sha: impl Into<String>,
         num_completions_for_summary: usize,
+        initial_context: impl Into<String>,
     ) -> Self {
         Self {
             llm: llm.into(),
@@ -45,6 +47,7 @@ impl ConversationSummarizer {
             num_completions_since_summary: Arc::new(0.into()),
             git_start_sha: git_start_sha.into(),
             num_completions_for_summary,
+            initial_context: initial_context.into(),
         }
     }
 
@@ -69,6 +72,7 @@ impl ConversationSummarizer {
 
             let prompt = self.prompt();
             let git_start_sha = self.git_start_sha.clone();
+            let initial_context = self.initial_context.clone();
 
             Box::pin(
                 async move {
@@ -91,7 +95,18 @@ impl ConversationSummarizer {
                         filter_messages_since_summary(agent.context().history().await);
                     messages.push(ChatMessage::new_user(prompt));
 
-                    let summary = llm.complete(&messages.into()).await?;
+                    let mut summary = llm.complete(&messages.into()).await?;
+
+                    // reinject the original prompt at the beginning of the summary
+                    //
+                    // NOTE use code block (```) for the original goal as it may contain markdown
+                    // itself which should be distinguished from the markdown in the rest of the
+                    // summary
+                    let msg = summary.message.unwrap_or_default();
+                    let msg = format!(
+                        "# Original Goal for Reference: \n```\n{initial_context}\n```\n\n{msg}"
+                    );
+                    summary.message = Some(msg);
 
                     if let Some(summary) = summary.message() {
                         tracing::debug!(summary = %summary, "Summarized conversation");

@@ -70,6 +70,7 @@ pub async fn start(
         &tools,
         &agent_env.start_ref,
         session.repository.config().num_completions_for_summary,
+        initial_context.clone(),
     );
     let commit_and_push = CommitAndPush::try_new(&session.repository, &agent_env)?;
 
