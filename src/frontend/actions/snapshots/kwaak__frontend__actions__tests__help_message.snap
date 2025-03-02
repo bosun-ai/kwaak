@@ -1,5 +1,6 @@
 ---
 source: src/frontend/actions/mod.rs
+assertion_line: 91
 expression: message
 ---
 You can use the following slash commands to interact with kwaak and the agent:
@@ -13,9 +14,7 @@ Usage:
     /diff show - Shows the diff in the chat
     /diff pull - Pulls the diff into a new branch
 
-**/github_issue** - Fetch and summarize a GitHub issue
-
-Usage:
+**/gh_issue** - Fetch and summarize a GitHub issue. Example usage:
     /gh_issue 123 - Fetches the issue #123 and displays it
 
 **/help** - Print help

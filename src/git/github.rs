@@ -192,7 +192,7 @@ impl GithubSession {
         if !self.repository.config().is_github_enabled() {
             return Err(anyhow::anyhow!("Github is not enabled"));
         }
-        
+
         // Above checks make the unwrap infallible
         let owner = self.repository.config().git.owner.as_deref().unwrap();
         let repo = self.repository.config().git.repository.as_deref().unwrap();
@@ -216,81 +216,54 @@ impl GithubSession {
         Ok(GithubIssueWithComments { issue, comments })
     }
 
-    /// Generates a summary of a GitHub issue
-    ///
-    /// # Arguments
-    ///
-    /// * `issue_with_comments` - The issue and its comments to summarize
-    ///
-    /// # Returns
-    ///
-    /// A summary of the issue
-    pub fn summarize_issue(&self, issue_with_comments: &GithubIssueWithComments) -> String {
+    /// Generates a summary of a GitHub issue in markdown format.
+    pub fn issue_to_markdown(&self, issue_with_comments: &GithubIssueWithComments) -> String {
         let GithubIssueWithComments { issue, comments } = issue_with_comments;
-        
-        let mut summary = format!(
-            "# Issue #{}: {}\n\n",
-            issue.number, issue.title
-        );
-        
-        // Add issue state (open/closed)
-        summary.push_str(&format!("**State**: {:?}\n", issue.state));
-        
-        // Add issue author
+
+        let mut summary = format!("# Issue #{}: {}\n\n", issue.number, issue.title);
+
+        summary.push_str(&format!("**State**: {:?}\n", issue.state)); // (open/closed)
         summary.push_str(&format!("**Author**: {}\n", issue.user.login));
-        
-        // Add issue creation date
         summary.push_str(&format!("**Created**: {}\n", issue.created_at));
-        
-        // Add labels if any
+
+        // add labels if any
         if !issue.labels.is_empty() {
             summary.push_str("\n**Labels**: ");
-            for (i, label) in issue.labels.iter().enumerate() {
-                if i > 0 {
-                    summary.push_str(", ");
-                }
-                summary.push_str(&label.name);
-            }
+            summary.push_str(
+                &issue
+                    .labels
+                    .iter()
+                    .map(|label| label.name.as_str())
+                    .collect::<Vec<&str>>()
+                    .join(", "),
+            );
             summary.push('\n');
         }
-        
-        // Add assignees if any
-        if !issue.assignees.is_empty() {
-            summary.push_str("\n**Assignees**: ");
-            for (i, assignee) in issue.assignees.iter().enumerate() {
-                if i > 0 {
-                    summary.push_str(", ");
-                }
-                summary.push_str(&assignee.login);
-            }
-            summary.push('\n');
-        }
-        
-        // Add issue body
+
+        // add issue body
         if let Some(body) = &issue.body {
             summary.push_str("\n## Issue Description\n\n");
             summary.push_str(body);
             summary.push_str("\n\n");
         }
-        
-        // Add comments if any
+
+        // add comments if any
         if !comments.is_empty() {
             summary.push_str("## Comments\n\n");
             for (i, comment) in comments.iter().enumerate() {
-                summary.push_str(&format!("### Comment #{} by {}\n\n", i + 1, comment.user.login));
-                
+                summary.push_str(&format!(
+                    "### Comment #{} by {}\n",
+                    i + 1,
+                    comment.user.login
+                ));
+
                 if let Some(body) = &comment.body {
                     summary.push_str(body);
-                    summary.push_str("\n\n");
+                    summary.push('\n');
                 }
             }
         }
-        
-        // Add a section describing what needs to be done
-        summary.push_str("## Task Analysis\n\n");
-        summary.push_str("Based on the issue and comments, the following needs to be done:\n\n");
-        summary.push_str("1. [Analysis will be completed by the agent]\n");
-        
+
         summary
     }
 }

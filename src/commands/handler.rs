@@ -92,7 +92,7 @@ impl CommandHandler {
                 let this_handler = Arc::clone(&this_handler);
 
                 joinset.spawn(async move {
-                    let result = this_handler.lock().await.handle_command_event(&repository, &event, &event.command()).await;
+                    let result = Box::pin(this_handler.lock().await.handle_command_event(&repository, &event, &event.command())).await;
                     event.responder().send(CommandResponse::Completed);
 
                     if let Err(error) = result {
@@ -193,59 +193,44 @@ impl CommandHandler {
                 }?;
             }
             Command::GithubIssue { number } => {
-                // Get an existing session if one exists, or create a new one
-                let issue_number = *number;
-                
-                // Find or create a GitHub session
                 let github_session = match git::github::GithubSession::from_repository(repository) {
                     Ok(session) => session,
                     Err(e) => {
-                        event.responder().system_message(&format!(
-                            "Failed to create GitHub session: {}", e
-                        ));
+                        event
+                            .responder()
+                            .system_message(&format!("Failed to create GitHub session: {e}"));
                         return Ok(());
                     }
                 };
-                
-                // Fetch the issue and its comments
-                let issue_with_comments = match github_session.fetch_issue(issue_number).await {
+
+                let issue_with_comments = match github_session.fetch_issue(*number).await {
                     Ok(issue) => issue,
                     Err(e) => {
                         event.responder().system_message(&format!(
-                            "Failed to fetch GitHub issue #{}: {}", issue_number, e
+                            "Failed to fetch GitHub issue #{number}: {e}",
                         ));
                         return Ok(());
                     }
                 };
-                
-                // Generate a summary of the issue
-                let summary = github_session.summarize_issue(&issue_with_comments);
-                
-                // Send the summary to the user
-                event.responder().system_message(&summary);
-                
-                // Let the agent process the issue next time the user prompts
+
+                let issue_md = github_session.issue_to_markdown(&issue_with_comments);
                 let prompt = format!(
-                    "Based on the GitHub issue #{} summary above, please analyze what needs to be done and wait for confirmation before proceeding.",
-                    issue_number
+                    "Please summarize, analyze, and then proceed to fix the following issue. Take \
+                    into account suggested fixes proposed in the issue description and comments. \
+                    \n\n{issue_md}"
                 );
-                
+
+                event.responder().system_message(prompt.as_str());
+
                 // Start or use an existing agent session
                 let session = self
                     .find_or_start_agent_by_uuid(event.uuid(), &prompt, event.clone_responder())
                     .await?;
-                
                 let token = session.cancel_token().clone();
-                
                 tokio::select! {
                     () = token.cancelled() => Ok(()),
                     result = session.query_agent(&prompt) => result,
                 }?;
-                
-                // Send a message to explain that the agent is waiting for confirmation
-                event.responder().system_message(
-                    "The agent has summarized the GitHub issue. Please confirm if the analysis makes sense by sending a message."
-                );
             }
             Command::Quit { .. } => unreachable!("Quit should be handled earlier"),
         }

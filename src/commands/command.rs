@@ -40,7 +40,7 @@ pub enum Command {
     RetryChat,
 
     /// Fetch a GitHub issue and its comments
-    /// The agent will summarize the issue and wait for confirmation
+    /// The agent will summarize the issue and
     GithubIssue { number: u64 },
 }
 
