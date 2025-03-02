@@ -1,0 +1,41 @@
+---
+source: src/frontend/actions/mod.rs
+assertion_line: 91
+expression: message
+---
+You can use the following slash commands to interact with kwaak and the agent:
+
+**/copy** - Copy the last message from an agent
+**/delete_chat** - Delete the current chat
+**/diff** - Show or pull changes made by an agent
+Defaults to `show` if no argument is given
+
+Usage:
+    /diff show - Shows the diff in the chat
+    /diff pull - Pulls the diff into a new branch
+
+**/gh_issue** - Fetch and summarize a GitHub issue
+
+Usage:
+    /gh_issue 123 - Fetches the issue #123 and displays it
+
+**/help** - Print help
+**/index_repository** - Force a re-index of the repository
+**/new_chat** - Start a new chat
+**/next_chat** - Switch to the next chat
+**/quit** - Stop the application
+**/retry** - Retries the last chat with the agent.
+**/show_config** - Show the current configuration
+
+
+Additionally, you can use the following keybindings to navigate the interface:
+
+"Page Up/Down - Scroll"
+"End - Scroll to end"
+"Tab - Next chat"
+"^s - Send a message to the agent"
+"^x - Stop agent"
+"^n - New chat"
+"^q - Quit"
+
+If you encounter any issues, reach out to us on github or discord, we're happy to help!
