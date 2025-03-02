@@ -29,6 +29,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use swiftide::{agents::DefaultContext, chat_completion::Tool, traits::AgentContext};
+use swiftide_docker_executor::DockerExecutor;
 use tokio::{fs, sync::mpsc};
 use uuid::Uuid;
 
@@ -139,11 +140,23 @@ async fn test_tool(
         .find(|tool| tool.name() == tool_name)
         .context("Tool not found")?;
 
-    let agent_context = DefaultContext::default();
+    let mut executor = DockerExecutor::default();
+    let dockerfile = &repository.config().docker.dockerfile;
+
+    let running_executor = executor
+        .with_context_path(&repository.config().docker.context)
+        .with_image_name(repository.config().project_name.to_lowercase())
+        .with_dockerfile(dockerfile)
+        .to_owned()
+        .start()
+        .await?;
+
+    let agent_context = DefaultContext::from_executor(running_executor);
 
     let output = tool
         .invoke(&agent_context as &dyn AgentContext, tool_args)
         .await?;
+
     println!("{output}");
 
     Ok(())
