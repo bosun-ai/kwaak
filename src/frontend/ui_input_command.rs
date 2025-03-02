@@ -53,6 +53,7 @@ pub enum UserInputCommand {
     ///
     /// Usage:
     ///     /gh_issue 123 - Fetches the issue #123 and displays it
+    #[strum(serialize = "gh_issue")]
     GithubIssue(u64),
 }
 
