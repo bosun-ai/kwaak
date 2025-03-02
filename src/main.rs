@@ -143,6 +143,7 @@ async fn test_tool(
     let mut executor = DockerExecutor::default();
     let dockerfile = &repository.config().docker.dockerfile;
 
+    println!("Starting executor with dockerfile: {}", dockerfile.display());
     let running_executor = executor
         .with_context_path(&repository.config().docker.context)
         .with_image_name(repository.config().project_name.to_lowercase())
@@ -153,6 +154,7 @@ async fn test_tool(
 
     let agent_context = DefaultContext::from_executor(running_executor);
 
+    println!("Invoking tool: {tool_name}");
     let output = tool
         .invoke(&agent_context as &dyn AgentContext, tool_args)
         .await?;

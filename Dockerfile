@@ -26,9 +26,9 @@ WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 RUN mkdir src \
   && echo 'fn main() { println!("ERROR in docker build"); }' > src/main.rs \
-  && cargo build \
+  && cargo test --no-run \
   && rm -rf src
 
 # Build the actual project
 COPY . .
-RUN cargo build
+RUN cargo test --no-run
