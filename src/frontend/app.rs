@@ -3,6 +3,7 @@ use std::{path::PathBuf, time::Duration};
 use strum::IntoEnumIterator as _;
 use tui_logger::TuiWidgetState;
 use tui_textarea::TextArea;
+use update_informer::{http_client::HttpClient, registry, Check, UpdateInformer};
 use uuid::Uuid;
 
 use ratatui::{
@@ -90,6 +91,9 @@ pub struct App<'a> {
 
     /// User configuration for the UI
     pub ui_config: UIConfig,
+
+    /// Informs the user if there is an update available
+    pub update_available: Option<update_informer::Version>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -145,6 +149,14 @@ impl Default for App<'_> {
 
         let command_responder = AppCommandResponder::spawn_for(ui_tx.clone());
 
+        // Actual api checks are done only once every 24 hours, with the first happening after 24
+
+        let update_available = update_informer::new(registry::Crates, "kwaak", "0.1.0")
+            // .interval(Duration::ZERO) // Uncomment me to test the update informer
+            .check_version()
+            .ok()
+            .flatten();
+
         Self {
             workdir: ".".into(),
             splash: splash::Splash::default(),
@@ -169,6 +181,7 @@ impl Default for App<'_> {
             input_width: None,
             chat_messages_max_lines: 0,
             ui_config: UIConfig::default(),
+            update_available,
         }
     }
 }
@@ -513,7 +526,17 @@ impl App<'_> {
 
         let duck = Span::styled("󰇥", Style::default().fg(Color::Yellow));
         let header = Span::styled("  kwaak  ", Style::default().bold());
-        let version = Span::styled(VERSION, Style::default().fg(Color::Gray));
+
+        // If the version is outdated, show it in red. The version is checked every 24 hours.
+        // update_informer caches the version in the cache folder.
+        let mut version = Span::styled(VERSION, Style::default().dim());
+        if let Some(new_version) = &self.update_available {
+            version = Span::styled(
+                format!("new version available: {new_version}"),
+                Style::default().fg(Color::Red).dim(),
+            );
+        }
+
         Paragraph::new(duck + header + version)
             .block(Block::default().padding(Padding::new(1, 0, 1, 0)))
             .render(header_area, f.buffer_mut());

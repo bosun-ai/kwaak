@@ -85,13 +85,17 @@ htmd = "0.1.6"
 ansi-to-tui = "7.0.0"
 tempfile = { version = "3.16.0" }
 backoff = "0.4.0"
-
 copypasta = "0.10.1"
 strip-ansi-escapes = "0.2.1"
 inquire = "0.7.5"
 config = { version = "0.15.6", features = ["toml", "convert-case"] }
 dyn-clone = "1.0.17"
 shell-escape = "0.1.5"
+update-informer = { version = "1.2.0", features = [
+  "crates",
+  "ureq",
+  "rustls-tls",
+], default-features = false }
 
 # Something is still pulling in libssl, this is a quickfix and should be investigated
 [target.'cfg(linux)'.dependencies]
