@@ -701,6 +701,10 @@ mod tests {
         let toml = r#"
             language = "rust"
             
+            [commands]
+            test = "cargo test"
+            coverage = "cargo tarpaulin"
+            
             [disabled_tools]
             disabled_tools = ["git", "shell_command", "write_file"]
             
