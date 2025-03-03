@@ -714,4 +714,22 @@ mod tests {
         assert!(config.disabled_tools.is_tool_disabled("write_file"));
         assert!(!config.disabled_tools.is_tool_disabled("read_file"));
     }
+    #[test]
+    fn test_serialize_disabled_tools() {
+        // Create a DisabledTools with some values
+        let disabled_tools = DisabledTools(vec!["git".to_string(), "shell_command".to_string()]);
+        
+        // Serialize it to a string
+        let serialized = toml::to_string(&disabled_tools).unwrap();
+        
+        println!("Serialized DisabledTools: {}", serialized);
+        
+        // Deserialize it back
+        let deserialized: DisabledTools = toml::from_str(&serialized).unwrap();
+        
+        // Check that the values match
+        assert_eq!(deserialized.0.len(), 2);
+        assert!(deserialized.0.contains(&"git".to_string()));
+        assert!(deserialized.0.contains(&"shell_command".to_string()));
+    }
 }
