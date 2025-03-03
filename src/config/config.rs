@@ -716,7 +716,8 @@ mod tests {
     #[test]
     fn test_serialize_disabled_tools() {
         // Create a DisabledTools with some values
-        let disabled_tools = DisabledTools(vec!["git".to_string(), "shell_command".to_string()]);
+        let mut disabled_tools = DisabledTools::default();
+        disabled_tools.disabled_tools = vec!["git".to_string(), "shell_command".to_string()];
         
         // Serialize it to a string
         let serialized = toml::to_string(&disabled_tools).unwrap();
@@ -727,8 +728,8 @@ mod tests {
         let deserialized: DisabledTools = toml::from_str(&serialized).unwrap();
         
         // Check that the values match
-        assert_eq!(deserialized.0.len(), 2);
-        assert!(deserialized.0.contains(&"git".to_string()));
-        assert!(deserialized.0.contains(&"shell_command".to_string()));
+        assert_eq!(deserialized.disabled_tools.len(), 2);
+        assert!(deserialized.disabled_tools.contains(&"git".to_string()));
+        assert!(deserialized.disabled_tools.contains(&"shell_command".to_string()));
     }
 }
