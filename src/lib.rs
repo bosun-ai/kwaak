@@ -1,4 +1,3 @@
-#![recursion_limit = "256"] // Temporary fix so tracing plays nice with lancedb
 pub mod agent;
 pub mod chat;
 pub mod chat_message;
