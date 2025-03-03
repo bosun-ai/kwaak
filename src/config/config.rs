@@ -748,6 +748,10 @@ mod tests {
         let toml = r#"
             language = "rust"
             
+            [commands]
+            test = "cargo test"
+            coverage = "cargo tarpaulin"
+            
             [disabled_tools]
             pull_request = true
             
