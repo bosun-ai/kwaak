@@ -714,3 +714,4 @@ mod tests {
         assert!(config.disabled_tools.is_tool_disabled("write_file"));
         assert!(!config.disabled_tools.is_tool_disabled("read_file"));
     }
+}
