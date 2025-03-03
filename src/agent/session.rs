@@ -381,29 +381,64 @@ pub fn available_tools(
     agent_env: Option<&env_setup::AgentEnvironment>,
 ) -> Result<Vec<Box<dyn Tool>>> {
     let query_pipeline = indexing::build_query_pipeline(repository)?;
+    let mut tools = Vec::new();
+    
+    // Basic tools
+    if !repository.config().disabled_tools.is_tool_disabled("write_file") {
+        tools.push(tools::write_file());
+    }
+    
+    if !repository.config().disabled_tools.is_tool_disabled("search_file") {
+        tools.push(tools::search_file());
+    }
+    
+    if !repository.config().disabled_tools.is_tool_disabled("git") {
+        tools.push(tools::git());
+    }
+    
+    if !repository.config().disabled_tools.is_tool_disabled("shell_command") {
+        tools.push(tools::shell_command());
+    }
+    
+    if !repository.config().disabled_tools.is_tool_disabled("search_code") {
+        tools.push(tools::search_code());
+    }
+    
+    if !repository.config().disabled_tools.is_tool_disabled("fetch_url") {
+        tools.push(tools::fetch_url());
+    }
+    
+    if !repository.config().disabled_tools.is_tool_disabled("explain_code") {
+        tools.push(tools::ExplainCode::new(query_pipeline).boxed());
+    }
 
-    let mut tools = vec![
-        tools::write_file(),
-        tools::search_file(),
-        tools::git(),
-        tools::shell_command(),
-        tools::search_code(),
-        tools::fetch_url(),
-        tools::ExplainCode::new(query_pipeline).boxed(),
-    ];
-
+    // Agent edit mode specific tools
     match repository.config().agent_edit_mode {
         AgentEditMode::Whole => {
-            tools.push(tools::write_file());
-            tools.push(tools::read_file());
+            if !repository.config().disabled_tools.is_tool_disabled("write_file") && !tools.iter().any(|tool| tool.name() == "write_file") {
+                tools.push(tools::write_file());
+            }
+            
+            if !repository.config().disabled_tools.is_tool_disabled("read_file") {
+                tools.push(tools::read_file());
+            }
         }
         AgentEditMode::Line => {
-            tools.push(tools::read_file_with_line_numbers());
-            tools.push(tools::replace_lines());
-            tools.push(tools::add_lines());
+            if !repository.config().disabled_tools.is_tool_disabled("read_file_with_line_numbers") {
+                tools.push(tools::read_file_with_line_numbers());
+            }
+            
+            if !repository.config().disabled_tools.is_tool_disabled("replace_lines") {
+                tools.push(tools::replace_lines());
+            }
+            
+            if !repository.config().disabled_tools.is_tool_disabled("add_lines") {
+                tools.push(tools::add_lines());
+            }
         }
     }
 
+    // GitHub-related tools
     if let Some(github_session) = github_session {
         if !repository.config().disabled_tools.is_tool_disabled("create_or_update_pull_request") {
             tools.push(tools::CreateOrUpdatePullRequest::new(github_session).boxed());
@@ -414,21 +449,32 @@ pub fn available_tools(
         }
     }
 
+    // Web search tool
     if let Some(tavily_api_key) = &repository.config().tavily_api_key {
-        let tavily = Tavily::builder(tavily_api_key.expose_secret()).build()?;
-        tools.push(tools::SearchWeb::new(tavily, tavily_api_key.clone()).boxed());
+        if !repository.config().disabled_tools.is_tool_disabled("search_web") {
+            let tavily = Tavily::builder(tavily_api_key.expose_secret()).build()?;
+            tools.push(tools::SearchWeb::new(tavily, tavily_api_key.clone()).boxed());
+        }
     };
 
+    // Test-related tools
     if let Some(test_command) = &repository.config().commands.test {
-        tools.push(tools::RunTests::new(test_command).boxed());
+        if !repository.config().disabled_tools.is_tool_disabled("run_tests") {
+            tools.push(tools::RunTests::new(test_command).boxed());
+        }
     }
 
     if let Some(coverage_command) = &repository.config().commands.coverage {
-        tools.push(tools::RunCoverage::new(coverage_command).boxed());
+        if !repository.config().disabled_tools.is_tool_disabled("run_coverage") {
+            tools.push(tools::RunCoverage::new(coverage_command).boxed());
+        }
     }
 
+    // Reset file tool
     if let Some(env) = agent_env {
-        tools.push(tools::ResetFile::new(&env.start_ref).boxed());
+        if !repository.config().disabled_tools.is_tool_disabled("reset_file") {
+            tools.push(tools::ResetFile::new(&env.start_ref).boxed());
+        }
     }
 
     Ok(tools)
