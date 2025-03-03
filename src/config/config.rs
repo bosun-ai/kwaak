@@ -149,7 +149,12 @@ fn default_num_completions_for_summary() -> usize {
 /// Opt out of certain tools an agent can use
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DisabledTools {
+    /// List of tool names to disable
     #[serde(default)]
+    pub disabled_tools: Vec<String>,
+    
+    /// Deprecated: Use disabled_tools instead
+    #[serde(default, skip_serializing)]
     pub pull_request: bool,
 }
 
