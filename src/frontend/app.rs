@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, ListState, Padding, Paragraph, Tabs},
+    widgets::{Block, ListState, Padding, Paragraph, Tabs},
 };
 
 use crossterm::event::{self, KeyCode, KeyEvent};
@@ -29,7 +29,7 @@ use super::{
 };
 
 const TICK_RATE: u64 = 250;
-const HEADER: &str = include_str!("ascii_logo");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Handles user and TUI interaction
 pub struct App<'a> {
@@ -288,7 +288,7 @@ impl App<'_> {
         loop {
             // Draw the UI
             terminal.draw(|f| {
-                if self.has_indexed_on_boot && self.splash.is_rendered() {
+                if self.has_indexed_on_boot {
                     self.render_tui(f);
                 } else {
                     self.splash.render(f);
@@ -499,28 +499,23 @@ impl App<'_> {
         }
 
         let [top_area, main_area] =
-            Layout::vertical([Constraint::Length(6), Constraint::Min(0)]).areas(f.area());
+            Layout::vertical([Constraint::Length(2), Constraint::Min(0)]).areas(f.area());
 
         // Hardcoded tabs length for now to right align
         let [header_area, tabs_area] =
             Layout::horizontal([Constraint::Fill(1), Constraint::Length(24)]).areas(top_area);
 
         Tabs::new(self.tab_names.iter().copied())
-            .block(
-                Block::default()
-                    .borders(Borders::BOTTOM)
-                    .padding(Padding::top(top_area.height - 2)),
-            )
+            .block(Block::default().padding(Padding::new(0, 1, 1, 0)))
             .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
             .select(self.selected_tab)
             .render(tabs_area, f.buffer_mut());
 
-        Paragraph::new(HEADER)
-            .block(
-                Block::default()
-                    .borders(Borders::BOTTOM)
-                    .padding(Padding::new(1, 0, 1, 0)),
-            )
+        let duck = Span::styled("󰇥", Style::default().fg(Color::Yellow));
+        let header = Span::styled("  kwaak  ", Style::default().bold());
+        let version = Span::styled(VERSION, Style::default().fg(Color::Gray));
+        Paragraph::new(duck + header + version)
+            .block(Block::default().padding(Padding::new(1, 0, 1, 0)))
             .render(header_area, f.buffer_mut());
 
         main_area
