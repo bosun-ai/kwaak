@@ -405,10 +405,13 @@ pub fn available_tools(
     }
 
     if let Some(github_session) = github_session {
-        if !repository.config().disabled_tools.pull_request {
+        if !repository.config().disabled_tools.is_tool_disabled("create_or_update_pull_request") {
             tools.push(tools::CreateOrUpdatePullRequest::new(github_session).boxed());
         }
-        tools.push(tools::GithubSearchCode::new(github_session).boxed());
+        
+        if !repository.config().disabled_tools.is_tool_disabled("github_search_code") {
+            tools.push(tools::GithubSearchCode::new(github_session).boxed());
+        }
     }
 
     if let Some(tavily_api_key) = &repository.config().tavily_api_key {
