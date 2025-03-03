@@ -3,7 +3,7 @@ use std::{path::PathBuf, time::Duration};
 use strum::IntoEnumIterator as _;
 use tui_logger::TuiWidgetState;
 use tui_textarea::TextArea;
-use update_informer::{http_client::HttpClient, registry, Check};
+use update_informer::{registry, Check};
 use uuid::Uuid;
 
 use ratatui::{
@@ -150,8 +150,7 @@ impl Default for App<'_> {
         let command_responder = AppCommandResponder::spawn_for(ui_tx.clone());
 
         // Actual api checks are done only once every 24 hours, with the first happening after 24
-
-        let update_available = update_informer::new(registry::Crates, "kwaak", "0.1.0")
+        let update_available = update_informer::new(registry::Crates, "kwaak", VERSION)
             // .interval(Duration::ZERO) // Uncomment me to test the update informer
             .check_version()
             .ok()
