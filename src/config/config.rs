@@ -655,7 +655,7 @@ mod tests {
     fn test_disabled_tools() {
         // Test with disabled_tools list
         let mut disabled_tools = DisabledTools::default();
-        disabled_tools.0 = vec!["git".to_string(), "shell_command".to_string()];
+        disabled_tools.disabled_tools = vec!["git".to_string(), "shell_command".to_string()];
         
         // Tools explicitly in the list should be disabled
         assert!(disabled_tools.is_tool_disabled("git"));
