@@ -696,4 +696,84 @@ mod tests {
         // Other tools should not be disabled
         assert!(!combined_disabled_tools.is_tool_disabled("write_file"));
     }
+    #[test]
+    fn test_deserialize_disabled_tools_list() {
+        let toml = r#"
+            language = "rust"
+            
+            [disabled_tools]
+            disabled_tools = ["git", "shell_command", "write_file"]
+            
+            [llm.indexing]
+            provider = "OpenAI"
+            api_key = "text:test-key"
+            prompt_model = "gpt-4o-mini"
+            
+            [llm.query]
+            provider = "OpenAI"
+            api_key = "text:test-key"
+            prompt_model = "gpt-4o-mini"
+            
+            [llm.embedding]
+            provider = "OpenAI"
+            api_key = "text:test-key"
+            embedding_model = "text-embedding-3-small"
+            
+            [git]
+            repository = "kwaak"
+            owner = "bosun-ai"
+        "#;
+        
+        let config: Config = Config::from_str(toml).unwrap();
+        
+        // Verify the disabled_tools list is correctly parsed
+        assert_eq!(config.disabled_tools.disabled_tools.len(), 3);
+        assert!(config.disabled_tools.disabled_tools.contains(&"git".to_string()));
+        assert!(config.disabled_tools.disabled_tools.contains(&"shell_command".to_string()));
+        assert!(config.disabled_tools.disabled_tools.contains(&"write_file".to_string()));
+        
+        // Verify the is_tool_disabled method works as expected with the parsed config
+        assert!(config.disabled_tools.is_tool_disabled("git"));
+        assert!(config.disabled_tools.is_tool_disabled("shell_command"));
+        assert!(config.disabled_tools.is_tool_disabled("write_file"));
+        assert!(!config.disabled_tools.is_tool_disabled("read_file"));
+    }
+    
+    #[test]
+    fn test_deserialize_legacy_pull_request_flag() {
+        let toml = r#"
+            language = "rust"
+            
+            [disabled_tools]
+            pull_request = true
+            
+            [llm.indexing]
+            provider = "OpenAI"
+            api_key = "text:test-key"
+            prompt_model = "gpt-4o-mini"
+            
+            [llm.query]
+            provider = "OpenAI"
+            api_key = "text:test-key"
+            prompt_model = "gpt-4o-mini"
+            
+            [llm.embedding]
+            provider = "OpenAI"
+            api_key = "text:test-key"
+            embedding_model = "text-embedding-3-small"
+            
+            [git]
+            repository = "kwaak"
+            owner = "bosun-ai"
+        "#;
+        
+        let config: Config = Config::from_str(toml).unwrap();
+        
+        // Verify the legacy pull_request flag is correctly parsed
+        assert!(config.disabled_tools.pull_request);
+        
+        // Verify the is_tool_disabled method works with the legacy flag
+        assert!(config.disabled_tools.is_tool_disabled("create_or_update_pull_request"));
+        assert!(!config.disabled_tools.is_tool_disabled("git"));
+    }
 }
