@@ -675,9 +675,9 @@ mod tests {
             test = "cargo test"
             coverage = "cargo tarpaulin"
             
+            
             [disabled_tools]
-            # For new type tuple struct, this is how it's serialized
-            [disabled_tools]
+            # For tuple struct, the vector is the unnamed field
             disabled_tools = ["git", "shell_command", "write_file"]
             
             [llm.indexing]
