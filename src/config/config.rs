@@ -655,7 +655,7 @@ mod tests {
     fn test_disabled_tools() {
         // Test with disabled_tools list
         let mut disabled_tools = DisabledTools::default();
-        disabled_tools.disabled_tools = vec!["git".to_string(), "shell_command".to_string()];
+        disabled_tools.0 = vec!["git".to_string(), "shell_command".to_string()];
         
         // Tools explicitly in the list should be disabled
         assert!(disabled_tools.is_tool_disabled("git"));
@@ -664,29 +664,8 @@ mod tests {
         // Tools not in the list should not be disabled
         assert!(!disabled_tools.is_tool_disabled("write_file"));
         assert!(!disabled_tools.is_tool_disabled("read_file"));
-        
-        // Test with legacy pull_request flag
-        let mut legacy_disabled_tools = DisabledTools::default();
-        legacy_disabled_tools.pull_request = true;
-        
-        // The create_or_update_pull_request tool should be disabled due to legacy flag
-        assert!(legacy_disabled_tools.is_tool_disabled("create_or_update_pull_request"));
-        
-        // Other tools should not be disabled
-        assert!(!legacy_disabled_tools.is_tool_disabled("git"));
-        
-        // Test with both methods combined
-        let mut combined_disabled_tools = DisabledTools::default();
-        combined_disabled_tools.pull_request = true;
-        combined_disabled_tools.disabled_tools = vec!["git".to_string()];
-        
-        // Both tools should be disabled
-        assert!(combined_disabled_tools.is_tool_disabled("create_or_update_pull_request"));
-        assert!(combined_disabled_tools.is_tool_disabled("git"));
-        
-        // Other tools should not be disabled
-        assert!(!combined_disabled_tools.is_tool_disabled("write_file"));
     }
+
     #[test]
     fn test_deserialize_disabled_tools_list() {
         let toml = r#"
@@ -722,10 +701,10 @@ mod tests {
         let config: Config = Config::from_str(toml).unwrap();
         
         // Verify the disabled_tools list is correctly parsed
-        assert_eq!(config.disabled_tools.disabled_tools.len(), 3);
-        assert!(config.disabled_tools.disabled_tools.contains(&"git".to_string()));
-        assert!(config.disabled_tools.disabled_tools.contains(&"shell_command".to_string()));
-        assert!(config.disabled_tools.disabled_tools.contains(&"write_file".to_string()));
+        assert_eq!(config.disabled_tools.0.len(), 3);
+        assert!(config.disabled_tools.0.contains(&"git".to_string()));
+        assert!(config.disabled_tools.0.contains(&"shell_command".to_string()));
+        assert!(config.disabled_tools.0.contains(&"write_file".to_string()));
         
         // Verify the is_tool_disabled method works as expected with the parsed config
         assert!(config.disabled_tools.is_tool_disabled("git"));
