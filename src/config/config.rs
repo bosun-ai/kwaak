@@ -660,4 +660,40 @@ mod tests {
         assert!(config.cache_dir.ends_with("kwaak/test"));
         assert!(config.log_dir().ends_with("kwaak/logs/test"));
     }
+    #[test]
+    fn test_disabled_tools() {
+        // Test with disabled_tools list
+        let mut disabled_tools = DisabledTools::default();
+        disabled_tools.disabled_tools = vec!["git".to_string(), "shell_command".to_string()];
+        
+        // Tools explicitly in the list should be disabled
+        assert!(disabled_tools.is_tool_disabled("git"));
+        assert!(disabled_tools.is_tool_disabled("shell_command"));
+        
+        // Tools not in the list should not be disabled
+        assert!(!disabled_tools.is_tool_disabled("write_file"));
+        assert!(!disabled_tools.is_tool_disabled("read_file"));
+        
+        // Test with legacy pull_request flag
+        let mut legacy_disabled_tools = DisabledTools::default();
+        legacy_disabled_tools.pull_request = true;
+        
+        // The create_or_update_pull_request tool should be disabled due to legacy flag
+        assert!(legacy_disabled_tools.is_tool_disabled("create_or_update_pull_request"));
+        
+        // Other tools should not be disabled
+        assert!(!legacy_disabled_tools.is_tool_disabled("git"));
+        
+        // Test with both methods combined
+        let mut combined_disabled_tools = DisabledTools::default();
+        combined_disabled_tools.pull_request = true;
+        combined_disabled_tools.disabled_tools = vec!["git".to_string()];
+        
+        // Both tools should be disabled
+        assert!(combined_disabled_tools.is_tool_disabled("create_or_update_pull_request"));
+        assert!(combined_disabled_tools.is_tool_disabled("git"));
+        
+        // Other tools should not be disabled
+        assert!(!combined_disabled_tools.is_tool_disabled("write_file"));
+    }
 }
