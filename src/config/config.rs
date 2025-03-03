@@ -676,6 +676,8 @@ mod tests {
             coverage = "cargo tarpaulin"
             
             [disabled_tools]
+            # For new type tuple struct, this is how it's serialized
+            [disabled_tools]
             disabled_tools = ["git", "shell_command", "write_file"]
             
             [llm.indexing]
