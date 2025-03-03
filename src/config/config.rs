@@ -148,26 +148,17 @@ fn default_num_completions_for_summary() -> usize {
 
 /// Opt out of certain tools an agent can use
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct DisabledTools {
+pub struct DisabledTools(
     /// List of tool names to disable
     #[serde(default)]
-    pub disabled_tools: Vec<String>,
-    
-    /// Deprecated: Use disabled_tools instead
-    #[serde(default, skip_serializing)]
-    pub pull_request: bool,
-}
+    pub Vec<String>
+);
+
 impl DisabledTools {
-    /// Checks if a tool is disabled either via the specific pull_request flag (for backward compatibility)
-    /// or via the disabled_tools list
+    /// Checks if a tool is disabled
     #[must_use]
     pub fn is_tool_disabled(&self, tool_name: &str) -> bool {
-        // Special case for backward compatibility
-        if tool_name == "create_or_update_pull_request" && self.pull_request {
-            return true;
-        }
-        
-        self.disabled_tools.iter().any(|name| name == tool_name)
+        self.0.iter().any(|name| name == tool_name)
     }
 }
 
