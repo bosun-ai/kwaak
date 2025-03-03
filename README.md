@@ -386,7 +386,7 @@ max_elapsed_time_sec = 120
 - **`agent_edit_mode`**: Defaults to `whole` (write full files at the time). If you experience issues with (very) large files, you can experiment with `line` edits.
 - **`git.auto_push_remote`**: Enabled by default if a github key is present. Automatically pushes to the remote repository after each chat completion. You can disable this by setting it to `false`.
 - **`git.auto_commit_disabled`**: Opt-out of automatic commits after each chat completion.
-- **`disabled_tools.pull_request`**: Enables or disables the pull request tool. Defaults to `false`.
+- **`disabled_tools.disabled_tools`**: A list of tool names to disable. For example: `disabled_tools = ["git", "search_file", "create_or_update_pull_request"]` to disable the git, search file, and pull request tools.
 - **`ui.hide_header`**: Optionally hide the top header in the UI. Defaults to `false`.
 - **`num_completions_for_summary`**: Number of completions before the agent summarizes the conversation. Defaults to 10;
 - **`git.agent_user_name`**: Name which the kwaak agent will make commands with.
