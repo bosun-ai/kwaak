@@ -1134,20 +1134,32 @@ version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97ccca1260af6a459d75994ad5acc1651bcabcbdbc41467cc9786519ab854c30"
 dependencies = [
+ "async-stream",
  "base64 0.22.1",
+ "bitflags 2.8.0",
+ "bollard-buildkit-proto",
  "bollard-stubs",
  "bytes",
+ "chrono",
  "futures-core",
  "futures-util",
  "hex",
+ "home",
  "http 1.2.0",
  "http-body-util",
  "hyper 1.6.0",
  "hyper-named-pipe",
+ "hyper-rustls 0.27.5",
  "hyper-util",
  "hyperlocal",
  "log",
+ "num",
  "pin-project-lite",
+ "rand",
+ "rustls 0.23.23",
+ "rustls-native-certs 0.8.1",
+ "rustls-pemfile 2.2.0",
+ "rustls-pki-types",
  "serde",
  "serde_derive",
  "serde_json",
@@ -1155,10 +1167,24 @@ dependencies = [
  "serde_urlencoded",
  "thiserror 2.0.12",
  "tokio",
+ "tokio-stream",
  "tokio-util",
+ "tonic",
  "tower-service",
  "url",
  "winapi",
+]
+
+[[package]]
+name = "bollard-buildkit-proto"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4565dfbe8ac1deb443211d55a1985cc33fd9d3606cf86377edbb538682993f30"
+dependencies = [
+ "prost",
+ "prost-types",
+ "tonic",
+ "ureq",
 ]
 
 [[package]]
@@ -1167,6 +1193,11 @@ version = "1.47.1-rc.27.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f179cfbddb6e77a5472703d4b30436bff32929c0aa8a9008ecf23d1d3cdd0da"
 dependencies = [
+ "base64 0.22.1",
+ "bollard-buildkit-proto",
+ "bytes",
+ "chrono",
+ "prost",
  "serde",
  "serde_repr",
  "serde_with",
@@ -3086,6 +3117,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
 dependencies = [
  "digest",
+]
+
+[[package]]
+name = "home"
+version = "0.5.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "589533453244b0995c858700322199b2becb13b627df2851f64a2775d024abcf"
+dependencies = [
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -7230,9 +7270,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-docker-executor"
-version = "0.6.5"
+version = "0.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ebcc098413a83f8486422b7e320a563202a14fdad9d0c855d94e731c679c74b7"
+checksum = "805a8b0025e768a1cf9bcb7ca2bacd865e40723e9558c2a7c8f7eb4083af2373"
 dependencies = [
  "anyhow",
  "async-trait",
