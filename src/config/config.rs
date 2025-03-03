@@ -148,17 +148,17 @@ fn default_num_completions_for_summary() -> usize {
 
 /// Opt out of certain tools an agent can use
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct DisabledTools(
+pub struct DisabledTools {
     /// List of tool names to disable
     #[serde(default)]
-    pub Vec<String>
-);
+    pub disabled_tools: Vec<String>,
+}
 
 impl DisabledTools {
     /// Checks if a tool is disabled
     #[must_use]
     pub fn is_tool_disabled(&self, tool_name: &str) -> bool {
-        self.0.iter().any(|name| name == tool_name)
+        self.disabled_tools.iter().any(|name| name == tool_name)
     }
 }
 
