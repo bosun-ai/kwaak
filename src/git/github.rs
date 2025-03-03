@@ -168,6 +168,105 @@ impl GithubSession {
         Ok(pull_request)
     }
 }
+/// A struct to hold a GitHub issue and its comments
+#[derive(Debug, Clone)]
+pub struct GithubIssueWithComments {
+    /// The issue
+    pub issue: octocrab::models::issues::Issue,
+    /// The comments on the issue
+    pub comments: Vec<octocrab::models::issues::Comment>,
+}
+
+impl GithubSession {
+    /// Fetches a GitHub issue and its comments
+    ///
+    /// # Arguments
+    ///
+    /// * `issue_number` - The number of the issue to fetch
+    ///
+    /// # Returns
+    ///
+    /// The issue and its comments
+    #[tracing::instrument(skip(self), err)]
+    pub async fn fetch_issue(&self, issue_number: u64) -> Result<GithubIssueWithComments> {
+        if !self.repository.config().is_github_enabled() {
+            return Err(anyhow::anyhow!("Github is not enabled"));
+        }
+
+        // Above checks make the unwrap infallible
+        let owner = self.repository.config().git.owner.as_deref().unwrap();
+        let repo = self.repository.config().git.repository.as_deref().unwrap();
+
+        let issue = self
+            .octocrab
+            .issues(owner, repo)
+            .get(issue_number)
+            .await
+            .context("Failed to fetch issue")?;
+
+        let comments = self
+            .octocrab
+            .issues(owner, repo)
+            .list_comments(issue_number)
+            .send()
+            .await
+            .context("Failed to fetch issue comments")?
+            .items;
+
+        Ok(GithubIssueWithComments { issue, comments })
+    }
+
+    /// Generates a summary of a GitHub issue in markdown format.
+    pub fn issue_to_markdown(&self, issue_with_comments: &GithubIssueWithComments) -> String {
+        let GithubIssueWithComments { issue, comments } = issue_with_comments;
+
+        let mut summary = format!("# Issue #{}: {}\n\n", issue.number, issue.title);
+
+        summary.push_str(&format!("**State**: {:?}\n", issue.state)); // (open/closed)
+        summary.push_str(&format!("**Author**: {}\n", issue.user.login));
+        summary.push_str(&format!("**Created**: {}\n", issue.created_at));
+
+        // add labels if any
+        if !issue.labels.is_empty() {
+            summary.push_str("\n**Labels**: ");
+            summary.push_str(
+                &issue
+                    .labels
+                    .iter()
+                    .map(|label| label.name.as_str())
+                    .collect::<Vec<&str>>()
+                    .join(", "),
+            );
+            summary.push('\n');
+        }
+
+        // add issue body
+        if let Some(body) = &issue.body {
+            summary.push_str("\n## Issue Description\n\n");
+            summary.push_str(body);
+            summary.push_str("\n\n");
+        }
+
+        // add comments if any
+        if !comments.is_empty() {
+            summary.push_str("## Comments\n\n");
+            for (i, comment) in comments.iter().enumerate() {
+                summary.push_str(&format!(
+                    "### Comment #{} by {}\n",
+                    i + 1,
+                    comment.user.login
+                ));
+
+                if let Some(body) = &comment.body {
+                    summary.push_str(body);
+                    summary.push('\n');
+                }
+            }
+        }
+
+        summary
+    }
+}
 
 // Temporarily disabled, if messages get too large the PR can't be created.
 //

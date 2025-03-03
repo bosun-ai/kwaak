@@ -49,6 +49,9 @@ pub enum UserInputCommand {
     Retry,
     /// Print help
     Help,
+    /// Fetch, analyze, and fix a GitHub issue. Example usage: `/gh_issue 123`
+    #[strum(serialize = "gh_issue")]
+    GithubIssue(u64),
 }
 
 #[derive(
@@ -81,6 +84,7 @@ impl UserInputCommand {
             UserInputCommand::ShowConfig => Some(Command::ShowConfig),
             UserInputCommand::IndexRepository => Some(Command::IndexRepository),
             UserInputCommand::Retry => Some(Command::RetryChat),
+            UserInputCommand::GithubIssue(number) => Some(Command::GithubIssue { number: *number }),
             _ => None,
         }
     }
@@ -132,6 +136,17 @@ impl UserInputCommand {
                     .with_context(|| format!("failed to parse diff subcommand {subcommand}"))?;
                 Ok(UserInputCommand::Diff(diff_variant))
             }
+            UserInputCommand::GithubIssue(_) => {
+                let Some(issue_number) = subcommand else {
+                    return Err(anyhow::anyhow!("GitHub issue number is required"));
+                };
+
+                let issue_number = issue_number.parse::<u64>().with_context(|| {
+                    format!("failed to parse GitHub issue number {issue_number}")
+                })?;
+
+                Ok(UserInputCommand::GithubIssue(issue_number))
+            }
             _ => Ok(input_cmd),
         }
     }
@@ -173,6 +188,35 @@ mod tests {
                 parsed_command, expected_command,
                 "expected: {expected_command:?} for: {input:?}",
             );
+        }
+    }
+
+    #[test]
+    fn test_parse_github_issue_input() {
+        let test_cases = vec![
+            ("/gh_issue 123", UserInputCommand::GithubIssue(123)),
+            ("/gh_issue 456", UserInputCommand::GithubIssue(456)),
+        ];
+
+        for (input, expected_command) in test_cases {
+            let parsed_command = UserInputCommand::parse_from_input(input).unwrap();
+            assert_eq!(
+                parsed_command, expected_command,
+                "expected: {expected_command:?} for: {input:?}",
+            );
+        }
+    }
+
+    #[test]
+    fn test_github_issue_command_mapping() {
+        let user_command = UserInputCommand::GithubIssue(123);
+        let cmd = user_command.to_command().unwrap();
+
+        match cmd {
+            Command::GithubIssue { number } => {
+                assert_eq!(number, 123);
+            }
+            _ => panic!("Expected Command::GithubIssue, got {cmd:?}"),
         }
     }
 }
