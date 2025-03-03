@@ -157,6 +157,19 @@ pub struct DisabledTools {
     #[serde(default, skip_serializing)]
     pub pull_request: bool,
 }
+impl DisabledTools {
+    /// Checks if a tool is disabled either via the specific pull_request flag (for backward compatibility)
+    /// or via the disabled_tools list
+    #[must_use]
+    pub fn is_tool_disabled(&self, tool_name: &str) -> bool {
+        // Special case for backward compatibility
+        if tool_name == "create_or_update_pull_request" && self.pull_request {
+            return true;
+        }
+        
+        self.disabled_tools.iter().any(|name| name == tool_name)
+    }
+}
 
 /// Agent session configurations supported by Kwaak
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize, Default)]
