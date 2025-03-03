@@ -3,7 +3,7 @@ use std::{path::PathBuf, time::Duration};
 use strum::IntoEnumIterator as _;
 use tui_logger::TuiWidgetState;
 use tui_textarea::TextArea;
-use update_informer::{http_client::HttpClient, registry, Check, UpdateInformer};
+use update_informer::{http_client::HttpClient, registry, Check};
 use uuid::Uuid;
 
 use ratatui::{
