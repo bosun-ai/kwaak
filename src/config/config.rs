@@ -677,7 +677,6 @@ mod tests {
             
             
             [disabled_tools]
-            # For tuple struct, the vector is the unnamed field
             disabled_tools = ["git", "shell_command", "write_file"]
             
             [llm.indexing]
@@ -703,10 +702,10 @@ mod tests {
         let config: Config = Config::from_str(toml).unwrap();
         
         // Verify the disabled_tools list is correctly parsed
-        assert_eq!(config.disabled_tools.0.len(), 3);
-        assert!(config.disabled_tools.0.contains(&"git".to_string()));
-        assert!(config.disabled_tools.0.contains(&"shell_command".to_string()));
-        assert!(config.disabled_tools.0.contains(&"write_file".to_string()));
+        assert_eq!(config.disabled_tools.disabled_tools.len(), 3);
+        assert!(config.disabled_tools.disabled_tools.contains(&"git".to_string()));
+        assert!(config.disabled_tools.disabled_tools.contains(&"shell_command".to_string()));
+        assert!(config.disabled_tools.disabled_tools.contains(&"write_file".to_string()));
         
         // Verify the is_tool_disabled method works as expected with the parsed config
         assert!(config.disabled_tools.is_tool_disabled("git"));
