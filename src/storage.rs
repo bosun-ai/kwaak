@@ -5,15 +5,11 @@
 use std::sync::OnceLock;
 
 use anyhow::{Context, Result};
-use swiftide::{
-    indexing::{transformers, EmbeddedField},
-    integrations::{duckdb::Duckdb, redb::Redb},
-};
+use swiftide::{indexing::EmbeddedField, integrations::duckdb::Duckdb};
 
 use crate::repository::Repository;
 
-static LANCE_DB: OnceLock<Duckdb> = OnceLock::new();
-static REDB: OnceLock<Redb> = OnceLock::new();
+static DUCK_DB: OnceLock<Duckdb> = OnceLock::new();
 
 /// Retrieves a static duckdb
 ///
@@ -21,21 +17,13 @@ static REDB: OnceLock<Redb> = OnceLock::new();
 ///
 /// Panics if it cannot setup duckdb
 pub fn get_duckdb(repository: &Repository) -> Duckdb {
-    LANCE_DB
+    DUCK_DB
         .get_or_init(|| build_duckdb(repository).expect("Failed to build duckdb"))
         .to_owned()
 }
 
-/// Retrieves a static redb
-///
-/// # Panics
-///
-/// Panic if it cannot setup redb, i.e. its already open
-pub fn get_redb(repository: &Repository) -> Redb {
-    REDB.get_or_init(|| build_redb(repository).expect("Failed to build Redb"))
-        .to_owned()
-}
-
+// Probably should just be on the repository/config, cloned from there.
+// This sucks in tests
 pub(crate) fn build_duckdb(repository: &Repository) -> Result<Duckdb> {
     let config = repository.config();
     let path = config.cache_dir().join("duck.db3");
@@ -50,21 +38,18 @@ pub(crate) fn build_duckdb(repository: &Repository) -> Result<Duckdb> {
         .connection(connection)
         .with_vector(
             EmbeddedField::Combined,
-            embedding_provider.vector_size() as usize,
+            embedding_provider.vector_size().try_into()?,
         )
-        .table_name(&config.project_name)
+        .table_name(normalize_table_name(&config.project_name))
+        .cache_table(format!(
+            "cache_{}",
+            normalize_table_name(&config.project_name)
+        ))
         .build()
         .context("Failed to build Duckdb")
 }
 
-pub(crate) fn build_redb(repository: &Repository) -> Result<Redb> {
-    let config = repository.config();
-    let cache_dir = config.cache_dir().join("redb");
-
-    tracing::debug!("Building Redb with cache dir: {}", cache_dir.display());
-
-    Redb::builder()
-        .database_path(cache_dir)
-        .table_name(&config.project_name)
-        .build()
+// Is this enough?
+fn normalize_table_name(name: &str) -> String {
+    name.replace('-', "_")
 }

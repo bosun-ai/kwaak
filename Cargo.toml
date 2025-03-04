@@ -23,7 +23,6 @@ swiftide-docker-executor = "0.6.6"
 swiftide = { version = "0.21.1", features = [
   "openai",
   "tree-sitter",
-  "redb",
   "ollama",
   "swiftide-agents",
   "open-router",
@@ -76,7 +75,6 @@ reqwest = { version = "0.12.12", features = [
   "http2",
   "macos-system-configuration",
 ], default-features = false }
-redb = { version = "2.3.0" }
 duckdb = { version = "1.2.0", features = ["bundled"] }
 num_cpus = "1.16.0"
 htmd = "0.1.6"

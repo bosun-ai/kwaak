@@ -47,7 +47,6 @@ pub async fn index_repository(
         .get_embedding_model(backoff)?;
 
     let duckdb = storage::get_duckdb(repository);
-    let redb = storage::get_redb(repository);
 
     let total_chunks = Arc::new(AtomicU64::new(0));
     let processed_chunks = Arc::new(AtomicU64::new(0));
@@ -55,7 +54,7 @@ pub async fn index_repository(
     let (mut markdown, mut code) = swiftide::indexing::Pipeline::from_loader(loader)
         .with_concurrency(repository.config().indexing_concurrency())
         .with_default_llm_client(indexing_provider)
-        .filter_cached(redb)
+        .filter_cached(duckdb.clone())
         .split_by(|node| {
             let Ok(node) = node else { return true };
 
