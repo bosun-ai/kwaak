@@ -1136,7 +1136,7 @@ checksum = "97ccca1260af6a459d75994ad5acc1651bcabcbdbc41467cc9786519ab854c30"
 dependencies = [
  "async-stream",
  "base64 0.22.1",
- "bitflags 2.8.0",
+ "bitflags 2.9.0",
  "bollard-buildkit-proto",
  "bollard-stubs",
  "bytes",
