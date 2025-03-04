@@ -6,7 +6,7 @@
 use anyhow::Result;
 use std::{borrow::Cow, path::PathBuf, time::SystemTime};
 use swiftide::{
-    integrations::{duckdb::Duckdb, lancedb::LanceDB, redb::Redb},
+    integrations::{duckdb::Duckdb, redb::Redb},
     traits::Persist,
 };
 
