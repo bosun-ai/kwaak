@@ -7,22 +7,22 @@ use std::sync::OnceLock;
 use anyhow::{Context, Result};
 use swiftide::{
     indexing::{transformers, EmbeddedField},
-    integrations::{lancedb::LanceDB, redb::Redb},
+    integrations::{duckdb::Duckdb, redb::Redb},
 };
 
 use crate::repository::Repository;
 
-static LANCE_DB: OnceLock<LanceDB> = OnceLock::new();
+static LANCE_DB: OnceLock<Duckdb> = OnceLock::new();
 static REDB: OnceLock<Redb> = OnceLock::new();
 
-/// Retrieves a static lancedb
+/// Retrieves a static duckdb
 ///
 /// # Panics
 ///
-/// Panics if it cannot setup lancedb
-pub fn get_lancedb(repository: &Repository) -> LanceDB {
+/// Panics if it cannot setup duckdb
+pub fn get_duckdb(repository: &Repository) -> Duckdb {
     LANCE_DB
-        .get_or_init(|| build_lancedb(repository).expect("Failed to build LanceDB"))
+        .get_or_init(|| build_duckdb(repository).expect("Failed to build duckdb"))
         .to_owned()
 }
 
@@ -36,26 +36,25 @@ pub fn get_redb(repository: &Repository) -> Redb {
         .to_owned()
 }
 
-pub(crate) fn build_lancedb(repository: &Repository) -> Result<LanceDB> {
+pub(crate) fn build_duckdb(repository: &Repository) -> Result<Duckdb> {
     let config = repository.config();
-    let cache_dir = config.cache_dir().join("lancedb");
+    let path = config.cache_dir().join("duck.db3");
 
-    tracing::debug!("Building LanceDB with cache dir: {}", cache_dir.display());
+    tracing::debug!("Building Duckdb: {}", path.display());
 
     let embedding_provider = config.embedding_provider();
 
-    let uri = cache_dir
-        .to_str()
-        .context("Failed to convert path to string")?;
-    LanceDB::builder()
-        .uri(uri)
-        .with_vector(EmbeddedField::Combined)
-        .vector_size(embedding_provider.vector_size())
+    let connection =
+        duckdb::Connection::open(&path).context("Failed to open connection to duckdb")?;
+    Duckdb::builder()
+        .connection(connection)
+        .with_vector(
+            EmbeddedField::Combined,
+            embedding_provider.vector_size() as usize,
+        )
         .table_name(&config.project_name)
-        .with_metadata("path")
-        .with_metadata(transformers::metadata_qa_code::NAME)
-        .with_metadata(transformers::metadata_qa_text::NAME)
         .build()
+        .context("Failed to build Duckdb")
 }
 
 pub(crate) fn build_redb(repository: &Repository) -> Result<Redb> {

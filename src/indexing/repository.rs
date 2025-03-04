@@ -46,7 +46,7 @@ pub async fn index_repository(
         .embedding_provider()
         .get_embedding_model(backoff)?;
 
-    let lancedb = storage::get_lancedb(repository);
+    let lancedb = storage::get_duckdb(repository);
     let redb = storage::get_redb(repository);
 
     let total_chunks = Arc::new(AtomicU64::new(0));

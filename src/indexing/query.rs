@@ -38,7 +38,7 @@ pub fn build_query_pipeline<'b>(
         .embedding_provider()
         .get_embedding_model(backoff)?;
 
-    let lancedb = storage::get_lancedb(repository);
+    let lancedb = storage::get_duckdb(repository);
     let search_strategy: SimilaritySingleEmbedding<()> = SimilaritySingleEmbedding::default()
         .with_top_k(30)
         .to_owned();

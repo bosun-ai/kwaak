@@ -49,7 +49,7 @@ pub fn test_repository() -> (Repository, TestGuard) {
     *repository.path_mut() = tempdir.path().join("app");
 
     let config = repository.config_mut();
-    config.project_name = Uuid::new_v4().to_string();
+    config.project_name = "test_repository".into();
     config.cache_dir = tempdir.path().to_path_buf();
     config.log_dir = tempdir.path().join("logs");
     config.docker.context = tempdir.path().join("app");
@@ -263,7 +263,7 @@ pub async fn setup_integration() -> Result<IntegrationContext> {
     let (repository, repository_guard) = test_repository();
     let workdir = repository.path().clone();
     let mut app = App::default().with_workdir(repository.path());
-    let lancedb = storage::get_lancedb(&repository);
+    let lancedb = storage::get_duckdb(&repository);
     lancedb.setup().await.unwrap();
     let terminal = Terminal::new(TestBackend::new(160, 40)).unwrap();
 

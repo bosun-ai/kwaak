@@ -6,7 +6,7 @@
 use anyhow::Result;
 use std::{borrow::Cow, path::PathBuf, time::SystemTime};
 use swiftide::{
-    integrations::{lancedb::LanceDB, redb::Redb},
+    integrations::{duckdb::Duckdb, lancedb::LanceDB, redb::Redb},
     traits::Persist,
 };
 
@@ -18,7 +18,7 @@ const LAST_CLEANED_UP_AT: &str = "last_cleaned_up_at";
 pub struct GarbageCollector<'repository> {
     /// The last index date
     repository: Cow<'repository, Repository>,
-    lancedb: LanceDB,
+    duckdb: Duckdb,
     redb: Redb,
     /// Extensions to consider for GC
     file_extensions: Vec<&'repository str>,
@@ -31,7 +31,7 @@ impl<'repository> GarbageCollector<'repository> {
 
         Self {
             repository: Cow::Borrowed(repository),
-            lancedb: storage::get_lancedb(repository),
+            duckdb: storage::get_duckdb(repository),
             redb: storage::get_redb(repository),
             file_extensions,
         }
@@ -166,18 +166,27 @@ impl<'repository> GarbageCollector<'repository> {
             "Setting up LanceDB table for deletion of files: {:?}",
             files
         );
-        self.lancedb.setup().await?;
-
-        let table = self.lancedb.open_table().await?;
-
-        for file in files {
-            let predicate = format!("path = \"{}\"", file.display());
-            tracing::debug!(
-                "Deleting file from LanceDB index with predicate: {}",
-                predicate
-            );
-            table.delete(&predicate).await?;
+        if let Err(err) = self.duckdb.setup().await {
+            // Duck currently does not allow `IF NOT EXISTS` on creating indices.
+            // We just ignore the error here if the table already exists.
+            // This is expected to happen always.
+            tracing::debug!("Failed to setup duckdb in GC (this is ok): {:#}", err);
         }
+
+        let mut conn = self.duckdb.connection().lock().await;
+        let tx = conn.transaction()?;
+
+        {
+            let table = self.duckdb.table_name();
+            let mut stmt = tx.prepare(&format!("DELETE FROM {table} WHERE path = ?"))?;
+
+            for file in files {
+                tracing::debug!(?file, "Deleting file from Duckdb index with predicate",);
+                stmt.execute([file.display().to_string()])?;
+            }
+        }
+        tx.commit()?;
+
         Ok(())
     }
 
@@ -274,11 +283,18 @@ impl<'repository> GarbageCollector<'repository> {
     // Returns true if no rows were indexed, or otherwise errors were encountered
     #[tracing::instrument(skip(self))]
     async fn never_been_indexed(&self) -> bool {
-        if let Ok(table) = self.lancedb.open_table().await {
-            table.count_rows(None).await.map(|n| n == 0).unwrap_or(true)
-        } else {
-            true
+        let conn = self.duckdb.connection().lock().await;
+        let table = self.duckdb.table_name();
+
+        let num = conn.query_row_and_then(&format!("SELECT count(*) FROM {table}"), [], |row| {
+            row.get::<_, i64>(0)
+        });
+
+        if let Err(e) = &num {
+            tracing::error!("Failed to determine if index has been done: {e:#}");
         }
+
+        num.map(|n| n == 0).unwrap_or(true)
     }
 }
 
@@ -287,7 +303,7 @@ mod tests {
     use std::time::Duration;
 
     use swiftide::{
-        indexing::{transformers::metadata_qa_code, Node},
+        indexing::{transformers::metadata_qa_code, EmbeddedField, Node},
         traits::{NodeCache, Persist},
     };
 
@@ -297,7 +313,7 @@ mod tests {
 
     struct TestContext {
         redb: Redb,
-        lancedb: LanceDB,
+        duckdb: Duckdb,
         node: Node,
         subject: GarbageCollector<'static>,
         _guard: TestGuard,
@@ -319,6 +335,7 @@ mod tests {
         let mut node = Node::builder()
             .chunk("Test node")
             .path(relative_path.as_str())
+            .vectors([(EmbeddedField::Combined, vec![0.0; 1])])
             .build()
             .unwrap();
 
@@ -333,22 +350,22 @@ mod tests {
         }
         assert!(redb.get(&node).await);
 
-        let lancedb = storage::build_lancedb(&repository).unwrap();
+        let duckdb = storage::build_duckdb(&repository).unwrap();
 
-        if let Err(error) = lancedb.setup().await {
-            tracing::warn!(%error, "Error setting up LanceDB");
-        }
-        let node = lancedb.store(node).await.unwrap();
+        dbg!(&duckdb);
+        duckdb.setup().await.unwrap();
+        tracing::info!("Duckdb setup completed.");
+        let node = duckdb.store(node).await.unwrap();
 
         let subject = GarbageCollector {
             repository: Cow::Owned(repository.clone()),
-            lancedb: lancedb.clone(),
+            duckdb: duckdb.clone(),
             redb: redb.clone(),
             file_extensions: vec!["md"],
         };
         TestContext {
             redb,
-            lancedb,
+            duckdb,
             node,
             subject,
             _guard: guard,
@@ -356,13 +373,19 @@ mod tests {
         }
     }
 
-    macro_rules! assert_rows_with_path_in_lancedb {
+    macro_rules! assert_rows_with_path_in_duckdb {
         ($context:expr, $path:expr, $count:expr) => {
-            let predicate = format!("path = \"{}\"", $path.display());
+            let predicate = format!("path = '{}'", $path.display());
 
+            let table_name = $context.duckdb.table_name();
             let count = {
-                let table = $context.lancedb.open_table().await.unwrap();
-                table.count_rows(Some(predicate)).await.unwrap()
+                let conn = $context.duckdb.connection().lock().await;
+                conn.query_row_and_then(
+                    &format!("SELECT COUNT (*) FROM {table_name} WHERE {predicate}"),
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap()
             };
 
             assert_eq!(count, $count);
@@ -373,12 +396,12 @@ mod tests {
     async fn test_clean_up_never_done_before() {
         let context = setup().await;
 
-        assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
+        assert_rows_with_path_in_duckdb!(&context, context.node.path, 1);
 
         tracing::info!("Executing clean up for never done before test.");
         context.subject.clean_up().await.unwrap();
 
-        assert_rows_with_path_in_lancedb!(&context, context.node.path, 0);
+        assert_rows_with_path_in_duckdb!(&context, context.node.path, 0);
         assert!(!context.redb.get(&context.node).await);
     }
 
@@ -390,7 +413,7 @@ mod tests {
             .subject
             .update_last_cleaned_up_at(SystemTime::now() - Duration::from_secs(60));
 
-        assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
+        assert_rows_with_path_in_duckdb!(&context, context.node.path, 1);
 
         tracing::info!("Clean up after file changes.");
         context.subject.clean_up().await.unwrap();
@@ -398,7 +421,7 @@ mod tests {
         let cache_result = context.redb.get(&context.node).await;
         tracing::debug!("Cache result after clean up: {:?}", cache_result);
 
-        assert_rows_with_path_in_lancedb!(&context, context.node.path, 0);
+        assert_rows_with_path_in_duckdb!(&context, context.node.path, 0);
         assert!(!cache_result);
     }
 
@@ -410,12 +433,12 @@ mod tests {
             .subject
             .update_last_cleaned_up_at(SystemTime::now() + Duration::from_secs(600));
 
-        assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
+        assert_rows_with_path_in_duckdb!(&context, context.node.path, 1);
 
         tracing::info!("Executing clean up for nothing changed scenario.");
         context.subject.clean_up().await.unwrap();
 
-        assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
+        assert_rows_with_path_in_duckdb!(&context, context.node.path, 1);
         assert!(context.redb.get(&context.node).await);
     }
 
@@ -426,7 +449,7 @@ mod tests {
             .subject
             .update_last_cleaned_up_at(SystemTime::now() + Duration::from_secs(600));
 
-        assert_rows_with_path_in_lancedb!(&context, context.node.path, 1);
+        assert_rows_with_path_in_duckdb!(&context, context.node.path, 1);
 
         std::process::Command::new("git")
             .arg("add")
@@ -474,7 +497,7 @@ mod tests {
         let cache_result = context.redb.get(&context.node).await;
         tracing::debug!("Cache result after detection clean up: {:?}", cache_result);
 
-        assert_rows_with_path_in_lancedb!(&context, context.node.path, 0);
+        assert_rows_with_path_in_duckdb!(&context, context.node.path, 0);
 
         // TODO: Figure out a nice way to deal with clearing the cache on removed files
         // Since we hash on the content, we cannot get the cache key properly
@@ -503,7 +526,8 @@ mod tests {
         context.subject.clean_up().await.unwrap();
 
         // Check that the file with the filtered extension is not in the index
-        assert_rows_with_path_in_lancedb!(
+        tracing::info!("Checking for filtered file in Duckdb");
+        assert_rows_with_path_in_duckdb!(
             &context,
             filtered_file
                 .strip_prefix(context.repository.path())
@@ -511,13 +535,15 @@ mod tests {
             0
         );
 
+        tracing::info!("Checking for included file in Duckdb");
         // Check that the file with the included extension is in the index
-        assert_rows_with_path_in_lancedb!(
+        assert_rows_with_path_in_duckdb!(
             &context,
             included_file
                 .strip_prefix(context.repository.path())
                 .unwrap(),
             0
         );
+        tracing::info!("File extension filtering test completed.");
     }
 }

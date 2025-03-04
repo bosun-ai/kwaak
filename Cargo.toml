@@ -30,6 +30,7 @@ swiftide = { version = "0.21.1", features = [
   "open-router",
   "fastembed",
   "anthropic",
+  "duckdb",
 
 ] }
 fastembed = "4.6.0"
@@ -77,9 +78,10 @@ reqwest = { version = "0.12.12", features = [
   "macos-system-configuration",
 ], default-features = false }
 redb = { version = "2.3.0" }
-lancedb = { version = "0.17.0", default-features = false, features = [
-  "rustls-tls",
-] }
+# lancedb = { version = "0.17.0", default-features = false, features = [
+#   "rustls-tls",
+# ] }
+duckdb = { version = "1.2.0", features = ["bundled"] }
 num_cpus = "1.16.0"
 htmd = "0.1.6"
 ansi-to-tui = "7.0.0"
@@ -143,9 +145,9 @@ default = ["otel"]
 
 
 [patch.crates-io]
-# swiftide = { path = "../swiftide/swiftide" }
-# swiftide-macros = { path = "../swiftide/swiftide-macros" }
-# swiftide-core = { path = "../swiftide/swiftide-core" }
+swiftide = { path = "../swiftide/swiftide" }
+swiftide-macros = { path = "../swiftide/swiftide-macros" }
+swiftide-core = { path = "../swiftide/swiftide-core" }
 
 [workspace.metadata.cross.target.x86_64-unknown-linux-gnu]
 image = "rust:1.83.0"
