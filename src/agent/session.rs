@@ -434,7 +434,8 @@ pub fn available_tools(
         !repository
             .config()
             .disabled_tools
-            .contains(&tool.name().to_string())
+            .iter()
+            .any(|s| s == tool.name().as_ref())
     });
 
     Ok(tools)
