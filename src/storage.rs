@@ -1,6 +1,15 @@
 //! Builds various storage providers for kwaak
 //!
 //! Handled as statics to avoid multiple instances of the same storage provider
+//!
+//!
+//! Currently there are 3 tables:
+//! - project itself (indexing/retrieval) (uuid, path, chunk, embeddings)
+//! - cache (for caching in indexing/retrieval) (uuid, path)
+//! - runtime settings (for storing runtime settings) (key, value)
+//!
+//! Right now, these are relatively simple. Friendly reminder for future me and others to consider
+//! a decent migration strategy if these tables change.
 
 use std::sync::OnceLock;
 
