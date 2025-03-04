@@ -77,9 +77,6 @@ reqwest = { version = "0.12.12", features = [
   "macos-system-configuration",
 ], default-features = false }
 redb = { version = "2.3.0" }
-# lancedb = { version = "0.17.0", default-features = false, features = [
-#   "rustls-tls",
-# ] }
 duckdb = { version = "1.2.0", features = ["bundled"] }
 num_cpus = "1.16.0"
 htmd = "0.1.6"

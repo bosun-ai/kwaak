@@ -46,7 +46,7 @@ pub async fn index_repository(
         .embedding_provider()
         .get_embedding_model(backoff)?;
 
-    let lancedb = storage::get_duckdb(repository);
+    let duckdb = storage::get_duckdb(repository);
     let redb = storage::get_redb(repository);
 
     let total_chunks = Arc::new(AtomicU64::new(0));
@@ -144,21 +144,11 @@ pub async fn index_repository(
                 Ok(node)
             }
         })
-        .then_store_with(lancedb)
+        .then_store_with(duckdb)
         .run()
         .await?;
 
     updater.send_update("Creating column indices ...");
-    // NOTE: Disable indexing for now, it uses ANN, which kinda sucks at small scale when
-    // performance is fine already
-    //
-    // let table = lancedb.open_table().await?;
-    // let column_name = format!("vector_{}", EmbeddedField::Combined.field_name());
-    //
-    // table
-    //     .create_index(&[&column_name], lancedb::index::Index::Auto)
-    //     .execute()
-    //     .await?;
 
     Ok(())
 }

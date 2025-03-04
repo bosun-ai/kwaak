@@ -162,10 +162,7 @@ impl<'repository> GarbageCollector<'repository> {
 
     async fn delete_files_from_index(&self, files: Vec<PathBuf>) -> Result<()> {
         // Ensure the table is set up
-        tracing::info!(
-            "Setting up LanceDB table for deletion of files: {:?}",
-            files
-        );
+        tracing::info!("Setting up duckdb table for deletion of files: {:?}", files);
         if let Err(err) = self.duckdb.setup().await {
             // Duck currently does not allow `IF NOT EXISTS` on creating indices.
             // We just ignore the error here if the table already exists.
