@@ -22,7 +22,6 @@ use crate::{
     commands::{Command, CommandEvent},
     config::UIConfig,
     frontend::actions,
-    git,
     repository::Repository,
 };
 
@@ -426,54 +425,7 @@ impl App<'_> {
             UIEvent::ScrollDown => actions::scroll_down(self),
             UIEvent::ScrollEnd => actions::scroll_end(self),
             UIEvent::Help => actions::help(self),
-            UIEvent::GithubIssue(uuid, number) => {
-                let Some(ref repository) = self.repository else {
-                    self.add_chat_message(
-                        self.current_chat_uuid,
-                        ChatMessage::new_system("No repository found in UI"),
-                    );
-                    return;
-                };
-                let github_session = match git::github::GithubSession::from_repository(repository) {
-                    Ok(session) => session,
-                    Err(e) => {
-                        self.add_chat_message(
-                            self.current_chat_uuid,
-                            ChatMessage::new_system(format!(
-                                "Failed to create GitHub session: {e}"
-                            )),
-                        );
-                        return;
-                    }
-                };
-
-                let issue_with_comments = match github_session.fetch_issue(*number).await {
-                    Ok(issue) => issue,
-                    Err(e) => {
-                        self.add_chat_message(
-                            self.current_chat_uuid,
-                            ChatMessage::new_system(format!(
-                                "Failed to fetch GitHub issue #{number}: {e}",
-                            )),
-                        );
-                        return;
-                    }
-                };
-
-                let issue_md = github_session.issue_to_markdown(&issue_with_comments);
-                let prompt = format!(
-                    "Please summarize, analyze, and then proceed to fix the following issue. Take \
-                    into account suggested fixes proposed in the issue description and comments. \
-                    \n\n{issue_md}"
-                );
-                let message = ChatMessage::new_user(prompt);
-                self.add_chat_message(*uuid, message);
-                if let Some(chat) = self.find_chat_mut(*uuid) {
-                    if chat.auto_tail {
-                        self.send_ui_event(UIEvent::ScrollEnd);
-                    }
-                }
-            }
+            UIEvent::GithubIssue(uuid, number) => actions::github_issue(self, *number, *uuid).await,
         }
     }
 
