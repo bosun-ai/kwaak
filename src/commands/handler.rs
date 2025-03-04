@@ -192,46 +192,6 @@ impl CommandHandler {
 
                 }?;
             }
-            Command::GithubIssue { number } => {
-                let github_session = match git::github::GithubSession::from_repository(repository) {
-                    Ok(session) => session,
-                    Err(e) => {
-                        event
-                            .responder()
-                            .system_message(&format!("Failed to create GitHub session: {e}"));
-                        return Ok(());
-                    }
-                };
-
-                let issue_with_comments = match github_session.fetch_issue(*number).await {
-                    Ok(issue) => issue,
-                    Err(e) => {
-                        event.responder().system_message(&format!(
-                            "Failed to fetch GitHub issue #{number}: {e}",
-                        ));
-                        return Ok(());
-                    }
-                };
-
-                let issue_md = github_session.issue_to_markdown(&issue_with_comments);
-                let prompt = format!(
-                    "Please summarize, analyze, and then proceed to fix the following issue. Take \
-                    into account suggested fixes proposed in the issue description and comments. \
-                    \n\n{issue_md}"
-                );
-
-                event.responder().system_message(prompt.as_str());
-
-                // Start or use an existing agent session
-                let session = self
-                    .find_or_start_agent_by_uuid(event.uuid(), &prompt, event.clone_responder())
-                    .await?;
-                let token = session.cancel_token().clone();
-                tokio::select! {
-                    () = token.cancelled() => Ok(()),
-                    result = session.query_agent(&prompt) => result,
-                }?;
-            }
             Command::Quit { .. } => unreachable!("Quit should be handled earlier"),
         }
         // Sleep for a tiny bit to avoid racing with agent responses

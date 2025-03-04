@@ -14,7 +14,11 @@ Usage:
     /diff show - Shows the diff in the chat
     /diff pull - Pulls the diff into a new branch
 
-**/gh_issue** - Fetch, analyze, and fix a GitHub issue. Example usage: `/gh_issue 123`
+**/github** - Github commands
+
+Usage:
+    /github issue [number] - Fetch, analyze, and fix a github issue
+
 **/help** - Print help
 **/index_repository** - Force a re-index of the repository
 **/new_chat** - Start a new chat

@@ -229,10 +229,8 @@ async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Res
 
     // Start the application
     let mut app = App::default();
-
-    // We don't want the frontend to be aware of any repository specifics
-    // However, the config does allow from some UI customization, so we copy it here
     app.ui_config = repository.config().ui.clone();
+    app.repository = Some(repository.clone());
 
     if args.skip_indexing {
         app.skip_indexing = true;

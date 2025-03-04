@@ -10,6 +10,7 @@ use crate::commands::Command;
 use anyhow::{Context as _, Result};
 
 use super::ui_event::UIEvent;
+use uuid::Uuid;
 
 #[derive(
     Debug,
@@ -49,9 +50,34 @@ pub enum UserInputCommand {
     Retry,
     /// Print help
     Help,
-    /// Fetch, analyze, and fix a GitHub issue. Example usage: `/gh_issue 123`
-    #[strum(serialize = "gh_issue")]
-    GithubIssue(u64),
+    /// Github commands
+    ///
+    /// Usage:
+    ///     /github issue [number] - Fetch, analyze, and fix a github issue
+    #[strum(serialize = "github", serialize = "gh")]
+    Github(GithubVariant),
+}
+
+#[derive(
+    Debug,
+    Clone,
+    strum_macros::Display,
+    strum_macros::EnumIs,
+    strum_macros::AsRefStr,
+    strum_macros::EnumString,
+    strum_macros::EnumIter,
+    PartialEq,
+)]
+#[strum(serialize_all = "snake_case")]
+pub enum GithubVariant {
+    /// Print the current changes
+    Issue(u64),
+}
+
+impl Default for GithubVariant {
+    fn default() -> Self {
+        GithubVariant::Issue(0)
+    }
 }
 
 #[derive(
@@ -84,7 +110,6 @@ impl UserInputCommand {
             UserInputCommand::ShowConfig => Some(Command::ShowConfig),
             UserInputCommand::IndexRepository => Some(Command::IndexRepository),
             UserInputCommand::Retry => Some(Command::RetryChat),
-            UserInputCommand::GithubIssue(number) => Some(Command::GithubIssue { number: *number }),
             _ => None,
         }
     }
@@ -93,7 +118,7 @@ impl UserInputCommand {
     ///
     /// Not all user input commands can be turned into a `UIEvent`
     #[must_use]
-    pub fn to_ui_event(&self) -> Option<UIEvent> {
+    pub fn to_ui_event(&self, uuid: Uuid) -> Option<UIEvent> {
         match self {
             UserInputCommand::NextChat => Some(UIEvent::NextChat),
             UserInputCommand::NewChat => Some(UIEvent::NewChat),
@@ -104,6 +129,9 @@ impl UserInputCommand {
             UserInputCommand::Diff(diff_variant) => match diff_variant {
                 DiffVariant::Show => Some(UIEvent::DiffShow),
                 DiffVariant::Pull => Some(UIEvent::DiffPull),
+            },
+            UserInputCommand::Github(github_variable) => match github_variable {
+                GithubVariant::Issue(number) => Some(UIEvent::GithubIssue(uuid, *number)),
             },
             _ => None,
         }
@@ -120,7 +148,6 @@ impl UserInputCommand {
         let cmd_parts = input.split_whitespace().collect::<Vec<_>>();
 
         let input = cmd_parts.first().unwrap();
-        let subcommand = cmd_parts.get(1);
 
         let input_cmd = input[1..]
             .parse::<UserInputCommand>()
@@ -128,6 +155,7 @@ impl UserInputCommand {
 
         match input_cmd {
             UserInputCommand::Diff(_) => {
+                let subcommand = cmd_parts.get(1);
                 let Some(subcommand) = subcommand else {
                     return Ok(UserInputCommand::Diff(DiffVariant::default()));
                 };
@@ -136,16 +164,26 @@ impl UserInputCommand {
                     .with_context(|| format!("failed to parse diff subcommand {subcommand}"))?;
                 Ok(UserInputCommand::Diff(diff_variant))
             }
-            UserInputCommand::GithubIssue(_) => {
-                let Some(issue_number) = subcommand else {
-                    return Err(anyhow::anyhow!("GitHub issue number is required"));
+            UserInputCommand::Github(_) => {
+                let subcommand = cmd_parts.get(1);
+                let Some(subcommand) = subcommand else {
+                    return Ok(UserInputCommand::Github(GithubVariant::default()));
                 };
-
-                let issue_number = issue_number.parse::<u64>().with_context(|| {
-                    format!("failed to parse GitHub issue number {issue_number}")
-                })?;
-
-                Ok(UserInputCommand::GithubIssue(issue_number))
+                let github_variant = subcommand
+                    .parse()
+                    .with_context(|| format!("failed to parse github subcommand {subcommand}"))?;
+                match github_variant {
+                    GithubVariant::Issue(_) => {
+                        let subsubcommand = cmd_parts.get(2);
+                        let Some(subsubcommand) = subsubcommand else {
+                            return Ok(UserInputCommand::Github(GithubVariant::Issue(0)));
+                        };
+                        let issue_number = subsubcommand.parse::<u64>().with_context(|| {
+                            format!("failed to parse issue number {subsubcommand}")
+                        })?;
+                        Ok(UserInputCommand::Github(GithubVariant::Issue(issue_number)))
+                    }
+                }
             }
             _ => Ok(input_cmd),
         }
@@ -194,8 +232,14 @@ mod tests {
     #[test]
     fn test_parse_github_issue_input() {
         let test_cases = vec![
-            ("/gh_issue 123", UserInputCommand::GithubIssue(123)),
-            ("/gh_issue 456", UserInputCommand::GithubIssue(456)),
+            (
+                "/github issue 123",
+                UserInputCommand::Github(GithubVariant::Issue(123)),
+            ),
+            (
+                "/gh issue 456",
+                UserInputCommand::Github(GithubVariant::Issue(456)),
+            ),
         ];
 
         for (input, expected_command) in test_cases {
@@ -204,19 +248,6 @@ mod tests {
                 parsed_command, expected_command,
                 "expected: {expected_command:?} for: {input:?}",
             );
-        }
-    }
-
-    #[test]
-    fn test_github_issue_command_mapping() {
-        let user_command = UserInputCommand::GithubIssue(123);
-        let cmd = user_command.to_command().unwrap();
-
-        match cmd {
-            Command::GithubIssue { number } => {
-                assert_eq!(number, 123);
-            }
-            _ => panic!("Expected Command::GithubIssue, got {cmd:?}"),
         }
     }
 }
