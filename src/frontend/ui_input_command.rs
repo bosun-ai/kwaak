@@ -74,9 +74,10 @@ pub enum GithubVariant {
     Issue(u64),
 }
 
+// Default is required for strum_macros::EnumString, strum_macros::EnumIter on UserInputCommand
 impl Default for GithubVariant {
     fn default() -> Self {
-        GithubVariant::Issue(0)
+        Self::Issue(0)
     }
 }
 
@@ -167,7 +168,7 @@ impl UserInputCommand {
             UserInputCommand::Github(_) => {
                 let subcommand = cmd_parts.get(1);
                 let Some(subcommand) = subcommand else {
-                    return Ok(UserInputCommand::Github(GithubVariant::default()));
+                    return Err(anyhow::anyhow!("no subcommand provided for github command"));
                 };
                 let github_variant = subcommand
                     .parse()
