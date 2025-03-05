@@ -8,17 +8,14 @@ use {
 
 pub async fn github_issue(app: &mut App<'_>, number: u64, uuid: Uuid) {
     let Some(ref repository) = app.repository else {
-        app.add_chat_message(
-            app.current_chat_uuid,
-            ChatMessage::new_system("No repository found in UI"),
-        );
+        app.add_chat_message(uuid, ChatMessage::new_system("No repository found in UI"));
         return;
     };
     let github_session = match git::github::GithubSession::from_repository(repository) {
         Ok(session) => session,
         Err(e) => {
             app.add_chat_message(
-                app.current_chat_uuid,
+                uuid,
                 ChatMessage::new_system(format!("Failed to create GitHub session: {e}")),
             );
             return;
@@ -29,7 +26,7 @@ pub async fn github_issue(app: &mut App<'_>, number: u64, uuid: Uuid) {
         Ok(issue) => issue,
         Err(e) => {
             app.add_chat_message(
-                app.current_chat_uuid,
+                uuid,
                 ChatMessage::new_system(format!("Failed to fetch GitHub issue #{number}: {e}",)),
             );
             return;

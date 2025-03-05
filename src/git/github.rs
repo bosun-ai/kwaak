@@ -263,7 +263,6 @@ impl GithubSession {
                 }
             }
         }
-
         summary
     }
 }
