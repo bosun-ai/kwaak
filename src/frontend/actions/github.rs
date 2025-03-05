@@ -7,7 +7,12 @@ use {
 };
 
 pub async fn github_issue(app: &mut App<'_>, number: u64, uuid: Uuid) {
-    let Some(ref repository) = app.repository else {
+    let Some(chat) = app.find_chat(uuid) else {
+        app.add_chat_message(uuid, ChatMessage::new_system("No chat found in uuid"));
+        return;
+    };
+
+    let Some(ref repository) = chat.repository else {
         app.add_chat_message(uuid, ChatMessage::new_system("No repository found in UI"));
         return;
     };

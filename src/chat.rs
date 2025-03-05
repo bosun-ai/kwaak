@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use ratatui::widgets::ScrollbarState;
 
-use crate::chat_message::ChatMessage;
+use crate::{chat_message::ChatMessage, repository::Repository};
 
 #[derive(Debug, Clone)]
 pub struct Chat {
@@ -24,6 +24,8 @@ pub struct Chat {
 
     // Whether to auto-tail the chat on new messages
     pub auto_tail: bool,
+
+    pub repository: Option<Repository>,
 }
 
 impl Chat {
@@ -91,6 +93,7 @@ impl Default for Chat {
             vertical_scroll: 0,
             num_lines: 0,
             auto_tail: true,
+            repository: None,
         }
     }
 }

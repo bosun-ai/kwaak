@@ -22,7 +22,6 @@ use crate::{
     commands::{Command, CommandEvent},
     config::UIConfig,
     frontend::actions,
-    repository::Repository,
 };
 
 use super::{
@@ -95,8 +94,6 @@ pub struct App<'a> {
 
     /// Informs the user if there is an update available
     pub update_available: Option<update_informer::Version>,
-
-    pub repository: Option<Repository>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -184,7 +181,6 @@ impl Default for App<'_> {
             chat_messages_max_lines: 0,
             ui_config: UIConfig::default(),
             update_available,
-            repository: None,
         }
     }
 }
@@ -382,7 +378,16 @@ impl App<'_> {
                 }
             }
             UIEvent::NewChat => {
-                self.add_chat(Chat::default());
+                let chat = Chat {
+                    // add the repo from the current chat to the new chat
+                    // TODO eventually this should be updated for more complex multi-repo setups
+                    repository: self
+                        .current_chat()
+                        .map(|c| c.repository.clone())
+                        .unwrap_or_default(),
+                    ..Default::default()
+                };
+                self.add_chat(chat);
             }
             UIEvent::RenameChat(uuid, name) => {
                 if let Some(chat) = self.find_chat_mut(*uuid) {

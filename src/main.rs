@@ -230,7 +230,9 @@ async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Res
     // Start the application
     let mut app = App::default();
     app.ui_config = repository.config().ui.clone();
-    app.repository = Some(repository.clone());
+    app.current_chat_mut()
+        .expect("app created with no chat")
+        .repository = Some(repository.clone());
 
     if args.skip_indexing {
         app.skip_indexing = true;
