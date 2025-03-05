@@ -1,6 +1,6 @@
 ---
 source: src/frontend/actions/mod.rs
-assertion_line: 91
+assertion_line: 93
 expression: message
 ---
 You can use the following slash commands to interact with kwaak and the agent:
@@ -17,7 +17,7 @@ Usage:
 **/github** - Github commands
 
 Usage:
-    /github issue [number] - Fetch, analyze, and fix a github issue
+    /github fix [number] - Fetch, analyze, and fix a github issue
 
 **/help** - Print help
 **/index_repository** - Force a re-index of the repository

@@ -53,7 +53,7 @@ pub enum UserInputCommand {
     /// Github commands
     ///
     /// Usage:
-    ///     /github issue [number] - Fetch, analyze, and fix a github issue
+    ///     /github fix [number] - Fetch, analyze, and fix a github issue
     #[strum(serialize = "github", serialize = "gh")]
     Github(GithubVariant),
 }
