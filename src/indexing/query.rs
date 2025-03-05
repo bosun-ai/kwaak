@@ -5,13 +5,17 @@ use swiftide::{
         self, answers, query_transformers, search_strategies::SimilaritySingleEmbedding, states,
         Query,
     },
-    traits::{EmbeddingModel, SimplePrompt},
+    traits::{EmbeddingModel, Persist, SimplePrompt},
 };
 
 use crate::{repository::Repository, storage, templates::Templates, util::strip_markdown_tags};
 
 #[tracing::instrument(skip_all, err)]
 pub async fn query(repository: &Repository, query: impl AsRef<str>) -> Result<String> {
+    // Ensure the table exists to avoid dumb errors
+    let duckdb = storage::get_duckdb(repository);
+    let _ = duckdb.setup().await;
+
     let answer = build_query_pipeline(repository)?
         .query(query.as_ref())
         .await?
@@ -47,6 +51,8 @@ pub fn build_query_pipeline<'b>(
     let document_template = Templates::from_file("indexing_document.md")?;
 
     // NOTE: Changed a lot to tailor it for agentic flows, might be worth upstreaming
+    // Simple takes the retrieved documents, formats them with a template, then throws it into a
+    // prompt with to answer the original question properly. It's really simple.
     let simple = answers::Simple::builder()
         .client(query_provider.clone())
         .prompt_template(prompt_template.into())
