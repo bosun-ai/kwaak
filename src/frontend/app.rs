@@ -431,7 +431,7 @@ impl App<'_> {
             UIEvent::ScrollEnd => actions::scroll_end(self),
             UIEvent::Help => actions::help(self),
             UIEvent::GithubFixIssue(uuid, number) => {
-                actions::github_issue(self, *number, *uuid).await
+                actions::github_issue(self, *number, *uuid).await;
             }
         }
     }
