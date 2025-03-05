@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use swiftide::chat_completion;
 use tokio::sync::mpsc;
 use tokio_util::task::AbortOnDropHandle;
 use uuid::Uuid;
@@ -19,37 +18,39 @@ use super::ui_event::UIEvent;
 /// The responder is send with commands so that the backend has a way to communicate with the
 /// frontend, without knowing about the frontend
 ///
-/// Only one is expected to be running at a time
-///
-/// TODO: If only used in app, singleton is not needed
+/// When dispatching commands, a responder is created that wraps each response with the chat id
 #[derive(Debug)]
 pub struct AppCommandResponder {
     // ui_tx: mpsc::UnboundedSender<UIEvent>,
-    tx: mpsc::UnboundedSender<CommandResponse>,
+    tx: mpsc::UnboundedSender<ResponseWithChatId>,
     _handle: AbortOnDropHandle<()>,
 }
 
+#[derive(Debug)]
+struct ResponseWithChatId(Uuid, CommandResponse);
+
 #[derive(Debug, Clone)]
 pub struct AppCommandResponderForChatId {
-    inner: mpsc::UnboundedSender<CommandResponse>,
+    inner: mpsc::UnboundedSender<ResponseWithChatId>,
     uuid: uuid::Uuid,
 }
 
 impl AppCommandResponder {
     pub fn spawn_for(ui_tx: mpsc::UnboundedSender<UIEvent>) -> AppCommandResponder {
         tracing::info!("Initializing app command responder");
-        let (tx, mut rx) = mpsc::unbounded_channel();
+        let (tx, mut rx) = mpsc::unbounded_channel::<ResponseWithChatId>();
         let handle = tokio::spawn(async move {
             while let Some(response) = rx.recv().await {
                 tracing::debug!("[RESPONDER] Received response: {:?}", response);
-                let ui_event = match response {
-                    CommandResponse::Chat(uuid, msg) => UIEvent::ChatMessage(uuid, msg.into()),
-                    CommandResponse::Activity(uuid, state) => UIEvent::ActivityUpdate(uuid, state),
-                    CommandResponse::RenameChat(uuid, name) => UIEvent::RenameChat(uuid, name),
-                    CommandResponse::RenameBranch(uuid, name) => UIEvent::RenameBranch(uuid, name),
-                    CommandResponse::Completed(uuid) => UIEvent::CommandDone(uuid),
-                    CommandResponse::BackendMessage(uuid, msg) => {
-                        UIEvent::ChatMessage(uuid, ChatMessage::new_system(&msg))
+                let chat_id = response.0;
+                let ui_event = match response.1 {
+                    CommandResponse::Chat(msg) => UIEvent::ChatMessage(chat_id, msg.into()),
+                    CommandResponse::Activity(state) => UIEvent::ActivityUpdate(chat_id, state),
+                    CommandResponse::RenameChat(name) => UIEvent::RenameChat(chat_id, name),
+                    CommandResponse::RenameBranch(name) => UIEvent::RenameBranch(chat_id, name),
+                    CommandResponse::Completed => UIEvent::CommandDone(chat_id),
+                    CommandResponse::BackendMessage(msg) => {
+                        UIEvent::ChatMessage(chat_id, ChatMessage::new_system(&msg))
                     }
                 };
 
@@ -81,33 +82,10 @@ impl AppCommandResponder {
 impl Responder for AppCommandResponderForChatId {
     fn send(&self, response: CommandResponse) {
         tracing::debug!("[RESPONDER SENDER] Sending response: {:?}", response);
-        let response = response.with_uuid(self.uuid);
+        let response = ResponseWithChatId(self.uuid, response);
         if let Err(err) = self.inner.send(response) {
             tracing::error!("Failed to send response for command: {:?}", err);
         }
-    }
-
-    fn agent_message(&self, message: chat_completion::ChatMessage) {
-        self.send(CommandResponse::Chat(self.uuid, message));
-    }
-
-    fn system_message(&self, message: &str) {
-        self.send(CommandResponse::Chat(
-            self.uuid,
-            chat_completion::ChatMessage::new_system(message),
-        ));
-    }
-
-    fn update(&self, state: &str) {
-        self.send(CommandResponse::Activity(self.uuid, state.into()));
-    }
-
-    fn rename_chat(&self, name: &str) {
-        self.send(CommandResponse::RenameChat(self.uuid, name.into()));
-    }
-
-    fn rename_branch(&self, branch_name: &str) {
-        self.send(CommandResponse::RenameBranch(self.uuid, branch_name.into()));
     }
 }
 
@@ -141,7 +119,7 @@ mod tests {
             _ => panic!("Unexpected UI event received"),
         }
 
-        responder.send(CommandResponse::Completed(Uuid::new_v4()));
+        responder.send(CommandResponse::Completed);
 
         // Verify the UI event is received
         if let Some(ui_event) = ui_rx.recv().await {

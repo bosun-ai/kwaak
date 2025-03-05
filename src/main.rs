@@ -184,18 +184,18 @@ async fn start_agent(
     let handle = tokio::spawn(async move {
         while let Some(response) = rx.recv().await {
             match response {
-                CommandResponse::Chat(.., message) => {
+                CommandResponse::Chat(message) => {
                     println!("{message}");
                 }
-                CommandResponse::Activity(.., message) => {
+                CommandResponse::Activity(message) => {
                     println!(">> {message}");
                 }
-                CommandResponse::BackendMessage(.., message) => {
+                CommandResponse::BackendMessage(message) => {
                     println!("Backend: {message}");
                 }
                 CommandResponse::RenameChat(..)
                 | CommandResponse::RenameBranch(..)
-                | CommandResponse::Completed(..) => {}
+                | CommandResponse::Completed => {}
             }
         }
     });

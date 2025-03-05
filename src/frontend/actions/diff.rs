@@ -30,7 +30,7 @@ pub async fn diff_show(app: &mut App<'_>) {
     let mut diff_message = String::new();
     while let Some(msg) = rx.recv().await {
         match msg {
-            CommandResponse::BackendMessage(_, ref payload) => {
+            CommandResponse::BackendMessage(ref payload) => {
                 if diff_message.is_empty() {
                     diff_message = payload.to_string();
                     let rendered = ansi_to_tui::IntoText::into_text(&diff_message).ok();
@@ -45,7 +45,7 @@ pub async fn diff_show(app: &mut App<'_>) {
                     app_tx.send(msg);
                 }
             }
-            CommandResponse::Completed(_) => {
+            CommandResponse::Completed => {
                 app_tx.send(msg);
                 break;
             }
@@ -83,12 +83,12 @@ pub async fn diff_pull(app: &mut App<'_>) {
 
     while let Some(msg) = rx.recv().await {
         match msg {
-            CommandResponse::BackendMessage(_, ref payload) => {
+            CommandResponse::BackendMessage(ref payload) => {
                 if branch.is_empty() {
                     branch = payload.to_string();
                 }
             }
-            CommandResponse::Completed(_) => {
+            CommandResponse::Completed => {
                 break;
             }
             _ => (),
@@ -112,12 +112,12 @@ pub async fn diff_pull(app: &mut App<'_>) {
     let mut diff = String::new();
     while let Some(msg) = rx.recv().await {
         match msg {
-            CommandResponse::BackendMessage(_, ref payload) => {
+            CommandResponse::BackendMessage(ref payload) => {
                 if diff.is_empty() {
                     diff = payload.to_string();
                 }
             }
-            CommandResponse::Completed(_) => {
+            CommandResponse::Completed => {
                 break;
             }
             _ => (),
@@ -145,7 +145,7 @@ pub async fn diff_pull(app: &mut App<'_>) {
 
         app.command_responder
             .for_chat_id(current_chat_uuid)
-            .send(CommandResponse::Completed(current_chat_uuid));
+            .send(CommandResponse::Completed);
         return;
     }
 
@@ -185,7 +185,7 @@ pub async fn diff_pull(app: &mut App<'_>) {
 
         app.command_responder
             .for_chat_id(current_chat_uuid)
-            .send(CommandResponse::Completed(current_chat_uuid));
+            .send(CommandResponse::Completed);
         return;
     }
     // add all changes
@@ -228,5 +228,5 @@ pub async fn diff_pull(app: &mut App<'_>) {
     // Tell the app that we are done
     app.command_responder
         .for_chat_id(current_chat_uuid)
-        .send(CommandResponse::Completed(current_chat_uuid));
+        .send(CommandResponse::Completed);
 }

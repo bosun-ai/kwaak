@@ -4,46 +4,28 @@ use dyn_clone::DynClone;
 #[cfg(test)]
 use mockall::mock;
 use swiftide::chat_completion;
-use uuid::Uuid;
 
-/// Uuid here refers to the identifier of the command
-///
-/// TODO: Remove the UUID here, the responder is expected to know the uuid
-/// of the command, and it confuses with the uuid to identify chats (same value only for convenience,
-/// not the same 'thing') OR have only 3 generic types.
 #[derive(Debug, Clone)]
 pub enum CommandResponse {
     /// Messages coming from an agent
-    Chat(Uuid, chat_completion::ChatMessage),
+    Chat(chat_completion::ChatMessage),
     /// Short activity updates
-    Activity(Uuid, String),
+    Activity(String),
     /// A chat has been renamed
-    RenameChat(Uuid, String),
+    RenameChat(String),
     /// A chat branch has been renamed
-    RenameBranch(Uuid, String),
+    RenameBranch(String),
     /// Backend system messages (kwaak currently just renders these as system chat like messages)
-    BackendMessage(Uuid, String),
+    BackendMessage(String),
     /// A command has been completed
-    Completed(Uuid),
-}
-
-impl CommandResponse {
-    #[must_use]
-    pub fn with_uuid(self, uuid: Uuid) -> Self {
-        match self {
-            CommandResponse::Chat(uuid, msg) => CommandResponse::Chat(uuid, msg),
-            CommandResponse::Activity(_, state) => CommandResponse::Activity(uuid, state),
-            CommandResponse::RenameChat(_, name) => CommandResponse::RenameChat(uuid, name),
-            CommandResponse::RenameBranch(_, name) => CommandResponse::RenameBranch(uuid, name),
-            CommandResponse::BackendMessage(_, msg) => CommandResponse::BackendMessage(uuid, msg),
-            CommandResponse::Completed(_) => CommandResponse::Completed(uuid),
-        }
-    }
+    Completed,
 }
 
 /// A responder reacts to updates from commands
 ///
 /// Backend defines the interface, frontend can define ways to handle the responses
+///
+/// Backend expects the responder to know where it should go (i.e. the chat id)
 ///
 /// TODO: Consider, perhaps with the new structure, less concrete methods are needed
 /// and the frontend just uses a oneoff handler for each command
@@ -52,19 +34,29 @@ pub trait Responder: std::fmt::Debug + Send + Sync + DynClone {
     fn send(&self, response: CommandResponse);
 
     /// Messages from an agent
-    fn agent_message(&self, message: chat_completion::ChatMessage);
+    fn agent_message(&self, message: chat_completion::ChatMessage) {
+        self.send(CommandResponse::Chat(message));
+    }
 
     /// System messages from the backend
-    fn system_message(&self, message: &str);
+    fn system_message(&self, message: &str) {
+        self.send(CommandResponse::BackendMessage(message.to_string()));
+    }
 
     /// State updates with a message from the backend
-    fn update(&self, state: &str);
+    fn update(&self, state: &str) {
+        self.send(CommandResponse::Activity(state.to_string()));
+    }
 
-    /// Response to a rename request
-    fn rename_chat(&self, name: &str);
+    /// A chat has been renamed
+    fn rename_chat(&self, name: &str) {
+        self.send(CommandResponse::RenameChat(name.to_string()));
+    }
 
-    /// Response to a branch rename request
-    fn rename_branch(&self, name: &str);
+    /// A git branch has been renamed
+    fn rename_branch(&self, branch_name: &str) {
+        self.send(CommandResponse::RenameBranch(branch_name.to_string()));
+    }
 }
 
 dyn_clone::clone_trait_object!(Responder);
@@ -89,43 +81,9 @@ mock! {
     }
 }
 
-// TODO: Naming should be identical to command response
 impl Responder for tokio::sync::mpsc::UnboundedSender<CommandResponse> {
     fn send(&self, response: CommandResponse) {
         let _ = self.send(response);
-    }
-
-    fn agent_message(&self, message: chat_completion::ChatMessage) {
-        let _ = self.send(CommandResponse::Chat(Uuid::default(), message));
-    }
-
-    // TODO: These should not be swiftide messages, they should be backend messages
-    fn system_message(&self, message: &str) {
-        let _ = self.send(CommandResponse::BackendMessage(
-            Uuid::default(),
-            message.to_string(),
-        ));
-    }
-
-    fn update(&self, state: &str) {
-        let _ = self.send(CommandResponse::Activity(
-            Uuid::default(),
-            state.to_string(),
-        ));
-    }
-
-    fn rename_chat(&self, name: &str) {
-        let _ = self.send(CommandResponse::RenameChat(
-            Uuid::default(),
-            name.to_string(),
-        ));
-    }
-
-    fn rename_branch(&self, branch_name: &str) {
-        let _ = self.send(CommandResponse::RenameBranch(
-            Uuid::default(),
-            branch_name.to_string(),
-        ));
     }
 }
 

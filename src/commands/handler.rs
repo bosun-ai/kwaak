@@ -93,7 +93,7 @@ impl CommandHandler {
 
                 joinset.spawn(async move {
                     let result = this_handler.lock().await.handle_command_event(&repository, &event, &event.command()).await;
-                    event.responder().send(CommandResponse::Completed(event.uuid()));
+                    event.responder().send(CommandResponse::Completed);
 
                     if let Err(error) = result {
                         tracing::error!(?error, cmd = %event.command(), "Failed to handle command {cmd} with error {error:#}", cmd= event.command());

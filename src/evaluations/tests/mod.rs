@@ -1,7 +1,6 @@
 use super::logging_responder::LoggingResponder;
 use crate::commands::{CommandResponse, Responder};
 use swiftide::chat_completion::ChatMessage;
-use uuid::Uuid;
 
 #[test]
 fn test_logging_responder_formatting() {
@@ -18,11 +17,8 @@ fn test_logging_responder_formatting() {
     responder.agent_message(chat_message);
 
     // Test command response with escaped characters
-    let uuid = Uuid::new_v4();
-    let command_response = CommandResponse::BackendMessage(
-        uuid,
-        r#"Message with "quotes" and \n newlines"#.to_string(),
-    );
+    let command_response =
+        CommandResponse::BackendMessage(r#"Message with "quotes" and \n newlines"#.to_string());
     responder.send(command_response);
 
     // Test system message with escaped characters
@@ -39,7 +35,7 @@ fn test_logging_responder_formatting() {
     assert!(log.contains(r#"Assistant(Some("Here's a message with "quotes" and "#));
     assert!(log.contains(r#"newlines and a JSON: {"key": "value"}")"#));
     assert!(log.contains(r"BackendMessage("));
-    assert!(log.contains(r#", "Message with "quotes" and "#));
+    assert!(log.contains(r#"Message with "quotes" and "#));
     assert!(log.contains("newlines"));
     assert!(log.contains(r#"System message with "quotes" and "#));
     assert!(log.contains("newlines"));
