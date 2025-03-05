@@ -433,9 +433,9 @@ pub fn available_tools(
     tools.retain(|tool| {
         !repository
             .config()
-            .disabled_tools
+            .disabled_tools()
             .iter()
-            .any(|s| s == tool.name().as_ref())
+            .any(|s| *s == tool.name().as_ref())
     });
 
     Ok(tools)
