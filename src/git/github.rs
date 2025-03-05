@@ -177,48 +177,11 @@ pub struct GithubIssueWithComments {
     pub comments: Vec<octocrab::models::issues::Comment>,
 }
 
-impl GithubSession {
-    /// Fetches a GitHub issue and its comments
-    ///
-    /// # Arguments
-    ///
-    /// * `issue_number` - The number of the issue to fetch
-    ///
-    /// # Returns
-    ///
-    /// The issue and its comments
-    #[tracing::instrument(skip(self), err)]
-    pub async fn fetch_issue(&self, issue_number: u64) -> Result<GithubIssueWithComments> {
-        if !self.repository.config().is_github_enabled() {
-            return Err(anyhow::anyhow!("Github is not enabled"));
-        }
-
-        // Above checks make the unwrap infallible
-        let owner = self.repository.config().git.owner.as_deref().unwrap();
-        let repo = self.repository.config().git.repository.as_deref().unwrap();
-
-        let issue = self
-            .octocrab
-            .issues(owner, repo)
-            .get(issue_number)
-            .await
-            .context("Failed to fetch issue")?;
-
-        let comments = self
-            .octocrab
-            .issues(owner, repo)
-            .list_comments(issue_number)
-            .send()
-            .await
-            .context("Failed to fetch issue comments")?
-            .items;
-
-        Ok(GithubIssueWithComments { issue, comments })
-    }
-
+impl GithubIssueWithComments {
     /// Generates a summary of a GitHub issue in markdown format.
-    pub fn issue_to_markdown(&self, issue_with_comments: &GithubIssueWithComments) -> String {
-        let GithubIssueWithComments { issue, comments } = issue_with_comments;
+    #[must_use]
+    pub fn markdown(&self) -> String {
+        let GithubIssueWithComments { issue, comments } = self;
 
         let mut summary = format!("# Issue #{}: {}\n\n", issue.number, issue.title);
 
@@ -264,6 +227,46 @@ impl GithubSession {
             }
         }
         summary
+    }
+}
+
+impl GithubSession {
+    /// Fetches a GitHub issue and its comments
+    ///
+    /// # Arguments
+    ///
+    /// * `issue_number` - The number of the issue to fetch
+    ///
+    /// # Returns
+    ///
+    /// The issue and its comments
+    #[tracing::instrument(skip(self), err)]
+    pub async fn fetch_issue(&self, issue_number: u64) -> Result<GithubIssueWithComments> {
+        if !self.repository.config().is_github_enabled() {
+            return Err(anyhow::anyhow!("Github is not enabled"));
+        }
+
+        // Above checks make the unwrap infallible
+        let owner = self.repository.config().git.owner.as_deref().unwrap();
+        let repo = self.repository.config().git.repository.as_deref().unwrap();
+
+        let issue = self
+            .octocrab
+            .issues(owner, repo)
+            .get(issue_number)
+            .await
+            .context("Failed to fetch issue")?;
+
+        let comments = self
+            .octocrab
+            .issues(owner, repo)
+            .list_comments(issue_number)
+            .send()
+            .await
+            .context("Failed to fetch issue comments")?
+            .items;
+
+        Ok(GithubIssueWithComments { issue, comments })
     }
 }
 

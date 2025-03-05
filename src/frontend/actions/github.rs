@@ -38,7 +38,7 @@ pub async fn github_issue(app: &mut App<'_>, number: u64, uuid: Uuid) {
         }
     };
 
-    let issue_md = github_session.issue_to_markdown(&issue_with_comments);
+    let issue_md = issue_with_comments.markdown();
     let prompt = format!(
         "Please summarize, analyze, and then proceed to fix the following issue. Take \
                     into account suggested fixes proposed in the issue description and comments. \

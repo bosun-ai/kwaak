@@ -70,14 +70,14 @@ pub enum UserInputCommand {
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum GithubVariant {
-    /// Print the current changes
-    Issue(u64),
+    /// Fix the issue at the given number
+    Fix(u64),
 }
 
 // Default is required for strum_macros::EnumString, strum_macros::EnumIter on UserInputCommand
 impl Default for GithubVariant {
     fn default() -> Self {
-        Self::Issue(0)
+        Self::Fix(0)
     }
 }
 
@@ -132,7 +132,7 @@ impl UserInputCommand {
                 DiffVariant::Pull => Some(UIEvent::DiffPull),
             },
             UserInputCommand::Github(github_variable) => match github_variable {
-                GithubVariant::Issue(number) => Some(UIEvent::GithubIssue(uuid, *number)),
+                GithubVariant::Fix(number) => Some(UIEvent::GithubFixIssue(uuid, *number)),
             },
             _ => None,
         }
@@ -174,15 +174,17 @@ impl UserInputCommand {
                     .parse()
                     .with_context(|| format!("failed to parse github subcommand {subcommand}"))?;
                 match github_variant {
-                    GithubVariant::Issue(_) => {
+                    GithubVariant::Fix(_) => {
                         let subsubcommand = cmd_parts.get(2);
                         let Some(subsubcommand) = subsubcommand else {
-                            return Ok(UserInputCommand::Github(GithubVariant::Issue(0)));
+                            return Err(anyhow::anyhow!(
+                                "no issue number provided for github fix command"
+                            ));
                         };
                         let issue_number = subsubcommand.parse::<u64>().with_context(|| {
-                            format!("failed to parse issue number {subsubcommand}")
+                            format!("failed to parse issue number to fix {subsubcommand}")
                         })?;
-                        Ok(UserInputCommand::Github(GithubVariant::Issue(issue_number)))
+                        Ok(UserInputCommand::Github(GithubVariant::Fix(issue_number)))
                     }
                 }
             }
@@ -234,12 +236,12 @@ mod tests {
     fn test_parse_github_issue_input() {
         let test_cases = vec![
             (
-                "/github issue 123",
-                UserInputCommand::Github(GithubVariant::Issue(123)),
+                "/github fix 123",
+                UserInputCommand::Github(GithubVariant::Fix(123)),
             ),
             (
-                "/gh issue 456",
-                UserInputCommand::Github(GithubVariant::Issue(456)),
+                "/gh fix 456",
+                UserInputCommand::Github(GithubVariant::Fix(456)),
             ),
         ];
 

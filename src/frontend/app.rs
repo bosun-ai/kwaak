@@ -415,7 +415,7 @@ impl App<'_> {
                 if let Some(cmd) = cmd.to_command() {
                     self.dispatch_command(*uuid, cmd);
                 } else if let Some(event) = cmd.to_ui_event(*uuid) {
-                    self.send_ui_event(event); // TODO should this not just call handle_single_event??
+                    self.send_ui_event(event);
                 } else {
                     tracing::error!(
                         "Could not convert ui command to backend command nor ui event {cmd}"
@@ -430,7 +430,7 @@ impl App<'_> {
             UIEvent::ScrollDown => actions::scroll_down(self),
             UIEvent::ScrollEnd => actions::scroll_end(self),
             UIEvent::Help => actions::help(self),
-            UIEvent::GithubIssue(uuid, number) => actions::github_issue(self, *number, *uuid).await,
+            UIEvent::GithubFixIssue(uuid, number) => actions::github_issue(self, *number, *uuid).await,
         }
     }
 
