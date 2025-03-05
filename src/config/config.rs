@@ -1,18 +1,12 @@
 use config::{Config as ConfigRs, Environment, File};
 use std::{
-    borrow::Cow,
-    collections::HashMap,
     path::{Path, PathBuf},
     str::FromStr,
     time::Duration,
 };
 
 use anyhow::{Context as _, Result};
-use serde::{
-    de::{MapAccess, Visitor},
-    ser::SerializeStruct as _,
-    Deserialize, Deserializer, Serialize, Serializer,
-};
+use serde::{Deserialize, Serialize};
 use swiftide::integrations::treesitter::SupportedLanguages;
 
 use super::defaults::{

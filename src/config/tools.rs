@@ -4,7 +4,6 @@ use std::{collections::HashMap, ops::Deref};
 
 use serde::{
     de::{MapAccess, Visitor},
-    ser::SerializeStruct,
     Deserialize, Deserializer, Serialize, Serializer,
 };
 

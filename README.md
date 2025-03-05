@@ -386,15 +386,22 @@ max_elapsed_time_sec = 120
 - **`agent_edit_mode`**: Defaults to `whole` (write full files at the time). If you experience issues with (very) large files, you can experiment with `line` edits.
 - **`git.auto_push_remote`**: Enabled by default if a github key is present. Automatically pushes to the remote repository after each chat completion. You can disable this by setting it to `false`.
 - **`git.auto_commit_disabled`**: Opt-out of automatic commits after each chat completion.
-- **`disabled_tools`**: A list of tool names to disable. NOTE not all tools are
-  enabled by default. For example: `disabled_tools = ["search_web",
-  "run_tests"]`.
-  Possible values: `"shell_command"`, `"read_file"`,
-  `"read_file_with_line_numbers"`, `"write_file"`, `"search_file"`, `"git"`,
-  `"reset_file"`, `"search_code"`, `"explain_code"`,
-  `"create_or_update_pull_request"`, `"run_tests"`, `"run_coverage"`,
-  `"search_web"`, `"github_search_code"`, `"fetch_url"`, `"add_lines"`,
-  `"replace_lines"`
+- **`tools`**: A list of tool names to enable or disable.
+  Example:
+
+```toml
+[tools]
+shell_command = false
+search_code = true
+```
+
+Possible values: `"shell_command"`, `"read_file"`,
+`"read_file_with_line_numbers"`, `"write_file"`, `"search_file"`, `"git"`,
+`"reset_file"`, `"search_code"`, `"explain_code"`,
+`"create_or_update_pull_request"`, `"run_tests"`, `"run_coverage"`,
+`"search_web"`, `"github_search_code"`, `"fetch_url"`, `"add_lines"`,
+`"replace_lines"`
+
 - **`ui.hide_header`**: Optionally hide the top header in the UI. Defaults to `false`.
 - **`num_completions_for_summary`**: Number of completions before the agent summarizes the conversation. Defaults to 10;
 - **`git.agent_user_name`**: Name which the kwaak agent will make commands with.
