@@ -200,7 +200,7 @@ async fn run_single_evaluation(iteration: u32) -> Result<(bool, EvalMetrics)> {
 
     let config_path = Path::new("test-config.toml");
     let repository =
-        Repository::from_config(Config::load(&config_path).expect("Failed to load config"));
+        Repository::from_config(Config::load(Some(&config_path)).expect("Failed to load config"));
 
     let tools = get_evaluation_tools();
     let agent = start_tool_evaluation_agent(&repository, responder.clone(), tools).await?;

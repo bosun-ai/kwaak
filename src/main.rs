@@ -52,7 +52,7 @@ async fn main() -> Result<()> {
     init_panic_hook();
 
     // Load configuration
-    let config = match Config::load(&args.config_path) {
+    let config = match Config::load(args.config_path.as_deref()) {
         Ok(config) => config,
         Err(error) => {
             eprintln!("Failed to load configuration: {error:#}");

@@ -6,8 +6,8 @@ use clap::{Parser, Subcommand};
 #[clap(author, about, version)]
 pub struct Args {
     /// Optional path to overwrite the config
-    #[arg(short, long, default_value = "kwaak.toml")]
-    pub config_path: PathBuf,
+    #[arg(short, long, default_value = None)]
+    pub config_path: Option<PathBuf>,
 
     /// Skip initial indexing and splash screen
     #[arg(short, long, default_value_t = false)]

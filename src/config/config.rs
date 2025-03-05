@@ -284,13 +284,25 @@ impl FromStr for Config {
 }
 
 impl Config {
-    pub fn load(path: &Path) -> Result<Self> {
-        let builder = ConfigRs::builder()
-            .add_source(File::from(path))
-            .add_source(File::with_name("kwaak.local").required(false))
-            .add_source(Environment::with_prefix("KWAAK").separator("__"));
+    pub fn load(path: Option<&Path>) -> Result<Self> {
+        let builder = match path {
+            Some(path) => ConfigRs::builder().add_source(File::from(path)),
+            None => {
+                // Support both kwaak.toml and .config/kwaak.toml
+                // Check if they exist and create the builder accordingly
+                if std::fs::metadata(".config/kwaak.toml").is_ok() {
+                    ConfigRs::builder().add_source(File::with_name(".config/kwaak.toml"))
+                } else {
+                    ConfigRs::builder().add_source(File::with_name("kwaak.toml"))
+                }
+            }
+        };
 
-        let config = builder.build()?;
+        let config = builder
+            .add_source(File::with_name("kwaak.local").required(false))
+            .add_source(Environment::with_prefix("KWAAK").separator("__"))
+            .build()
+            .context("Failed to build configuration")?;
 
         config
             .try_deserialize()
