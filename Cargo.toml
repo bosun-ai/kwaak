@@ -19,8 +19,8 @@ tokio = { version = "1.43.0", features = ["full"] }
 tokio-util = { version = "0.7.13", features = ["rt"] }
 strum = "0.27.1"
 strum_macros = "0.27.1"
-swiftide-docker-executor = "0.6.6"
-swiftide = { version = "0.21.1", features = [
+swiftide-docker-executor = "0.6.7"
+swiftide = { version = "0.22", features = [
   "lancedb",
   "openai",
   "tree-sitter",
@@ -33,7 +33,7 @@ swiftide = { version = "0.21.1", features = [
 
 ] }
 fastembed = "4.6.0"
-swiftide-macros = { version = "0.21.1" }
+swiftide-macros = { version = "0.22" }
 toml = "0.8.20"
 serde = { version = "1.0.218", features = ["derive"] }
 serde_json = "1.0.140"
@@ -106,7 +106,7 @@ test-log = { version = "0.2.17", features = ["trace"] }
 insta = "1.42.2"
 assert_cmd = "2.0.16"
 predicates = "3.1.3"
-swiftide-core = { version = "0.21.1", features = ["test-utils"] }
+swiftide-core = { version = "0.22", features = ["test-utils"] }
 mockall = "0.13.1"
 rexpect = "0.6.0"
 
@@ -143,9 +143,10 @@ default = ["otel"]
 
 
 [patch.crates-io]
-# swiftide = { path = "../swiftide/swiftide" }
-# swiftide-macros = { path = "../swiftide/swiftide-macros" }
-# swiftide-core = { path = "../swiftide/swiftide-core" }
+swiftide = { path = "../swiftide/swiftide" }
+swiftide-macros = { path = "../swiftide/swiftide-macros" }
+swiftide-core = { path = "../swiftide/swiftide-core" }
+swiftide-docker-executor = { path = "../swiftide-docker-executor/swiftide-docker-executor/" }
 
 [workspace.metadata.cross.target.x86_64-unknown-linux-gnu]
 image = "rust:1.83.0"

@@ -317,7 +317,7 @@ impl LLMConfiguration {
     fn build_azure_openai(
         &self,
         backoff: BackoffConfiguration,
-    ) -> Result<integrations::openai::OpenAI<async_openai::config::AzureConfig>> {
+    ) -> Result<integrations::openai::OpenAI> {
         let LLMConfiguration::AzureOpenAI {
             api_key,
             embedding_model,
@@ -343,12 +343,13 @@ impl LLMConfiguration {
 
         let client = async_openai::Client::with_config(config).with_backoff(backoff.into());
 
-        integrations::openai::OpenAIBuilder::<async_openai::config::AzureConfig>::default()
-            .client(client)
-            .default_prompt_model(prompt_model.to_string())
-            .default_embed_model(embedding_model.to_string())
-            .build()
-            .context("Failed to build OpenAI client")
+        //integrations::openai::OpenAIBuilder::default()
+        //    .client(client)
+        //    .default_prompt_model(prompt_model.to_string())
+        //    .default_embed_model(embedding_model.to_string())
+        //    .build()
+        //    .context("Failed to build OpenAI client")
+        todo!()
     }
 
     fn build_openai(&self, backoff: BackoffConfiguration) -> Result<integrations::openai::OpenAI> {
@@ -380,7 +381,7 @@ impl LLMConfiguration {
             .default_embed_model(embedding_model.to_string());
 
         if &OpenAIPromptModel::O3Mini == prompt_model {
-            builder.parallel_tool_calls(false);
+            builder.parallel_tool_calls(None);
         }
 
         builder.build().context("Failed to build OpenAI client")
