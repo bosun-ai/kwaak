@@ -6,8 +6,7 @@ use strum::VariantNames as _;
 
 use crate::{
     config::{
-        AnthropicModel, EmbeddingModelWithSize, FastembedModel, LLMConfiguration,
-        OpenAIEmbeddingModel, OpenAIPromptModel,
+        AnthropicModel, FastembedModel, LLMConfiguration, OpenAIEmbeddingModel, OpenAIPromptModel,
     },
     onboarding::util::prompt_text,
 };
