@@ -252,9 +252,9 @@ pub enum OpenAIPromptModel {
     #[strum(serialize = "gpt-4o")]
     #[serde(rename = "gpt-4o")]
     GPT4O,
-    #[strum(serialize = "gpt-o3-mini")]
-    #[serde(rename = "gpt-o3-mini")]
-    GPTO3Mini,
+    #[strum(serialize = "o3-mini")]
+    #[serde(rename = "o3-mini")]
+    O3Mini,
 }
 
 #[derive(
