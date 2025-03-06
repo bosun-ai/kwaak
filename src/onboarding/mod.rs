@@ -67,7 +67,7 @@ pub async fn run(file: Option<PathBuf>, dry_run: bool) -> Result<()> {
     } else {
         std::fs::write(&file, &config)?;
         println!(
-            "\nInitialized kwaak project in current directory, please review and customize the created `{}` file.\n Kwaak also needs a `Dockerfile` to execute your code in, with `ripgrep` and `fd` installed. Refer to https://github.com/bosun-ai/kwaak for an up to date list.",
+            "\nInitialized kwaak project in current directory, please review and customize the created `{}` file.\n Kwaak also needs a `Dockerfile` to execute your code in.",
             file.display()
         );
     }
