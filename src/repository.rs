@@ -1,11 +1,12 @@
 use anyhow::Result;
+use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, str::FromStr as _};
 
 use tokio::fs;
 
 use crate::{config::Config, runtime_settings::RuntimeSettings};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Repository {
     config: Config,
     path: PathBuf,

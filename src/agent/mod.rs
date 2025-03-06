@@ -4,6 +4,7 @@ mod conversation_summarizer;
 pub mod env_setup;
 pub mod running_agent;
 pub mod session;
+mod session_recording;
 mod tool_summarizer;
 pub mod tools;
 mod util;
