@@ -55,11 +55,14 @@ pub async fn run(file: Option<PathBuf>, dry_run: bool) -> Result<()> {
     let config =
         Templates::render("kwaak.toml", &context).context("Failed to render default config")?;
 
+    // Ensure we panic during tests
     debug_assert!(
         toml::from_str::<crate::config::Config>(&config).is_ok(),
-        "Failed to parse the rendered config with error: {error}, config: \n{config}",
+        "Failed to parse the rendered config with error: {error:#}, config: \n{config}",
         error = toml::from_str::<crate::config::Config>(&config).unwrap_err()
     );
+    toml::from_str::<crate::config::Config>(&config)
+        .context("There is an error in the configuration")?;
 
     // Since we want the template annotated with comments, just return the template
     if dry_run {

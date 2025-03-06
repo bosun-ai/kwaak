@@ -6,7 +6,8 @@ use strum::VariantNames as _;
 
 use crate::{
     config::{
-        AnthropicModel, FastembedModel, LLMConfiguration, OpenAIEmbeddingModel, OpenAIPromptModel,
+        AnthropicModel, EmbeddingModelWithSize, FastembedModel, LLMConfiguration,
+        OpenAIEmbeddingModel, OpenAIPromptModel,
     },
     onboarding::util::prompt_text,
 };
@@ -268,8 +269,7 @@ fn ollama_questions(context: &mut tera::Context) -> Result<()> {
         &json!({
             "provider": "Ollama",
             "base_url": None::<String>,
-            "embedding_model": embedding_model,
-            "vector_size": vector_size,
+            "embedding_model": format!("{{name = \"{embedding_model}\", vector_size = {vector_size}}}")
         }),
     );
 

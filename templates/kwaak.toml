@@ -87,7 +87,11 @@ base_url = "{{ llm.base_url }}"
 
 [llm.embedding]
 provider = "{{ embed_llm.provider }}"
+{% if embed_llm.provider == "Ollama" -%}
+embedding_model = {{ embed_llm.embedding_model }}
+{% else -%}
 embedding_model = "{{ embed_llm.embedding_model }}"
+{% endif -%}
 {% if llm.base_url -%}
 base_url = "{{ embed_llm.base_url }}"
 {% endif -%}
