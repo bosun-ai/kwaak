@@ -380,7 +380,7 @@ impl LLMConfiguration {
             .default_embed_model(embedding_model.to_string());
 
         if &OpenAIPromptModel::O3Mini == prompt_model {
-            builder.parallel_tool_calls(false);
+            builder.parallel_tool_calls(None);
         }
 
         builder.build().context("Failed to build OpenAI client")
