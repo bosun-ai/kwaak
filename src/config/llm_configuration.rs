@@ -252,6 +252,9 @@ pub enum OpenAIPromptModel {
     #[strum(serialize = "gpt-4o")]
     #[serde(rename = "gpt-4o")]
     GPT4O,
+    #[strum(serialize = "gpt-o3")]
+    #[serde(rename = "gpt-o3")]
+    GPTO3,
 }
 
 #[derive(
