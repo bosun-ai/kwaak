@@ -300,6 +300,8 @@ embedding_model = "text-embedding-3-large"
 
 **Ollama Configuration**:
 
+**WARN**: We do not recommend using the smaller models with kwaak, apart from indexing. The model should be able to make tool calls fairly reliable.
+
 ```toml
 [llm.indexing]
 provider = "Ollama"
