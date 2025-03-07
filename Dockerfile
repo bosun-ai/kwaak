@@ -26,8 +26,16 @@ WORKDIR /app
 
 # Build test binaries so we can get started right away
 ENV RUSTFLAGS="-C link-arg=-fuse-ld=lld"
+
+# Build dependencies so they can be cached in a docker layer
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir src \
+  && echo 'fn main() { println!("ERROR in docker build"); }' > src/main.rs \
+  && cargo test --no-run \
+  && rm -rf src
+
+# Build the actual project
+# Build test binaries so we can get started right away
+ENV RUSTFLAGS="-C link-arg=-fuse-ld=lld"
 COPY . .
-RUN --mount=type=cache,target=/app/target/ \
-  --mount=type=cache,target=/usr/local/cargo/git/db \
-  --mount=type=cache,target=/usr/local/cargo/registry/ \
-  cargo test --no-run
+RUN cargo test --no-run
