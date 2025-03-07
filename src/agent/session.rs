@@ -349,7 +349,7 @@ async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Arc<
 
             if std::fs::metadata(dockerfile).is_err() {
                 tracing::error!("Dockerfile not found at {}", dockerfile.display());
-                panic!("Running in docker requires a Dockerfile");
+                return Err(anyhow::anyhow!("Dockerfile not found"));
             }
             let running_executor = executor
                 .with_context_path(&repository.config().docker.context)
