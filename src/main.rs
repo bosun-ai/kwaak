@@ -122,7 +122,7 @@ async fn main() -> Result<()> {
 
     if let Err(error) = app_result {
         ::tracing::error!(?error, "Kwaak encountered an error\n {error:#}");
-        eprintln!("Kwaak encountered an error\n {error:#}");
+        eprintln!("Kwaak encountered an error\n {error}");
         std::process::exit(1);
     }
 
@@ -252,7 +252,7 @@ async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Res
 
     if let Err(error) = app_result {
         ::tracing::error!(?error, "Application error");
-        eprintln!("Kwaak encountered an error:\n {error:#}");
+        eprintln!("Kwaak encountered an error:\n {error}");
         std::process::exit(1);
     }
 

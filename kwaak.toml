@@ -30,4 +30,4 @@ provider = "OpenAI"
 embedding_model = "text-embedding-3-large"
 
 [docker]
-dockerfile = "Dockerfile"
+dockerfile = "Dockerfile2"
