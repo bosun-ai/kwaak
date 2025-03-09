@@ -1,4 +1,3 @@
-#![recursion_limit = "256"] // Temporary fix so tracing plays nice with lancedb
 use std::{
     io::{self, stdout},
     panic::{self, set_hook, take_hook},
@@ -216,7 +215,7 @@ async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Res
     // Before starting the TUI, check if there is already a kwaak running on the project
     // TODO: This is not very reliable. Potentially redb needs to be reconsidered
     if panic::catch_unwind(|| {
-        storage::get_redb(&repository);
+        storage::get_duckdb(&repository);
     })
     .is_err()
     {

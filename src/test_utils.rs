@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 #![allow(clippy::missing_panics_doc)]
+use std::ffi::OsStr;
+use std::path::Component;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -20,6 +22,12 @@ pub struct TestGuard {
     pub tempdir: tempfile::TempDir,
 }
 
+/// Sets up a fake, noop repository for testing
+///
+/// * Temporary directory dropped when the repository is dropped
+/// * Safe to use with docker executor
+/// * Safe to use with git
+/// * Safe to use with LLMs (noop)
 pub fn test_repository() -> (Repository, TestGuard) {
     let toml = r#"
             language = "rust"
@@ -46,10 +54,18 @@ pub fn test_repository() -> (Repository, TestGuard) {
     let mut repository = Repository::from_config(config);
 
     let tempdir = tempfile::tempdir().unwrap();
+    // wtf why is this so verbose
+    let suffix = uuid::Uuid::new_v4()
+        .to_string()
+        .split('-')
+        .next()
+        .unwrap()
+        .to_string();
     *repository.path_mut() = tempdir.path().join("app");
 
     let config = repository.config_mut();
-    config.project_name = Uuid::new_v4().to_string();
+    dbg!(&suffix);
+    config.project_name = format!("test_repository_{suffix}");
     config.cache_dir = tempdir.path().to_path_buf();
     config.log_dir = tempdir.path().join("logs");
     config.docker.context = tempdir.path().join("app");
@@ -263,8 +279,8 @@ pub async fn setup_integration() -> Result<IntegrationContext> {
     let (repository, repository_guard) = test_repository();
     let workdir = repository.path().clone();
     let mut app = App::default().with_workdir(repository.path());
-    let lancedb = storage::get_lancedb(&repository);
-    lancedb.setup().await.unwrap();
+    let duckdb = storage::get_duckdb(&repository);
+    duckdb.setup().await.unwrap();
     let terminal = Terminal::new(TestBackend::new(160, 40)).unwrap();
 
     let mut handler = CommandHandler::from_repository(repository.clone());

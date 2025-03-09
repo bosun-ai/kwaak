@@ -230,7 +230,7 @@ Additionally, kwaak provides a number of slash commands, `/help` will show all a
 
 ### How does it work?
 
-On initial boot up, Kwaak will index your codebase. This can take a while, depending on the size. Once indexing has been completed once, subsequent startups will be faster. Indexes are stored with [lancedb](https://github.com/lancedb/lancedb), and indexing is cached with [redb](https://github.com/cberner/redb).
+On initial boot up, Kwaak will index your codebase. This can take a while, depending on the size. Once indexing has been completed once, subsequent startups will be faster. Indexes are stored with [duckdb](https://duckdb.org), and indexing is cached with [redb](https://github.com/cberner/redb).
 
 Kwaak provides a chat interface similar to other LLM chat applications. You can type messages to the agent, and the agent will try to accomplish the task and respond.
 
@@ -437,7 +437,7 @@ Possible values: `"shell_command"`, `"read_file"`,
 
 **A:** Kwaak commits and pushes to the remote repository after each completion, so you should be able to recover the changes.
 
-**Q:** I get a redb/lancedb error when starting, what is up?
+**Q:** I get a redb/duckdb error when starting, what is up?
 
 **A**: Possibly your index got corrupted, or you have another kwaak instance running on the same project. Try clearing the index with `kwaak clear-index` and restart kwaak. Note that this will require a reindexing of your codebase.
 

@@ -46,8 +46,7 @@ pub async fn index_repository(
         .embedding_provider()
         .get_embedding_model(backoff)?;
 
-    let lancedb = storage::get_lancedb(repository);
-    let redb = storage::get_redb(repository);
+    let duckdb = storage::get_duckdb(repository);
 
     let total_chunks = Arc::new(AtomicU64::new(0));
     let processed_chunks = Arc::new(AtomicU64::new(0));
@@ -55,7 +54,7 @@ pub async fn index_repository(
     let (mut markdown, mut code) = swiftide::indexing::Pipeline::from_loader(loader)
         .with_concurrency(repository.config().indexing_concurrency())
         .with_default_llm_client(indexing_provider)
-        .filter_cached(redb)
+        .filter_cached(duckdb.clone())
         .split_by(|node| {
             let Ok(node) = node else { return true };
 
@@ -144,21 +143,11 @@ pub async fn index_repository(
                 Ok(node)
             }
         })
-        .then_store_with(lancedb)
+        .then_store_with(duckdb)
         .run()
         .await?;
 
     updater.send_update("Creating column indices ...");
-    // NOTE: Disable indexing for now, it uses ANN, which kinda sucks at small scale when
-    // performance is fine already
-    //
-    // let table = lancedb.open_table().await?;
-    // let column_name = format!("vector_{}", EmbeddedField::Combined.field_name());
-    //
-    // table
-    //     .create_index(&[&column_name], lancedb::index::Index::Auto)
-    //     .execute()
-    //     .await?;
 
     Ok(())
 }

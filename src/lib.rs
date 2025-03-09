@@ -1,4 +1,3 @@
-#![recursion_limit = "256"]
 pub mod agent;
 pub mod chat;
 pub mod chat_message;
