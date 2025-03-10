@@ -821,6 +821,7 @@ mod tests {
             provider = "Anthropic"
             api_key = "text:test-key"
             prompt_model = "claude-3-5-sonnet-latest"
+            embedding = ""  # Correctly added
             "#;
 
         let config: Config = Config::from_str(toml).unwrap();
