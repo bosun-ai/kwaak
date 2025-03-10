@@ -4,6 +4,7 @@ pub mod chat_message;
 pub mod cli;
 pub mod commands;
 pub mod config;
+#[cfg(feature = "evaluations")]
 pub mod evaluations;
 pub mod frontend;
 pub mod git;
