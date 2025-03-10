@@ -124,6 +124,8 @@ fn anthropic_questions(context: &mut tera::Context) -> Result<()> {
             "base_url": None::<String>,
         }),
     );
+    // Set agent_edit_mode to "line" for Anthropic models
+    context.insert("agent_edit_mode", "line");
 
     println!(
         "\nAnthropic does not provide embeddings. Currently we suggest to use FastEmbed. If you want to use a different provider you can change it in your config later."
