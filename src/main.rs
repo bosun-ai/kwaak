@@ -118,6 +118,20 @@ async fn main() -> Result<()> {
                 cli::EvalCommands::Patch { iterations } => {
                     evaluations::run_patch_evaluation(*iterations).await
                 }
+                cli::EvalCommands::Ragas {
+                    input,
+                    output,
+                    record_ground_truth,
+                } => {
+                    evaluations::evaluate_query_pipeline(
+                        &repository,
+                        &input,
+                        &output,
+                        *record_ground_truth,
+                    )
+                    .await?;
+                    Ok(())
+                }
             },
             cli::Commands::Init { .. } => unreachable!(),
         }

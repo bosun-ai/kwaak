@@ -72,4 +72,15 @@ pub enum EvalCommands {
         #[arg(short, long, default_value_t = 1)]
         iterations: u32,
     },
+    /// Exports the query pipeline to a ragas
+    /// compatible data file
+    Ragas {
+        /// Records output as the ground truth in the dataset
+        #[arg(short, long, default_value_t = false)]
+        record_ground_truth: bool,
+        /// The input dataset in a `ragas::EvaluationDataSet` format
+        input: PathBuf,
+        /// The file to write the output to, in the same format
+        output: PathBuf,
+    },
 }
