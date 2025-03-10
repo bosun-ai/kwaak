@@ -718,4 +718,106 @@ mod tests {
         assert!(config.enabled_tools().contains(&"run_tests"));
         assert_eq!(config.enabled_tools().len(), 1);
     }
+    #[test]
+    fn test_anthropic_edit_mode() {
+        let toml = r#"
+            language = "rust"
+            anthropic_api_key = "text:test-key"
+
+            [commands]
+            test = "cargo test"
+            coverage = "cargo tarpaulin"
+
+            [git]
+            owner = "bosun-ai"
+            repository = "kwaak"
+
+            [llm.indexing]
+            provider = "Anthropic"
+            prompt_model = "claude-3-5-sonnet-latest"
+
+            [llm.query]
+            provider = "Anthropic"
+            prompt_model = "claude-3-5-sonnet-latest"
+
+            [llm.embedding]
+            provider = "FastEmbed"
+            embedding_model = "bge-small-en-v1.5"
+
+            agent_edit_mode = "line"
+        "#;
+
+        let config: Config = Config::from_str(toml).unwrap();
+        
+        // Verify that agent_edit_mode is Line for Anthropic
+        assert_eq!(config.agent_edit_mode, AgentEditMode::Line);
+    }
+
+    #[test]
+    fn test_openrouter_anthropic_edit_mode() {
+        let toml = r#"
+            language = "rust"
+            open_router_api_key = "text:test-key"
+
+            [commands]
+            test = "cargo test"
+            coverage = "cargo tarpaulin"
+
+            [git]
+            owner = "bosun-ai"
+            repository = "kwaak"
+
+            [llm.indexing]
+            provider = "OpenRouter"
+            prompt_model = "openai/gpt-4o-mini"
+
+            [llm.query]
+            provider = "OpenRouter"
+            prompt_model = "anthropic/claude-3-5-sonnet"
+
+            [llm.embedding]
+            provider = "FastEmbed"
+            embedding_model = "bge-small-en-v1.5"
+
+            agent_edit_mode = "line"
+        "#;
+
+        let config: Config = Config::from_str(toml).unwrap();
+        
+        // Verify that agent_edit_mode is Line for OpenRouter with Anthropic model
+        assert_eq!(config.agent_edit_mode, AgentEditMode::Line);
+    }
+
+    #[test]
+    fn test_openai_default_edit_mode() {
+        let toml = r#"
+            language = "rust"
+            openai_api_key = "text:test-key"
+
+            [commands]
+            test = "cargo test"
+            coverage = "cargo tarpaulin"
+
+            [git]
+            owner = "bosun-ai"
+            repository = "kwaak"
+
+            [llm.indexing]
+            provider = "OpenAI"
+            prompt_model = "gpt-4o-mini"
+
+            [llm.query]
+            provider = "OpenAI"
+            prompt_model = "gpt-4o"
+
+            [llm.embedding]
+            provider = "OpenAI"
+            embedding_model = "text-embedding-3-small"
+        "#;
+
+        let config: Config = Config::from_str(toml).unwrap();
+        
+        // Verify that agent_edit_mode is Whole (default) for OpenAI
+        assert_eq!(config.agent_edit_mode, AgentEditMode::Whole);
+    }
 }
