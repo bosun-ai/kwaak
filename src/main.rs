@@ -11,11 +11,14 @@ use clap::Parser;
 use commands::CommandResponse;
 use frontend::App;
 use git::github::GithubSession;
+#[cfg(feature = "evaluations")]
+use kwaak::evaluations;
 use kwaak::{
-    agent, cli, commands, config, evaluations, frontend, git,
+    agent, cli, commands, config, frontend, git,
     indexing::{self, index_repository},
     onboarding, repository, storage,
 };
+
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     Terminal,
@@ -110,6 +113,7 @@ async fn main() -> Result<()> {
                 println!("{}", toml::to_string_pretty(repository.config())?);
                 Ok(())
             }
+            #[cfg(feature = "evaluations")]
             cli::Commands::Eval { eval_type } => match eval_type {
                 cli::EvalCommands::Patch { iterations } => {
                     evaluations::run_patch_evaluation(*iterations).await

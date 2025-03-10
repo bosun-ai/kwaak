@@ -57,6 +57,7 @@ pub enum Commands {
     /// Clear the index and cache for this project and exit
     ClearCache,
     /// Run evaluations
+    #[cfg(feature = "evaluations")]
     Eval {
         #[command(subcommand)]
         eval_type: EvalCommands,
