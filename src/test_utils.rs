@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 #![allow(clippy::missing_panics_doc)]
-use std::ffi::OsStr;
-use std::path::Component;
 use std::sync::Arc;
 
 use anyhow::Result;
