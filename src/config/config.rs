@@ -136,6 +136,39 @@ pub struct Config {
     pub num_completions_for_summary: usize,
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            project_name: default_project_name(),
+            language: SupportedLanguages::default(),
+            llm: Box::new(LLMConfigurations::default()),
+            commands: CommandConfiguration::default(),
+            cache_dir: default_cache_dir(),
+            log_dir: default_log_dir(),
+            agent: SupportedAgentConfigurations::default(),
+            indexing_concurrency: None,
+            indexing_batch_size: None,
+            docker: DockerConfiguration::default(),
+            backoff: BackoffConfiguration::default(),
+            git: GitConfiguration::default(),
+            tavily_api_key: None,
+            github_api_key: None,
+            openai_api_key: None,
+            anthropic_api_key: None,
+            open_router_api_key: None,
+            azure_openai_api_key: None,
+            tool_executor: SupportedToolExecutors::default(),
+            tools: Tools::default(),
+            endless_mode: false,
+            otel_enabled: default_otel_enabled(),
+            agent_edit_mode: AgentEditMode::default(),
+            agent_custom_constraints: None,
+            ui: UIConfig::default(),
+            num_completions_for_summary: default_num_completions_for_summary(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct UIConfig {
