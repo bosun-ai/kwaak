@@ -57,6 +57,7 @@ pub enum Commands {
     /// Clear the index and cache for this project and exit
     ClearCache,
     /// Run evaluations
+    #[cfg(feature = "evaluations")]
     Eval {
         #[command(subcommand)]
         eval_type: EvalCommands,
@@ -70,5 +71,16 @@ pub enum EvalCommands {
         /// Number of iterations to run
         #[arg(short, long, default_value_t = 1)]
         iterations: u32,
+    },
+    /// Exports the query pipeline to a ragas
+    /// compatible data file
+    Ragas {
+        /// Records output as the ground truth in the dataset
+        #[arg(short, long, default_value_t = false)]
+        record_ground_truth: bool,
+        /// The input dataset in a `ragas::EvaluationDataSet` format
+        input: PathBuf,
+        /// The file to write the output to, in the same format
+        output: PathBuf,
     },
 }
