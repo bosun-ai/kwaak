@@ -131,10 +131,34 @@ fn anthropic_questions(context: &mut tera::Context) -> Result<Config> {
         "\nAnthropic does not provide embeddings. Currently we suggest to use FastEmbed. If you want to use a different provider you can change it in your config later."
     );
 
-    // Setting default agent edit mode to Line when Anthropic is selected
+    // Explicitly setting fields without accessing private ones
     let config = Config {
         agent_edit_mode: AgentEditMode::Line,
-        ..Config::default()
+        project_name: Config::default().project_name,
+        language: Config::default().language,
+        llm: Config::default().llm,
+        commands: Config::default().commands,
+        cache_dir: Config::default().cache_dir,
+        log_dir: Config::default().log_dir,
+        agent: Config::default().agent,
+        docker: Config::default().docker,
+        backoff: Config::default().backoff,
+        git: Config::default().git,
+        tavily_api_key: Config::default().tavily_api_key,
+        github_api_key: Config::default().github_api_key,
+        openai_api_key: Config::default().openai_api_key,
+        anthropic_api_key: Some(api_key),
+        open_router_api_key: Config::default().open_router_api_key,
+        azure_openai_api_key: Config::default().azure_openai_api_key,
+        tool_executor: Config::default().tool_executor,
+        tools: Config::default().tools,
+        endless_mode: Config::default().endless_mode,
+        otel_enabled: Config::default().otel_enabled,
+        agent_custom_constraints: Config::default().agent_custom_constraints,
+        ui: Config::default().ui,
+        num_completions_for_summary: Config::default().num_completions_for_summary,
+        indexing_concurrency: None, // or set explicitly how you wish to handle concurrency
+        indexing_batch_size: None,   // same for batch size
     };
 
     fastembed_questions(context)?;
