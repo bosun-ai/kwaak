@@ -8,6 +8,7 @@ use std::{
 use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
 use swiftide::integrations::treesitter::SupportedLanguages;
+use strum::IntoEnumIterator;
 
 use super::defaults::{
     default_auto_push_remote, default_cache_dir, default_docker_context, default_dockerfile,
