@@ -204,6 +204,15 @@ async fn open_router_questions(context: &mut tera::Context) -> Result<()> {
 
     context.insert("open_router_api_key", &api_key);
 
+    // Check if the selected query model is an Anthropic model
+    let is_anthropic_model = query_model.to_lowercase().contains("anthropic") 
+        || query_model.to_lowercase().contains("claude");
+
+    // Set agent_edit_mode to "line" if it's an Anthropic model
+    if is_anthropic_model {
+        context.insert("agent_edit_mode", "line");
+    }
+
     context.insert(
         "llm",
         &json!({
