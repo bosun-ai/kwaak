@@ -505,7 +505,7 @@ fn fill_llm(llm: &mut LLMConfiguration, root_key: Option<&ApiKey>) -> Result<()>
 #[cfg(test)]
 mod tests {
     #![allow(irrefutable_let_patterns)]
-    use crate::config::{OpenAIEmbeddingModel, OpenAIPromptModel};
+    use crate::config::{OpenAIEmbeddingModel, OpenAIPromptModel, AgentEditMode};
 
     use super::*;
     use swiftide::integrations::treesitter::SupportedLanguages;
@@ -717,5 +717,30 @@ mod tests {
         assert!(config.disabled_tools().contains(&"write_file"));
         assert!(config.enabled_tools().contains(&"run_tests"));
         assert_eq!(config.enabled_tools().len(), 1);
+    }
+
+    #[test]
+    fn test_line_edit_mode_with_anthropic() {
+        let toml = r#"
+            language = "rust"
+
+            [commands]
+            test = "cargo test"
+            coverage = "cargo tarpaulin"
+
+            [git]
+            owner = "bosun-ai"
+            repository = "kwaak"
+
+            [llm.indexing]
+            provider = "Anthropic"
+            api_key = "text:test-key"
+            prompt_model = "claude-v2"
+            "#;
+
+        let config: Config = Config::from_str(toml).unwrap();
+
+        // Validate agent_edit_mode is set to Line for Anthropic
+        assert_eq!(config.agent_edit_mode, AgentEditMode::Line);
     }
 }
