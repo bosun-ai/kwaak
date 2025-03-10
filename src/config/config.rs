@@ -39,12 +39,12 @@ pub struct Config {
     /// Concurrency for indexing
     /// By default for IO-bound LLMs, we assume 4x the number of CPUs
     /// For Ollama, it's the number of CPUs
-    indexing_concurrency: Option<usize>,
+    pub indexing_concurrency: Option<usize>,
     #[serde(default)]
     /// Batch size for indexing
     /// By default for IO-bound LLMs, we use a smaller batch size, as we can run it in parallel
     /// For local embeddings it's 256
-    indexing_batch_size: Option<usize>,
+    pub indexing_batch_size: Option<usize>,
 
     #[serde(default)]
     pub docker: DockerConfiguration,
