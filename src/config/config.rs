@@ -169,6 +169,56 @@ impl Default for Config {
     }
 }
 
+impl Default for LLMConfigurations {
+    fn default() -> Self {
+        LLMConfigurations {
+            indexing: LLMConfiguration::OpenAI {
+                api_key: None,
+                prompt_model: OpenAIPromptModel::default(),
+                embedding_model: OpenAIEmbeddingModel::default(),
+                base_url: None,
+            },
+            embedding: LLMConfiguration::OpenAI {
+                api_key: None,
+                prompt_model: OpenAIPromptModel::default(),
+                embedding_model: OpenAIEmbeddingModel::default(),
+                base_url: None,
+            },
+            query: LLMConfiguration::OpenAI {
+                api_key: None,
+                prompt_model: OpenAIPromptModel::default(),
+                embedding_model: OpenAIEmbeddingModel::default(),
+                base_url: None,
+            },
+        }
+    }
+}
+
+impl Default for CommandConfiguration {
+    fn default() -> Self {
+        CommandConfiguration {
+            test: None,
+            coverage: None,
+            lint_and_fix: None,
+        }
+    }
+}
+
+impl Default for GitConfiguration {
+    fn default() -> Self {
+        GitConfiguration {
+            repository: None,
+            owner: None,
+            main_branch: default_main_branch(),
+            auto_push_remote: default_auto_push_remote(),
+            auto_commit_disabled: false,
+            agent_user_name: default_agent_user_name(),
+            agent_user_email: default_agent_user_email(),
+            generate_commit_message: default_generate_commit_message(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct UIConfig {
