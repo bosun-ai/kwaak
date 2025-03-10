@@ -15,6 +15,7 @@ use super::defaults::{
 };
 use super::{api_key::ApiKey, tools::Tools};
 use super::{CommandConfiguration, LLMConfiguration, LLMConfigurations};
+use crate::config::{OpenAIEmbeddingModel, OpenAIPromptModel, AgentEditMode};
 
 // TODO: Improving parsing by enforcing invariants
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -140,7 +141,7 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             project_name: default_project_name(),
-            language: SupportedLanguages::default(),
+            language: SupportedLanguages::Iter().next().expect("No languages supported"),
             llm: Box::new(LLMConfigurations::default()),
             commands: CommandConfiguration::default(),
             cache_dir: default_cache_dir(),
