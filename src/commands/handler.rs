@@ -93,13 +93,13 @@ impl CommandHandler {
 
                 joinset.spawn(async move {
                     let result = Box::pin(this_handler.lock().await.handle_command_event(&repository, &event, &event.command())).await;
-                    event.responder().send(CommandResponse::Completed);
+                    event.responder().send(CommandResponse::Completed).await;
 
                     if let Err(error) = result {
                         tracing::error!(?error, cmd = %event.command(), "Failed to handle command {cmd} with error {error:#}", cmd= event.command());
                         event.responder().system_message(&format!(
                                 "Failed to handle command: {error:#}"
-                            ));
+                            )).await;
 
                     };
                 });
@@ -128,9 +128,12 @@ impl CommandHandler {
             Command::IndexRepository { .. } => {
                 indexing::index_repository(repository, Some(event.clone_responder())).await?;
             }
-            Command::ShowConfig => event
-                .responder()
-                .system_message(&toml::to_string_pretty(repository.config())?),
+            Command::ShowConfig => {
+                event
+                    .responder()
+                    .system_message(&toml::to_string_pretty(repository.config())?)
+                    .await;
+            }
             Command::Chat { message } => {
                 let message = message.clone();
                 let session = self
@@ -148,32 +151,35 @@ impl CommandHandler {
                 let Some(session) = self.find_agent_by_uuid(event.uuid()) else {
                     event
                         .responder()
-                        .system_message("No agent found (yet), is it starting up?");
+                        .system_message("No agent found (yet), is it starting up?")
+                        .await;
                     return Ok(());
                 };
 
                 let base_sha = &session.agent_environment().start_ref;
                 let diff = git::util::diff(session.executor(), &base_sha, true).await?;
 
-                event.responder().system_message(&diff);
+                event.responder().system_message(&diff).await;
             }
             Command::Exec { cmd } => {
                 let Some(session) = self.find_agent_by_uuid(event.uuid()) else {
                     event
                         .responder()
-                        .system_message("No agent found (yet), is it starting up?");
+                        .system_message("No agent found (yet), is it starting up?")
+                        .await;
                     return Ok(());
                 };
 
                 let output = accept_non_zero_exit(session.executor().exec_cmd(cmd).await)?.output;
 
-                event.responder().system_message(&output);
+                event.responder().system_message(&output).await;
             }
             Command::RetryChat => {
                 let Some(session) = self.find_agent_by_uuid(event.uuid()) else {
                     event
                         .responder()
-                        .system_message("No agent found (yet), is it starting up?");
+                        .system_message("No agent found (yet), is it starting up?")
+                        .await;
                     return Ok(());
                 };
                 let mut token = session.cancel_token().clone();
@@ -204,10 +210,13 @@ impl CommandHandler {
             elapsed = Duration::from_secs(0);
         }
 
-        event.responder().system_message(&format!(
-            "Command {cmd} successful in {} seconds",
-            elapsed.as_secs_f64().round()
-        ));
+        event
+            .responder()
+            .system_message(&format!(
+                "Command {cmd} successful in {} seconds",
+                elapsed.as_secs_f64().round()
+            ))
+            .await;
 
         Ok(())
     }
@@ -241,12 +250,14 @@ impl CommandHandler {
 
     async fn stop_agent(&self, uuid: Uuid, responder: Arc<dyn Responder>) -> Result<()> {
         let Some(session) = self.agent_sessions.get(&uuid) else {
-            responder.system_message("No agent found (yet), is it starting up?");
+            responder
+                .system_message("No agent found (yet), is it starting up?")
+                .await;
             return Ok(());
         };
 
         if session.cancel_token().is_cancelled() {
-            responder.system_message("Agent already stopped");
+            responder.system_message("Agent already stopped").await;
             return Ok(());
         }
 
@@ -254,7 +265,7 @@ impl CommandHandler {
         // Perhaps something to re-align it?
         session.stop().await;
 
-        responder.system_message("Agent stopped");
+        responder.system_message("Agent stopped").await;
         Ok(())
     }
 }

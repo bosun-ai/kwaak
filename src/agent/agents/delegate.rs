@@ -98,7 +98,7 @@ pub async fn start(
             let message = message.clone();
 
             Box::pin(async move {
-                command_responder.agent_message(message);
+                command_responder.agent_message(message).await;
 
                 Ok(())
             })
@@ -106,7 +106,7 @@ pub async fn start(
         .before_completion(move |_, _| {
             let command_responder = tx_3.clone();
             Box::pin(async move {
-                command_responder.update("running completions");
+                command_responder.update("running completions").await;
                 Ok(())
             })
         })
@@ -114,7 +114,7 @@ pub async fn start(
             let command_responder = tx_4.clone();
             let tool = tool.clone();
             Box::pin(async move {
-                command_responder.update(&format!("running tool {}", tool.name()));
+                command_responder.update(&format!("running tool {}", tool.name())).await;
                 Ok(())
             })
         })

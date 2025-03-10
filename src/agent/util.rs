@@ -23,7 +23,7 @@ pub async fn rename_chat(
         .take(60)
         .collect::<String>();
 
-    command_responder.rename_chat(&chat_name);
+    command_responder.rename_chat(&chat_name).await;
 
     Ok(())
 }
@@ -61,7 +61,7 @@ pub async fn create_branch_name(
     let uuid_start = uuid.to_string().chars().take(8).collect::<String>();
     let branch_name = format!("kwaak/{name}-{uuid_start}");
 
-    command_responder.rename_branch(&branch_name);
+    command_responder.rename_branch(&branch_name).await;
 
     Ok(branch_name)
 }

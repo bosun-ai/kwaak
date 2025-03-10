@@ -39,7 +39,7 @@ pub async fn start_tool_evaluation_agent(
             let responder = responder_for_messages.clone();
             let message = message.clone();
             Box::pin(async move {
-                responder.agent_message(message);
+                responder.agent_message(message).await;
                 Ok(())
             })
         })
@@ -47,7 +47,9 @@ pub async fn start_tool_evaluation_agent(
             let responder = responder_for_tools.clone();
             let tool = tool.clone();
             Box::pin(async move {
-                responder.update(&format!("running tool {}", tool.name()));
+                responder
+                    .update(&format!("running tool {}", tool.name()))
+                    .await;
                 Ok(())
             })
         })

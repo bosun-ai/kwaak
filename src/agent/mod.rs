@@ -20,7 +20,9 @@ pub async fn start_session(
     initial_query: &str,
     command_responder: Arc<dyn Responder>,
 ) -> Result<RunningSession> {
-    command_responder.update("starting up agent for the first time, this might take a while");
+    command_responder
+        .update("starting up agent for the first time, this might take a while")
+        .await;
 
     Session::builder()
         .session_id(uuid)

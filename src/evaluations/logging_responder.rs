@@ -1,4 +1,5 @@
 use crate::commands::{CommandResponse, Responder};
+use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
 use swiftide::chat_completion::ChatMessage;
 
@@ -26,8 +27,9 @@ impl LoggingResponder {
     }
 }
 
+#[async_trait]
 impl Responder for LoggingResponder {
-    fn agent_message(&self, message: ChatMessage) {
+    async fn agent_message(&self, message: ChatMessage) {
         let mut messages = self.messages.lock().unwrap();
         let formatted = format!("{message:?}").replace("\\\\", "\\");
         messages.push(format!(
@@ -36,7 +38,7 @@ impl Responder for LoggingResponder {
         ));
     }
 
-    fn update(&self, message: &str) {
+    async fn update(&self, message: &str) {
         let mut messages = self.messages.lock().unwrap();
         messages.push(format!(
             "DEBUG: State update: {}",
@@ -44,7 +46,7 @@ impl Responder for LoggingResponder {
         ));
     }
 
-    fn send(&self, response: CommandResponse) {
+    async fn send(&self, response: CommandResponse) {
         let mut messages = self.messages.lock().unwrap();
         let formatted = format!("{response:?}").replace("\\\\", "\\");
         messages.push(format!(
@@ -53,14 +55,11 @@ impl Responder for LoggingResponder {
         ));
     }
 
-    fn system_message(&self, message: &str) {
+    async fn system_message(&self, message: &str) {
         let mut messages = self.messages.lock().unwrap();
         messages.push(format!(
             "DEBUG: System message: {}",
             Self::format_string(message)
         ));
     }
-
-    fn rename_chat(&self, _name: &str) {}
-    fn rename_branch(&self, _name: &str) {}
 }

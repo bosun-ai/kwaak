@@ -42,14 +42,14 @@ pub async fn diff_show(app: &mut App<'_>) {
                             .to_owned(),
                     ));
                 } else {
-                    app_tx.send(msg);
+                    app_tx.send(msg).await;
                 }
             }
             CommandResponse::Completed => {
-                app_tx.send(msg);
+                app_tx.send(msg).await;
                 break;
             }
-            _ => app_tx.send(msg),
+            _ => app_tx.send(msg).await,
         }
     }
 }
@@ -145,7 +145,8 @@ pub async fn diff_pull(app: &mut App<'_>) {
 
         app.command_responder
             .for_chat_id(current_chat_uuid)
-            .send(CommandResponse::Completed);
+            .send(CommandResponse::Completed)
+            .await;
         return;
     }
 
@@ -185,7 +186,8 @@ pub async fn diff_pull(app: &mut App<'_>) {
 
         app.command_responder
             .for_chat_id(current_chat_uuid)
-            .send(CommandResponse::Completed);
+            .send(CommandResponse::Completed)
+            .await;
         return;
     }
     // add all changes
@@ -228,5 +230,6 @@ pub async fn diff_pull(app: &mut App<'_>) {
     // Tell the app that we are done
     app.command_responder
         .for_chat_id(current_chat_uuid)
-        .send(CommandResponse::Completed);
+        .send(CommandResponse::Completed)
+        .await;
 }

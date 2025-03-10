@@ -1,11 +1,13 @@
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use dyn_clone::DynClone;
 #[cfg(test)]
 use mockall::mock;
+use serde::{Deserialize, Serialize};
 use swiftide::chat_completion;
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum CommandResponse {
     /// Messages coming from an agent
     Chat(chat_completion::ChatMessage),
@@ -29,33 +31,38 @@ pub enum CommandResponse {
 ///
 /// TODO: Consider, perhaps with the new structure, less concrete methods are needed
 /// and the frontend just uses a oneoff handler for each command
+#[async_trait]
 pub trait Responder: std::fmt::Debug + Send + Sync + DynClone {
     /// Generic handler for command responses
-    fn send(&self, response: CommandResponse);
+    async fn send(&self, response: CommandResponse);
 
     /// Messages from an agent
-    fn agent_message(&self, message: chat_completion::ChatMessage) {
-        self.send(CommandResponse::Chat(message));
+    async fn agent_message(&self, message: chat_completion::ChatMessage) {
+        self.send(CommandResponse::Chat(message)).await;
     }
 
     /// System messages from the backend
-    fn system_message(&self, message: &str) {
-        self.send(CommandResponse::BackendMessage(message.to_string()));
+    async fn system_message(&self, message: &str) {
+        self.send(CommandResponse::BackendMessage(message.to_string()))
+            .await;
     }
 
     /// State updates with a message from the backend
-    fn update(&self, state: &str) {
-        self.send(CommandResponse::Activity(state.to_string()));
+    async fn update(&self, state: &str) {
+        self.send(CommandResponse::Activity(state.to_string()))
+            .await;
     }
 
     /// A chat has been renamed
-    fn rename_chat(&self, name: &str) {
-        self.send(CommandResponse::RenameChat(name.to_string()));
+    async fn rename_chat(&self, name: &str) {
+        self.send(CommandResponse::RenameChat(name.to_string()))
+            .await;
     }
 
     /// A git branch has been renamed
-    fn rename_branch(&self, branch_name: &str) {
-        self.send(CommandResponse::RenameBranch(branch_name.to_string()));
+    async fn rename_branch(&self, branch_name: &str) {
+        self.send(CommandResponse::RenameBranch(branch_name.to_string()))
+            .await;
     }
 }
 
@@ -66,13 +73,14 @@ mock! {
     #[derive(Debug)]
     pub Responder {}
 
+    #[async_trait]
     impl Responder for Responder {
-        fn send(&self, response: CommandResponse);
-        fn agent_message(&self, message: chat_completion::ChatMessage);
-        fn system_message(&self, message: &str);
-        fn update(&self, state: &str);
-        fn rename_chat(&self, name: &str);
-        fn rename_branch(&self, name: &str);
+        async fn send(&self, response: CommandResponse);
+        async fn agent_message(&self, message: chat_completion::ChatMessage);
+        async fn system_message(&self, message: &str);
+        async fn update(&self, state: &str);
+        async fn rename_chat(&self, name: &str);
+        async fn rename_branch(&self, name: &str);
     }
 
     impl Clone for Responder {
@@ -81,35 +89,17 @@ mock! {
     }
 }
 
+#[async_trait]
 impl Responder for tokio::sync::mpsc::UnboundedSender<CommandResponse> {
-    fn send(&self, response: CommandResponse) {
+    async fn send(&self, response: CommandResponse) {
         let _ = self.send(response);
     }
 }
 
+#[async_trait]
 impl Responder for Arc<dyn Responder> {
-    fn send(&self, response: CommandResponse) {
-        self.as_ref().send(response);
-    }
-
-    fn agent_message(&self, message: chat_completion::ChatMessage) {
-        self.as_ref().agent_message(message);
-    }
-
-    fn system_message(&self, message: &str) {
-        self.as_ref().system_message(message);
-    }
-
-    fn update(&self, state: &str) {
-        self.as_ref().update(state);
-    }
-
-    fn rename_chat(&self, name: &str) {
-        self.as_ref().rename_chat(name);
-    }
-
-    fn rename_branch(&self, name: &str) {
-        self.as_ref().rename_branch(name);
+    async fn send(&self, response: CommandResponse) {
+        self.as_ref().send(response).await;
     }
 }
 
@@ -117,43 +107,35 @@ impl Responder for Arc<dyn Responder> {
 #[derive(Debug, Clone)]
 pub struct DebugResponder;
 
+#[async_trait]
 impl Responder for DebugResponder {
-    fn send(&self, response: CommandResponse) {
+    async fn send(&self, response: CommandResponse) {
         eprintln!("DEBUG: Response: {response:?}");
     }
 
-    fn agent_message(&self, message: chat_completion::ChatMessage) {
+    async fn agent_message(&self, message: chat_completion::ChatMessage) {
         eprintln!("DEBUG: Agent message: {message:?}");
     }
 
-    fn system_message(&self, message: &str) {
+    async fn system_message(&self, message: &str) {
         eprintln!("DEBUG: System message: {message}");
     }
 
-    fn update(&self, state: &str) {
+    async fn update(&self, state: &str) {
         eprintln!("DEBUG: State update: {state}");
     }
 
-    fn rename_chat(&self, name: &str) {
+    async fn rename_chat(&self, name: &str) {
         eprintln!("DEBUG: Chat renamed to: {name}");
     }
 
-    fn rename_branch(&self, name: &str) {
+    async fn rename_branch(&self, name: &str) {
         eprintln!("DEBUG: Branch renamed to: {name}");
     }
 }
 
 // noop responder
+#[async_trait]
 impl Responder for () {
-    fn send(&self, _response: CommandResponse) {}
-
-    fn agent_message(&self, _message: chat_completion::ChatMessage) {}
-
-    fn system_message(&self, _message: &str) {}
-
-    fn update(&self, _state: &str) {}
-
-    fn rename_chat(&self, _name: &str) {}
-
-    fn rename_branch(&self, _name: &str) {}
+    async fn send(&self, _response: CommandResponse) {}
 }

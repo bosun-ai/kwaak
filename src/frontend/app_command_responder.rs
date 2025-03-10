@@ -80,7 +80,7 @@ impl AppCommandResponder {
 
 #[async_trait]
 impl Responder for AppCommandResponderForChatId {
-    fn send(&self, response: CommandResponse) {
+    async fn send(&self, response: CommandResponse) {
         tracing::debug!("[RESPONDER SENDER] Sending response: {:?}", response);
         let response = ResponseWithChatId(self.uuid, response);
         if let Err(err) = self.inner.send(response) {
@@ -104,7 +104,7 @@ mod tests {
 
         let responder = app.for_chat_id(TEST_UUID);
 
-        responder.system_message("Test message");
+        responder.system_message("Test message").await;
 
         let Some(ui_event) = ui_rx.recv().await else {
             panic!("No UI event received");
@@ -119,7 +119,7 @@ mod tests {
             _ => panic!("Unexpected UI event received"),
         }
 
-        responder.send(CommandResponse::Completed);
+        responder.send(CommandResponse::Completed).await;
 
         // Verify the UI event is received
         if let Some(ui_event) = ui_rx.recv().await {
