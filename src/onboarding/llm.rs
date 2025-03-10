@@ -6,14 +6,14 @@ use strum::VariantNames as _;
 
 use crate::{
     config::{
-        AnthropicModel, FastembedModel, LLMConfiguration, OpenAIEmbeddingModel, OpenAIPromptModel,
+        AnthropicModel, FastembedModel, LLMConfiguration, OpenAIEmbeddingModel, OpenAIPromptModel, AgentEditMode, Config
     },
     onboarding::util::prompt_text,
 };
 
 use super::util::{prompt_api_key, prompt_select};
 
-pub async fn llm_questions(context: &mut tera::Context) -> Result<()> {
+pub async fn llm_questions(context: &mut tera::Context) -> Result<Config> {
     println!(
         "\nKwaak supports multiple LLM providers and uses multiple models for various tasks. What providers would you like to use?"
     );
@@ -37,7 +37,10 @@ pub async fn llm_questions(context: &mut tera::Context) -> Result<()> {
         LLMConfiguration::AzureOpenAI { .. } => {
             println!("{valid_llm} is not selectable yet, skipping configuration");
         }
-        LLMConfiguration::Anthropic { .. } => anthropic_questions(context)?,
+        LLMConfiguration::Anthropic { .. } => {
+            let config = anthropic_questions(context)?;
+            return Ok(config);
+        }
         LLMConfiguration::FastEmbed { .. } => {
             println!("{valid_llm} is not selectable yet, skipping configuration");
         }
@@ -47,7 +50,7 @@ pub async fn llm_questions(context: &mut tera::Context) -> Result<()> {
         }
     }
 
-    Ok(())
+    Ok(Config::default())
 }
 
 fn openai_questions(context: &mut tera::Context) -> Result<()> {
@@ -80,7 +83,6 @@ fn openai_questions(context: &mut tera::Context) -> Result<()> {
             "provider": "OpenAI",
             "indexing_model": indexing_model,
             "query_model": query_model,
-            // "embedding_model": embedding_model,
             "base_url": None::<String>,
         }),
     );
@@ -96,7 +98,7 @@ fn openai_questions(context: &mut tera::Context) -> Result<()> {
     Ok(())
 }
 
-fn anthropic_questions(context: &mut tera::Context) -> Result<()> {
+fn anthropic_questions(context: &mut tera::Context) -> Result<Config> {
     let api_key = prompt_api_key(
         "Where can we find your anthropic api key? (https://console.anthropic.com/account/keys)",
         Some("env:ANTHROPIC_API_KEY"),
@@ -128,7 +130,16 @@ fn anthropic_questions(context: &mut tera::Context) -> Result<()> {
     println!(
         "\nAnthropic does not provide embeddings. Currently we suggest to use FastEmbed. If you want to use a different provider you can change it in your config later."
     );
-    fastembed_questions(context)
+
+    // Setting default agent edit mode to Line when Anthropic is selected
+    let config = Config {
+        agent_edit_mode: AgentEditMode::Line,
+        ..Config::default()
+    };
+
+    fastembed_questions(context)?;
+
+    Ok(config)
 }
 
 async fn get_open_router_models() -> Option<Vec<HashMap<String, serde_json::Value>>> {
@@ -149,6 +160,7 @@ async fn get_open_router_models() -> Option<Vec<HashMap<String, serde_json::Valu
         response.json().await.ok()?;
     models.get("data").map(Vec::to_owned)
 }
+
 async fn open_router_questions(context: &mut tera::Context) -> Result<()> {
     println!(
         "\nOpenRouter allows you to use a variety of managed models via a single api. You can find models at https://openrouter.ai/models."
