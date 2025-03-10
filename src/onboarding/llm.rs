@@ -147,7 +147,7 @@ fn anthropic_questions(context: &mut tera::Context) -> Result<Config> {
         tavily_api_key: Config::default().tavily_api_key,
         github_api_key: Config::default().github_api_key,
         openai_api_key: Config::default().openai_api_key,
-        anthropic_api_key: Some(api_key),
+        anthropic_api_key: Some(api_key.into()),  // Convert to ApiKey
         open_router_api_key: Config::default().open_router_api_key,
         azure_openai_api_key: Config::default().azure_openai_api_key,
         tool_executor: Config::default().tool_executor,
