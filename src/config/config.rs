@@ -820,7 +820,7 @@ mod tests {
             [llm.indexing]
             provider = "Anthropic"
             api_key = "text:test-key"
-            prompt_model = "claude-v2"
+            prompt_model = "claude-3-5-sonnet-latest"
             "#;
 
         let config: Config = Config::from_str(toml).unwrap();
