@@ -66,14 +66,14 @@ pub async fn index_repository(
             repository.config().language,
             CODE_CHUNK_RANGE,
         )?)
-        .then(updater.count_processed_fn())
+        .then(updater.count_total_fn())
         .then(transformers::MetadataQACode::default());
 
     markdown = markdown
         .then_chunk(transformers::ChunkMarkdown::from_chunk_range(
             MARKDOWN_CHUNK_RANGE,
         ))
-        .then(updater.count_processed_fn())
+        .then(updater.count_total_fn())
         .then(transformers::MetadataQAText::default());
 
     let batch_size = repository.config().indexing_batch_size();
@@ -88,7 +88,7 @@ pub async fn index_repository(
 
             Ok(chunk)
         })
-        .then(updater.count_total_fn())
+        .then(updater.count_processed_fn())
         .then_store_with(duckdb)
         .run()
         .await?;
