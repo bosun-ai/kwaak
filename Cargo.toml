@@ -101,6 +101,10 @@ update-informer = { version = "1.2.0", features = [
 [target.'cfg(linux)'.dependencies]
 openssl-sys = { version = "0.9.106", features = ["vendored"] }
 
+# Odd that the cfg doesn't pick that up
+[target.aarch64-unknown-linux-gnu.dependencies]
+openssl-sys = { version = "0.9.106", features = ["vendored"] }
+
 [dev-dependencies]
 test-log = { version = "0.2.17", features = ["trace"] }
 insta = "1.42.2"
