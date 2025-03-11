@@ -7,7 +7,7 @@ use mockall::mock;
 use serde::{Deserialize, Serialize};
 use swiftide::chat_completion;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum CommandResponse {
     /// Messages coming from an agent
     Chat(chat_completion::ChatMessage),

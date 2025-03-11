@@ -1,4 +1,5 @@
 mod garbage_collection;
+mod progress_updater;
 mod query;
 mod repository;
 

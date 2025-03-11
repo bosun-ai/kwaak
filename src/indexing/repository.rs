@@ -1,4 +1,5 @@
 use std::sync::atomic::AtomicU64;
+use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
 
 use crate::commands::Responder;
@@ -10,8 +11,10 @@ use swiftide::indexing::transformers;
 use swiftide::indexing::Node;
 use swiftide::traits::EmbeddingModel;
 use swiftide::traits::SimplePrompt;
+use swiftide::traits::Transformer;
 
 use super::garbage_collection::GarbageCollector;
+use super::progress_updater::ProgressUpdater;
 
 const CODE_CHUNK_RANGE: std::ops::Range<usize> = 100..2048;
 const MARKDOWN_CHUNK_RANGE: std::ops::Range<usize> = 100..1024;
@@ -23,7 +26,10 @@ pub async fn index_repository(
     repository: &Repository,
     responder: Option<Arc<dyn Responder>>,
 ) -> Result<()> {
-    let updater = UiUpdater::from(responder);
+    let mut updater = ProgressUpdater::from(responder);
+
+    // The updater forwards formatted progress updates to the connected frontend
+    let _handle = updater.spawn();
 
     updater.send_update("Cleaning up the index ...");
     let garbage_collector = GarbageCollector::from_repository(repository);
@@ -48,9 +54,6 @@ pub async fn index_repository(
 
     let duckdb = storage::get_duckdb(repository);
 
-    let total_chunks = Arc::new(AtomicU64::new(0));
-    let processed_chunks = Arc::new(AtomicU64::new(0));
-
     let (mut markdown, mut code) = swiftide::indexing::Pipeline::from_loader(loader)
         .with_concurrency(repository.config().indexing_concurrency())
         .with_default_llm_client(indexing_provider)
@@ -66,50 +69,14 @@ pub async fn index_repository(
             repository.config().language,
             CODE_CHUNK_RANGE,
         )?)
-        .then({
-            let total_chunks = Arc::clone(&total_chunks);
-            let processed_chunks = Arc::clone(&processed_chunks);
-            let updater = updater.clone();
-
-            move |node| {
-                let total_chunks = total_chunks.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-
-                updater.send_update(format!(
-                    "Indexing a bit of code {}/{}",
-                    processed_chunks
-                        .clone()
-                        .load(std::sync::atomic::Ordering::Relaxed),
-                    total_chunks
-                ));
-
-                Ok(node)
-            }
-        })
+        .then(updater.count_processed_fn())
         .then(transformers::MetadataQACode::default());
 
     markdown = markdown
         .then_chunk(transformers::ChunkMarkdown::from_chunk_range(
             MARKDOWN_CHUNK_RANGE,
         ))
-        .then({
-            let total_chunks = Arc::clone(&total_chunks);
-            let processed_chunks = Arc::clone(&processed_chunks);
-            let updater = updater.clone();
-
-            move |node| {
-                let total_chunks = total_chunks.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-
-                updater.send_update(format!(
-                    "Indexing a bit of code {}/{}",
-                    processed_chunks
-                        .clone()
-                        .load(std::sync::atomic::Ordering::Relaxed),
-                    total_chunks
-                ));
-
-                Ok(node)
-            }
-        })
+        .then(updater.count_processed_fn())
         .then(transformers::MetadataQAText::default());
 
     let batch_size = repository.config().indexing_batch_size();
@@ -124,47 +91,10 @@ pub async fn index_repository(
 
             Ok(chunk)
         })
-        .then({
-            let updater = updater.clone();
-
-            move |node| {
-                let current = processed_chunks
-                    .clone()
-                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-
-                updater.send_update(format!(
-                    "Indexing a bit of code {}/{}",
-                    current,
-                    total_chunks
-                        .clone()
-                        .load(std::sync::atomic::Ordering::Relaxed)
-                ));
-
-                Ok(node)
-            }
-        })
+        .then(updater.count_total_fn())
         .then_store_with(duckdb)
         .run()
         .await?;
 
-    updater.send_update("Creating column indices ...");
-
     Ok(())
-}
-
-// Just a simple wrapper so we can avoid having to Option check all the time
-#[derive(Debug, Clone)]
-struct UiUpdater(Option<Arc<dyn Responder>>);
-
-impl UiUpdater {
-    fn send_update(&self, state: impl AsRef<str>) {
-        let Some(responder) = &self.0 else { return };
-        responder.update(state.as_ref()).await;
-    }
-}
-
-impl From<Option<Arc<dyn Responder>>> for UiUpdater {
-    fn from(responder: Option<Arc<dyn Responder>>) -> Self {
-        Self(responder)
-    }
 }
