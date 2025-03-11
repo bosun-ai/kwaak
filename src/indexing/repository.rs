@@ -1,5 +1,3 @@
-use std::sync::atomic::AtomicU64;
-use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
 
 use crate::commands::Responder;
@@ -11,7 +9,6 @@ use swiftide::indexing::transformers;
 use swiftide::indexing::Node;
 use swiftide::traits::EmbeddingModel;
 use swiftide::traits::SimplePrompt;
-use swiftide::traits::Transformer;
 
 use super::garbage_collection::GarbageCollector;
 use super::progress_updater::ProgressUpdater;
