@@ -62,7 +62,7 @@ pub fn init(repository: &Repository, tui_logger_enabled: bool) -> Result<Guard> 
     let mut layers = vec![fmt_layer.boxed()];
 
     if tui_logger_enabled {
-        let tui_layer = tui_logger::tracing_subscriber_layer();
+        let tui_layer = tui_logger::TuiTracingSubscriberLayer;
         tui_logger::init_logger(default_level)?;
         layers.push(tui_layer.boxed());
     }
