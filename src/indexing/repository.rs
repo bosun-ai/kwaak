@@ -159,7 +159,7 @@ struct UiUpdater(Option<Arc<dyn Responder>>);
 impl UiUpdater {
     fn send_update(&self, state: impl AsRef<str>) {
         let Some(responder) = &self.0 else { return };
-        responder.update(state.as_ref());
+        responder.update(state.as_ref()).await;
     }
 }
 
