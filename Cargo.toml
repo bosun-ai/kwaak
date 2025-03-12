@@ -11,10 +11,9 @@ description = "Run a team of autonomous agents on your code, right from your ter
 license = "MIT"
 
 [dependencies]
-# Pinned as 54 breaks chrono (wtf)
-# arrow = { version = "=53.2.0" }
-chrono = "=0.4.38"
-# arrow-arith = { version = "=53.2.0" }
+arrow = { version = "=54.2.1" }
+# chrono = "=0.4.38"
+arrow-arith = { version = "=54.2.1" }
 
 swiftide-docker-executor = "0.6.7"
 anyhow = "1.0.97"
