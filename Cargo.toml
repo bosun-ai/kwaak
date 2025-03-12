@@ -95,6 +95,9 @@ update-informer = { version = "1.2.0", features = [
   "ureq",
   "rustls-tls",
 ], default-features = false }
+schemars = { version = "0.8.22", default-features = false, features = [
+  "derive",
+], optional = true }
 
 # Something is still pulling in libssl, this is a quickfix and should be investigated
 [target.'cfg(linux)'.dependencies]
@@ -139,6 +142,8 @@ default = ["otel"]
   "dep:opentelemetry",
   "dep:opentelemetry-otlp",
 ]
+# Derives jsonschema for common types
+jsonschema = ["dep:schemars"]
 
 
 [patch.crates-io]

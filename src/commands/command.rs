@@ -9,8 +9,15 @@ use super::Responder;
 ///
 /// By default all commands can be triggered from the ui like `/<command>`
 #[derive(
-    Debug, strum_macros::Display, strum_macros::IntoStaticStr, strum_macros::EnumIs, Clone,
+    Debug,
+    strum_macros::Display,
+    strum_macros::IntoStaticStr,
+    strum_macros::EnumIs,
+    Clone,
+    serde::Serialize,
+    serde::Deserialize,
 )]
+// #[cfg_attr(feature = "jsonschema", derive(schemars::JsonSchema))]
 #[strum(serialize_all = "snake_case")]
 pub enum Command {
     /// Cleanly stop the backend
@@ -40,7 +47,8 @@ pub enum Command {
     RetryChat,
 }
 
-#[derive(Debug, Clone, Builder)]
+#[cfg_attr(feature = "jsonschema", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Builder, serde::Serialize, serde::Deserialize)]
 pub struct CommandEvent {
     command: Command,
     uuid: Uuid,
