@@ -1252,9 +1252,9 @@ dependencies = [
 
 [[package]]
 name = "config"
-version = "0.15.9"
+version = "0.15.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb07d21d12f9f0bc5e7c3e97ccc78b2341b9b4a4604eac3ed7c1d0d6e2c3b23e"
+checksum = "595aae20e65c3be792d05818e8c63025294ac3cb7e200f11459063a352a6ef80"
 dependencies = [
  "async-trait",
  "convert_case 0.6.0",
@@ -4797,9 +4797,9 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.12.13"
+version = "0.12.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "389a89e494bbc88bebf30e23da98742c843863a16a352647716116aa71fae80a"
+checksum = "989e327e510263980e231de548a33e63d34962d29ae61b467389a1a09627a254"
 dependencies = [
  "base64 0.22.1",
  "bytes",
@@ -5692,9 +5692,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "swiftide"
-version = "0.22.2"
+version = "0.22.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa70e37611bb5d55fd7463c6a44f520175cd274c22ed0b44c6d018f70d35e62a"
+checksum = "ee3d865eee2ddc8e64d6481f1739655256fa02f9689e448abad10c3a269cc60c"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5730,9 +5730,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-core"
-version = "0.22.2"
+version = "0.22.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a326789f3dcfa06fa49536dcec70f6c6a685d99424897c3de5bc9fea0d2281f"
+checksum = "f2bc00e5b1e1d8b84f9c342ee1647334cd3d7b6e66e9b6ec7069d56b19df78df"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5855,9 +5855,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-macros"
-version = "0.22.2"
+version = "0.22.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9550fae8462fd0453a94fe6bcde95937274479aa2f9550bd4e5b51d06d673bc9"
+checksum = "e324b1a30d94852789e0aa7f8c9667d7539da70e3b27904e2ee32fac2727df30"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6284,9 +6284,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.44.0"
+version = "1.44.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9975ea0f48b5aa3972bf2d888c238182458437cc2a19374b81b25cdf1023fb3a"
+checksum = "f382da615b842244d4b8738c82ed1275e6c5dd90c459a30941cd07080b06c91a"
 dependencies = [
  "backtrace",
  "bytes",
@@ -6359,9 +6359,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.7.13"
+version = "0.7.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7fcaa8d55a2bdd6b83ace262b016eca0d79ee02818c5c1bcdf0305114081078"
+checksum = "6b9590b93e6fcc1739458317cccd391ad3955e2bde8913edf6f95f9e65a8f034"
 dependencies = [
  "bytes",
  "futures-core",
@@ -6744,9 +6744,9 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "tui-logger"
-version = "0.14.5"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f3fb54e48fa37d5081603f7804c730734b381235ebd876cb1e66f853a7d2533"
+checksum = "c51f8ebd40b73a7102b069bf6a5ac63d8baba21b910db94042903e473c7ed3b4"
 dependencies = [
  "chrono",
  "fxhash",
