@@ -79,7 +79,7 @@ reqwest = { version = "0.12.12", features = [
   "http2",
   "macos-system-configuration",
 ], default-features = false }
-duckdb = { version = "1.2.1", features = ["bundled"] }
+duckdb = { version = "1.2.1" }
 num_cpus = "1.16.0"
 htmd = "0.1.6"
 ansi-to-tui = "7.0.0"
@@ -99,7 +99,7 @@ update-informer = { version = "1.2.0", features = [
 
 # Something is still pulling in libssl, this is a quickfix and should be investigated
 [target.'cfg(linux)'.dependencies]
-openssl-sys = { version = "0.9.106", features = ["vendored"] }
+openssl-sys = { version = "0.9.106" }
 
 [dev-dependencies]
 test-log = { version = "0.2.17", features = ["trace"] }
@@ -140,6 +140,8 @@ default = ["otel"]
   "dep:opentelemetry",
   "dep:opentelemetry-otlp",
 ]
+# Bundles duckdb and openssl-sys (if target is linux) for release
+bundled = ["duckdb/bundled", "openssl-sys/vendored"]
 
 
 [patch.crates-io]
