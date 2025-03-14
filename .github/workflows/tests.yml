@@ -47,7 +47,7 @@ jobs:
         if: ${{matrix.os == 'ubuntu-latest'}}
         run: sudo cp /usr/bin/fdfind /usr/bin/fd
       - name: "Test"
-        run: cargo test -j 2
+        run: cargo test -j 2 --all-features
 
   lint:
     name: Lint
