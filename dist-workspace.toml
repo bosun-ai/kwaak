@@ -22,6 +22,10 @@ install-updater = true
 tap = "bosun-ai/homebrew-tap"
 # Features to pass to cargo build
 features = ["bundled"]
+# Which actions to run on pull requests
+pr-run-mode = "upload"
+# Skip checking whether the specified configuration files are up to date
+allow-dirty = ["ci"]
 
 [dist.github-custom-runners]
 x86_64-unknown-linux-gnu = "ubuntu-24.04"
