@@ -194,6 +194,8 @@ Or compile from source with Cargo:
 cargo install kwaak
 ```
 
+Note that you will need to have [duckdb](https://duckdb.org/docs/installation/?version=stable&environment=cli&platform=linux&download_method=direct&architecture=x86_64) and `libssl-dev` installed.
+
 ### Arch Linux
 
 The package is available in the [extra repositories](https://archlinux.org/packages/extra/x86_64/kwaak/) and can be installed with [pacman](https://wiki.archlinux.org/title/Pacman):
