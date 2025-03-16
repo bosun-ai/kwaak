@@ -121,12 +121,14 @@ async fn main() -> Result<()> {
                 cli::EvalCommands::Ragas {
                     input,
                     output,
+                    questions,
                     record_ground_truth,
                 } => {
                     evaluations::evaluate_query_pipeline(
                         &repository,
-                        &input,
+                        input.as_deref(),
                         &output,
+                        questions.as_deref(),
                         *record_ground_truth,
                     )
                     .await?;

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Parser, Debug, Clone)]
 #[clap(author, about, version)]
@@ -78,9 +78,14 @@ pub enum EvalCommands {
         /// Records output as the ground truth in the dataset
         #[arg(short, long, default_value_t = false)]
         record_ground_truth: bool,
-        /// The input dataset in a `ragas::EvaluationDataSet` format
-        input: PathBuf,
+        /// Path to the input dataset in a `ragas::EvaluationDataSet` format (json)
+        #[arg(short, long, conflicts_with = "questions")]
+        input: Option<PathBuf>,
+        /// List of questions to record a dataset for. Useful if there is no ground truth yet.
+        #[arg(short, long, conflicts_with = "input")]
+        questions: Option<Vec<String>>,
         /// The file to write the output to, in the same format
+        #[arg(short, long)]
         output: PathBuf,
     },
 }

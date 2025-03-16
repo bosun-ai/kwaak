@@ -35,13 +35,20 @@ use crate::{indexing::build_query_pipeline, repository::Repository};
 /// See [ragas](https://ragas.io) for more information.
 pub async fn evaluate_query_pipeline(
     repository: &Repository,
-    input: &Path,
+    input: Option<&Path>,
     output: &Path,
+    questions: Option<&[String]>,
     record_ground_truth: bool,
 ) -> Result<()> {
     // Load dataset
-    tracing::info!("Loading dataset from {}", input.display());
-    let dataset: ragas::EvaluationDataSet = std::fs::read_to_string(input)?.parse()?;
+
+    let dataset: ragas::EvaluationDataSet = if let Some(input) = input {
+        std::fs::read_to_string(input)?.parse()?
+    } else if let Some(questions) = questions {
+        questions.into()
+    } else {
+        anyhow::bail!("Either input or questions must be provided")
+    };
 
     // Setup ragas
     tracing::info!("Setting up evaluator");
