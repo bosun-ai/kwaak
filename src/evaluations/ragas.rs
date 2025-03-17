@@ -43,8 +43,10 @@ pub async fn evaluate_query_pipeline(
     // Load dataset
 
     let dataset: ragas::EvaluationDataSet = if let Some(input) = input {
+        println!("Reading dataset from file: {}", input.display());
         std::fs::read_to_string(input)?.parse()?
     } else if let Some(questions) = questions {
+        println!("Generation evalutions for {} questions", questions.len());
         questions.into()
     } else {
         anyhow::bail!("Either input or questions must be provided")
@@ -71,6 +73,9 @@ pub async fn evaluate_query_pipeline(
     tracing::info!("Writing evaluation results to file");
     // Export to file
     let json = ragas.to_json().await;
+    if let Some(parent) = output.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
     std::fs::write(output, json)?;
 
     Ok(())
