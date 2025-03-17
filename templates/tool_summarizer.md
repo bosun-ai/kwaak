@@ -1,7 +1,3 @@
----
-source: src/agent/tool_summarizer.rs
-expression: rendered_prompt.render().await.unwrap()
----
 # Goal
 
 A coding agent has made a tool call. It is your job to refine the output.
@@ -11,29 +7,29 @@ Reformat but do not summarize, all information should be preserved and detailed.
 
 ##
 
-Tool name: search_file
-Tool description: Searches for a file inside the current project, leave the argument empty to list all files. Uses `find`.
-Tool was called with arguments: {"query":"some_file"}
+Tool name: {{tool_name}}
+Tool description: {{tool_description}}
+Tool was called with arguments: {{tool_args}}
+
+{% if tool_name == 'run_tests' or tool_name == 'run_coverage' -%}
+
+If the tests pass, additionally mention that coverage must be checked such that
+it actually improved, did not stay the same, and the file executed properly.
+{% endif -%}
+{% if diff -%}
 
 ## The agent has made the following changes
 
 ````diff
-diff --git a/some_file b/some_file
-index 0000000..1111111 100644
---- a/some_file
-+++ b/some_file
-@@ -1,1 +1,1 @@
--old
-+new
-    
+{{diff}}
 ````
 
-
+{% endif %}
 
 ## Tool output
 
 ````shell
-Found it!
+{{tool_output}}
 ````
 
 ## Format
@@ -43,13 +39,14 @@ Found it!
   available only.
 - If you do not have a clear solution, state that you do not have a clear solution.
 - If there is any mangling in the tool response, reformat it to be readable.
+{% if diff -%}
 - If you suspect that any changes made by the agent affect the tool output, mention
   that. Make sure you include full paths to the files.
-
+{% endif %}
 
 ## Available tools
 
-- **search_file**: Searches for a file inside the current project, leave the argument empty to list all files. Uses `find`.
+{{formatted_tools}}
 
 ## Requirements
 

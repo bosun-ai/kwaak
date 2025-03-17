@@ -4,12 +4,11 @@ use swiftide::{
     agents::hooks::AfterToolFn,
     chat_completion::{Tool, ToolCall, ToolOutput},
     prompt::Prompt,
-    traits::Command,
-    traits::SimplePrompt,
+    traits::{Command, SimplePrompt},
 };
 use tracing::Instrument as _;
 
-use crate::util::accept_non_zero_exit;
+use crate::{templates::Templates, util::accept_non_zero_exit};
 
 #[derive(Clone)]
 pub struct ToolSummarizer<'a> {
@@ -36,10 +35,7 @@ impl<'a> ToolSummarizer<'a> {
 
     // Rust has a long outstanding issue where it captures outer lifetimes when returning an impl
     // that also has lifetimes, see https://github.com/rust-lang/rust/issues/42940
-    pub fn summarize_hook<'b>(self) -> impl AfterToolFn + 'b
-    where
-        'a: 'b,
-    {
+    pub fn summarize_hook(self) -> impl AfterToolFn + use<'a> {
         move |agent, tool_call, tool_output| {
             let llm = self.llm.clone();
 
@@ -89,17 +85,15 @@ impl<'a> ToolSummarizer<'a> {
             Box::pin(async move { Ok(()) })
         }
     }
-
-    // tfw changing to jinja halfway through
-    // The older prompts (like these) are a mess. It would be so nice to have everything in
-    // templates and use partials.
 }
+
 fn prompt(
     tool: &dyn Tool,
     tool_call: &ToolCall,
     tool_output: &ToolOutput,
     available_tools: &[Box<dyn Tool>],
 ) -> Prompt {
+    // TODO: Partial?
     let formatted_tools = available_tools
         .iter()
         .map(|tool| {
@@ -117,65 +111,17 @@ fn prompt(
         .collect::<Vec<String>>()
         .join("\n");
 
-    let additional_instructions = if tool_call.name() == "run_tests"
-        && available_tools.iter().any(|t| t.name() == "run_coverage")
-    {
-        indoc::formatdoc! {"
-                ## Additional instructions
-                * If the tests pass, additionally mention that coverage must be checked such that
-                  it actually improved, did not stay the same, and the file executed properly.
-            "}
-    } else {
-        String::new()
-    };
+    // TODO: clean me up further
+    let template =
+        Templates::load("tool_summarizer.md").expect("Infallible; failed to find template");
 
-    indoc::formatdoc!(
-            "
-            # Goal
-            A coding agent has made a tool call. It is your job to refine the output.
-
-            Reformat the following tool output such that it is effective for a chatgpt agent to work with. Only include the reformatted output in your response.
-            Reformat but do not summarize, all information should be preserved and detailed.
-    
-            ## 
-            Tool name: {tool_name}
-            Tool description: {tool_description}
-            Tool was called with arguments: {tool_args}
-
-            {additional_instructions}
-    
-            {{% if diff -%}}
-            ## The agent has made the following changes
-            ````
-            {{{{ diff }}}}
-            ````
-            {{% endif %}}
-
-            ## Tool output
-            ```
-            {tool_output}
-            ```
-    
-            ## Format
-            * Only include the reformatted output in your response and nothing else.
-            * Include clear instructions on how to fix each issue using the tools that are
-              available only.
-            * If you do not have a clear solution, state that you do not have a clear solution.
-            * If there is any mangling in the tool response, reformat it to be readable.
-            {{% if diff -%}}
-            * If you suspect that any changes made by the agent affect the tool output, mention
-                that. Make sure you include full paths to the files.
-            {{% endif -%}}
-    
-            ## Available tools
-            {formatted_tools}
-
-            ## Requirements
-            * Only propose improvements that can be fixed by the tools and functions that are
-                available in the conversation. For instance, running a command to fix linting can also be fixed by writing to that file without errors.
-            * If the tool output has repeating patterns, only include the pattern once and state
-             that it happens multiple times.
-            ", tool_name = tool.name(), tool_description = tool.tool_spec().description, tool_args = tool_call.args().unwrap_or_default(), tool_output = tool_output.content().unwrap_or_default().replace('{', "\\{")).into()
+    template
+        .to_prompt()
+        .with_context_value("formatted_tools", formatted_tools)
+        .with_context_value("tool_name", tool.name())
+        .with_context_value("tool_description", tool.tool_spec().description)
+        .with_context_value("tool_args", tool_call.args())
+        .with_context_value("tool_output", tool_output.content())
 }
 
 #[cfg(test)]
@@ -219,6 +165,38 @@ mod test {
         )
         .with_context_value("diff", diff);
 
+        insta::assert_snapshot!(rendered_prompt.render().await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_prompt_render_where_tool_output_has_jinja() {
+        // Create a mock tool
+        let tool = search_file();
+
+        // Create a ToolCall for this tool
+        let tool_call = ToolCall::builder()
+            .name("search_file")
+            .id("2")
+            .args(json!({ "query": "some_file_with_jinja"}).to_string())
+            .build()
+            .unwrap();
+
+        // Tool output contains Jinja syntax
+        let tool_output = ToolOutput::Text("Result with Jinja syntax: {{ some_variable }}".into());
+
+        // Setup available tools
+        let available_tools = vec![Box::new(tool) as Box<dyn Tool>];
+
+        // Generate the prompt
+        let rendered_prompt = prompt(
+            &available_tools[0],
+            &tool_call,
+            &tool_output,
+            &available_tools,
+        )
+        .with_context_value("diff", None::<String>);
+
+        // Verify the output to ensure Jinja is escaped
         insta::assert_snapshot!(rendered_prompt.render().await.unwrap());
     }
 }
