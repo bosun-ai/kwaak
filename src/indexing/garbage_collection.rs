@@ -329,7 +329,7 @@ mod tests {
 
         dbg!(&duckdb);
         if let Err(err) = duckdb.setup().await {
-            tracing::warn!(?err, "Failed to setup duckdb; might be an error")
+            tracing::warn!(?err, "Failed to setup duckdb; might be an error");
         }
         tracing::info!("Duckdb setup completed.");
         let node = duckdb.store(node).await.unwrap();
