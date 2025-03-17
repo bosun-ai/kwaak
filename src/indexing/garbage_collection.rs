@@ -419,6 +419,7 @@ mod tests {
         assert!(context.duckdb.get(&context.node).await);
     }
 
+    #[cfg_attr(coverage, ignore)] // Fails with nightly in llvm cov, that's ok
     #[test_log::test(tokio::test)]
     async fn test_detect_deleted_file() {
         let context = setup().await;
