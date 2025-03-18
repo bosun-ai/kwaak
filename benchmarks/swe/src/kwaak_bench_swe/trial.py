@@ -363,6 +363,9 @@ class Trial:
         # Queue to store the result from the thread
         result_queue = queue.Queue()
 
+        # Split on "/" then get tail
+        project_name = self.item.repo.split("/")[-1]
+
         def run_kwaak():
             try:
                 result = self.container.exec(
@@ -372,6 +375,7 @@ class Trial:
                         "OPENAI_API_KEY": openai_api_key,
                         "RUST_LOG": "debug",
                         "RUST_BACKTRACE": "1",
+                        "KWAAK__PROJECT_NAME": project_name,
                     },
                 )
                 result_queue.put(result)
