@@ -433,9 +433,9 @@ dependencies = [
 
 [[package]]
 name = "async-trait"
-version = "0.1.87"
+version = "0.1.88"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d556ec1359574147ec0c4fc5eb525f3f23263a592b1a9c07e0a75b427de55c97"
+checksum = "e539d3fca749fcee5236ab05e93a52867dd549cc157c8cb7f99595f3cedffdb5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5450,9 +5450,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "swiftide"
-version = "0.22.3"
+version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee3d865eee2ddc8e64d6481f1739655256fa02f9689e448abad10c3a269cc60c"
+checksum = "015b89645cbfe423834c51d622cd491c7804e6e5f230fe22216bf93e3cf469b7"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5488,9 +5488,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-core"
-version = "0.22.3"
+version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2bc00e5b1e1d8b84f9c342ee1647334cd3d7b6e66e9b6ec7069d56b19df78df"
+checksum = "4f439e896da3add31755f65a4b01081977eba93882c218ae4c4b7d77b7b7c3a8"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5570,9 +5570,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-integrations"
-version = "0.22.3"
+version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d039c0fd1a60146b4a4a2653edd1c1420e118f5884049e97b70e28440a85b281"
+checksum = "8b16ae891510395628fc3d92c3bc8e95646a3a4d1c72a7650f0b017488a28104"
 dependencies = [
  "anyhow",
  "async-anthropic",
@@ -5582,6 +5582,7 @@ dependencies = [
  "derive_builder",
  "duckdb",
  "fastembed",
+ "fs-err",
  "futures-util",
  "itertools 0.14.0",
  "libduckdb-sys",
@@ -5782,11 +5783,10 @@ dependencies = [
 
 [[package]]
 name = "tempfile"
-version = "3.18.0"
+version = "3.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c317e0a526ee6120d8dabad239c8dadca62b24b6f168914bbbc8e2fb1f0e567"
+checksum = "488960f40a3fd53d72c2a29a58722561dee8afdd175bd88e3db4677d7b2ba600"
 dependencies = [
- "cfg-if",
  "fastrand",
  "getrandom 0.3.1",
  "once_cell",
@@ -6502,9 +6502,9 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "tui-logger"
-version = "0.14.5"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f3fb54e48fa37d5081603f7804c730734b381235ebd876cb1e66f853a7d2533"
+checksum = "c51f8ebd40b73a7102b069bf6a5ac63d8baba21b910db94042903e473c7ed3b4"
 dependencies = [
  "chrono",
  "fxhash",
@@ -6740,9 +6740,9 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "uuid"
-version = "1.15.1"
+version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0f540e3240398cce6128b64ba83fdbdd86129c16a3aa1a3a252efd66eb3d587"
+checksum = "458f7a779bf54acc9f347480ac654f68407d3aab21269a6e3c9f922acd9e2da9"
 dependencies = [
  "getrandom 0.3.1",
  "md-5",
