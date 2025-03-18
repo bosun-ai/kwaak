@@ -44,6 +44,10 @@ pub struct Config {
     /// For local embeddings it's 256
     indexing_batch_size: Option<usize>,
 
+    /// Opt-out of garbage collection. Useful when running benchmarks
+    #[serde(default = "default_indexing_garbage_collection")]
+    pub indexing_garbage_collection_enabled: bool,
+
     #[serde(default)]
     pub docker: DockerConfiguration,
 
@@ -148,6 +152,10 @@ fn default_otel_enabled() -> bool {
 
 fn default_num_completions_for_summary() -> usize {
     10
+}
+
+fn default_indexing_garbage_collection() -> bool {
+    true
 }
 
 /// Agent session configurations supported by Kwaak

@@ -2,6 +2,7 @@ language = "Python"
 tool_executor = "local"
 openai_api_key = "env:OPENAI_API_KEY"
 otel_enabled = false
+indexing_garbage_collection_enabled = false
 
 [git]
 owner = "bosun-ai"

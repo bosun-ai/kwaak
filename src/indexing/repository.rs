@@ -28,9 +28,11 @@ pub async fn index_repository(
     // The updater forwards formatted progress updates to the connected frontend
     let _handle = updater.spawn();
 
-    updater.send_update("Cleaning up the index ...");
-    let garbage_collector = GarbageCollector::from_repository(repository);
-    garbage_collector.clean_up().await?;
+    if repository.config().indexing_garbage_collection_enabled {
+        updater.send_update("Cleaning up the index ...");
+        let garbage_collector = GarbageCollector::from_repository(repository);
+        garbage_collector.clean_up().await?;
+    }
 
     updater.send_update("Starting to index your code ...");
     let mut extensions = repository.config().language.file_extensions().to_vec();
