@@ -46,7 +46,7 @@ pub async fn evaluate_query_pipeline(
         println!("Reading dataset from file: {}", input.display());
         std::fs::read_to_string(input)?.parse()?
     } else if let Some(questions) = questions {
-        println!("Generation evalutions for {} questions", questions.len());
+        println!("Generation evaluations for {} questions", questions.len());
         questions.into()
     } else {
         anyhow::bail!("Either input or questions must be provided")
