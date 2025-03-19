@@ -380,7 +380,7 @@ pub fn available_tools(
     github_session: Option<&Arc<GithubSession>>,
     agent_env: Option<&env_setup::AgentEnvironment>,
 ) -> Result<Vec<Box<dyn Tool>>> {
-    let query_pipeline = indexing::build_query_pipeline(repository)?;
+    let query_pipeline = indexing::build_query_pipeline(repository, None)?;
     let mut tools = vec![
         tools::write_file(),
         tools::search_file(),

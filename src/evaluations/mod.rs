@@ -2,8 +2,11 @@ use anyhow::Result;
 
 mod logging_responder;
 mod output;
-pub mod patch;
+mod patch;
+mod ragas;
 mod tool_evaluation_agent;
+
+pub use ragas::evaluate_query_pipeline;
 
 #[cfg(test)]
 mod tests;

@@ -1,5 +1,6 @@
 use anyhow::Result;
 use indoc::formatdoc;
+use swiftide::traits::EvaluateQuery;
 use swiftide::{
     query::{
         self, answers, query_transformers, search_strategies::SimilaritySingleEmbedding, states,
@@ -16,7 +17,7 @@ pub async fn query(repository: &Repository, query: impl AsRef<str>) -> Result<St
     let duckdb = storage::get_duckdb(repository);
     let _ = duckdb.setup().await;
 
-    let answer = build_query_pipeline(repository)?
+    let answer = build_query_pipeline(repository, None)?
         .query(query.as_ref())
         .await?
         .answer()
@@ -31,6 +32,7 @@ pub async fn query(repository: &Repository, query: impl AsRef<str>) -> Result<St
 /// Should be infallible
 pub fn build_query_pipeline<'b>(
     repository: &Repository,
+    evaluator: Option<Box<dyn EvaluateQuery>>,
 ) -> Result<query::Pipeline<'b, SimilaritySingleEmbedding, states::Answered>> {
     let backoff = repository.config().backoff;
     let query_provider: Box<dyn SimplePrompt> = repository
@@ -63,7 +65,13 @@ pub fn build_query_pipeline<'b>(
     let language = repository.config().language.to_string();
     let project = repository.config().project_name.clone();
 
-    Ok(query::Pipeline::from_search_strategy(search_strategy)
+    let mut pipeline = query::Pipeline::from_search_strategy(search_strategy);
+
+    if let Some(evaluator) = evaluator {
+        pipeline = pipeline.evaluate_with(evaluator);
+    }
+
+    Ok(pipeline
         .then_transform_query(move |mut query: Query<states::Pending>| {
             let current = query.current();
             query.transformed_query(formatdoc! {"
