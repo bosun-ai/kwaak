@@ -277,7 +277,7 @@ pub async fn setup_integration() -> Result<IntegrationContext> {
     let (repository, repository_guard) = test_repository();
     let workdir = repository.path().clone();
     let mut app = App::default().with_workdir(repository.path());
-    let duckdb = storage::get_duckdb(&repository);
+    let duckdb = repository.storage();
     duckdb.setup().await.unwrap();
     let terminal = Terminal::new(TestBackend::new(160, 40)).unwrap();
 
