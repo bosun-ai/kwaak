@@ -1,14 +1,27 @@
 use anyhow::Result;
-use std::{path::PathBuf, str::FromStr as _};
+use std::{path::PathBuf, str::FromStr as _, sync::Arc};
+use swiftide::query::search_strategies;
+use swiftide::traits::{NodeCache, Persist, Retrieve};
 
 use tokio::fs;
 
-use crate::{config::Config, runtime_settings::RuntimeSettings};
+use crate::{config::Config, runtime_settings::RuntimeSettings, storage};
+
+/// Wrapper trait for storage; this is what kwaak minimally expects from a storage provider
+trait KwaakStorage:
+    Persist + Retrieve<search_strategies::SimilaritySingleEmbedding> + NodeCache
+{
+}
+impl<T> KwaakStorage for T where
+    T: Persist + Retrieve<search_strategies::SimilaritySingleEmbedding> + NodeCache
+{
+}
 
 #[derive(Debug, Clone)]
 pub struct Repository {
     config: Config,
     path: PathBuf,
+    storage: Arc<dyn KwaakStorage>,
 }
 
 impl Repository {
@@ -19,10 +32,17 @@ impl Repository {
     /// Panics if the current directory cannot be converted to a path
     #[must_use]
     pub fn from_config(config: impl Into<Config>) -> Repository {
+        let config: Config = config.into();
+        let storage = Arc::new(storage::get_duckdb(&config));
         Self {
-            config: config.into(),
+            config,
             path: PathBuf::from_str(".").expect("Failed to create path from current directory"),
+            storage,
         }
+    }
+
+    pub fn storage(&self) -> Arc<dyn KwaakStorage> {
+        self.storage.clone()
     }
 
     #[must_use]

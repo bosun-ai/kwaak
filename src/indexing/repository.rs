@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::sys_common::AsInner;
 
 use crate::commands::Responder;
 use crate::repository::Repository;
@@ -8,6 +9,7 @@ use swiftide::indexing::loaders;
 use swiftide::indexing::transformers;
 use swiftide::indexing::Node;
 use swiftide::traits::EmbeddingModel;
+use swiftide::traits::NodeCache;
 use swiftide::traits::SimplePrompt;
 
 use super::garbage_collection::GarbageCollector;
@@ -51,12 +53,12 @@ pub async fn index_repository(
         .embedding_provider()
         .get_embedding_model(backoff)?;
 
-    let duckdb = storage::get_duckdb(repository);
+    let duckdb = repository.storage();
 
     let (mut markdown, mut code) = swiftide::indexing::Pipeline::from_loader(loader)
         .with_concurrency(repository.config().indexing_concurrency())
         .with_default_llm_client(indexing_provider)
-        .filter_cached(duckdb.clone())
+        .filter_cached(duckdb.clone() as Arc<dyn NodeCache>)
         .split_by(|node| {
             let Ok(node) = node else { return true };
 
@@ -91,7 +93,7 @@ pub async fn index_repository(
             Ok(chunk)
         })
         .then(updater.count_processed_fn())
-        .then_store_with(duckdb)
+        .then_store_with(duckdb.clone() as Arc<dyn swiftide::traits::Persist>)
         .run()
         .await?;
 

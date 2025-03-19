@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 use indoc::formatdoc;
 use swiftide::{
@@ -5,7 +7,7 @@ use swiftide::{
         self, answers, query_transformers, search_strategies::SimilaritySingleEmbedding, states,
         Query,
     },
-    traits::{EmbeddingModel, Persist, SimplePrompt},
+    traits::{EmbeddingModel, Persist, Retrieve, SimplePrompt},
 };
 
 use crate::{repository::Repository, storage, templates::Templates, util::strip_markdown_tags};
@@ -13,7 +15,7 @@ use crate::{repository::Repository, storage, templates::Templates, util::strip_m
 #[tracing::instrument(skip_all, err)]
 pub async fn query(repository: &Repository, query: impl AsRef<str>) -> Result<String> {
     // Ensure the table exists to avoid dumb errors
-    let duckdb = storage::get_duckdb(repository);
+    let duckdb = repository.storage();
     let _ = duckdb.setup().await;
 
     let answer = build_query_pipeline(repository)?
@@ -42,7 +44,7 @@ pub fn build_query_pipeline<'b>(
         .embedding_provider()
         .get_embedding_model(backoff)?;
 
-    let duckdb = storage::get_duckdb(repository);
+    let duckdb = repository.storage();
     let search_strategy: SimilaritySingleEmbedding<()> = SimilaritySingleEmbedding::default()
         .with_top_k(30)
         .to_owned();
@@ -82,7 +84,7 @@ pub fn build_query_pipeline<'b>(
         .then_transform_query(query_transformers::Embed::from_client(
             embedding_provider.clone(),
         ))
-        .then_retrieve(duckdb)
+        .then_retrieve(duckdb as Arc<dyn Retrieve<SimilaritySingleEmbedding>>)
         // .then_transform_response(response_transformers::Summary::from_client(
         //     query_provider.clone(),
         // ))

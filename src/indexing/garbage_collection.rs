@@ -318,7 +318,7 @@ mod tests {
         node.metadata
             .insert(metadata_qa_code::NAME, "test".to_string());
 
-        let duckdb = storage::build_duckdb(&repository).unwrap();
+        let duckdb = storage::build_duckdb(repository.config()).unwrap();
 
         {
             duckdb.set(&node).await;
