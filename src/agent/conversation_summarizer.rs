@@ -51,6 +51,7 @@ impl ConversationSummarizer {
         }
     }
 
+    #[must_use]
     pub fn summarize_hook(self) -> impl AfterEachFn {
         move |agent| {
             let llm = self.llm.clone();

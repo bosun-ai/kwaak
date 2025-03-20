@@ -1,6 +1,6 @@
 pub mod agents;
 mod commit_and_push;
-mod conversation_summarizer;
+pub mod conversation_summarizer;
 pub mod env_setup;
 pub mod running_agent;
 pub mod session;

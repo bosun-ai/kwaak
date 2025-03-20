@@ -5,6 +5,7 @@ use swiftide::chat_completion::{ChatCompletion, Tool};
 use swiftide::traits::AgentContext;
 
 use crate::agent::agents;
+use crate::agent::conversation_summarizer::ConversationSummarizer;
 use crate::agent::running_agent::RunningAgent;
 use crate::commands::Responder;
 use crate::repository::Repository;
@@ -14,6 +15,7 @@ pub async fn start_tool_evaluation_agent(
     repository: &Repository,
     responder: Arc<dyn Responder>,
     tools: Vec<Box<dyn Tool>>,
+    initial_query: &str,
 ) -> Result<RunningAgent> {
     // Create agent with simplified tools
     let system_prompt = agents::coding::build_system_prompt(repository)?;
@@ -26,6 +28,14 @@ pub async fn start_tool_evaluation_agent(
         .config()
         .query_provider()
         .get_chat_completion_model(backoff)?;
+
+    let conversation_summarizer = ConversationSummarizer::new(
+        query_provider.clone(),
+        &tools,
+        "HEAD",
+        repository.config().num_completions_for_summary,
+        initial_query,
+    );
 
     let responder_for_messages = responder.clone();
     let responder_for_tools = responder.clone();
@@ -53,6 +63,7 @@ pub async fn start_tool_evaluation_agent(
                 Ok(())
             })
         })
+        .after_each(conversation_summarizer.summarize_hook())
         .build()?;
 
     let agent = RunningAgent::builder()

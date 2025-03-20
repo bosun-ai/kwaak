@@ -2,7 +2,6 @@
 //! in large files and/or files with semantic whitespace.
 
 use crate::agent::session::available_tools;
-use crate::agent::tools;
 use crate::config::Config;
 use crate::evaluations::{
     logging_responder::LoggingResponder,
@@ -11,11 +10,9 @@ use crate::evaluations::{
 };
 use crate::repository::Repository;
 use anyhow::Result;
-use std::path::Path;
 use std::process::Command;
 use std::sync::Arc;
 use std::time::Duration;
-use swiftide::chat_completion::Tool;
 
 const EXPECTED_REMOVALS: &[&str] = &["            self._content_consumed = True"];
 
@@ -204,13 +201,14 @@ async fn run_single_evaluation(iteration: u32) -> Result<(bool, EvalMetrics)> {
         "run_coverage",
         "reset_file",
     ] {
-        config.tools.insert(blacklisted_tool.to_string(), true);
+        config.tools.insert(blacklisted_tool.to_string(), false);
     }
 
     let repository = Repository::from_config(config);
 
     let tools = available_tools(&repository, None, None)?;
-    let agent = start_tool_evaluation_agent(&repository, responder.clone(), tools).await?;
+    let agent =
+        start_tool_evaluation_agent(&repository, responder.clone(), tools, &prompt()).await?;
 
     agent.query(&prompt()).await?;
     agent.run().await?;
