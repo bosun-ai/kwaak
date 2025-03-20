@@ -1,6 +1,9 @@
 //! Configuration for enabling and disabling tools
 
-use std::{collections::HashMap, ops::Deref};
+use std::{
+    collections::HashMap,
+    ops::{Deref, DerefMut},
+};
 
 use serde::{
     de::{MapAccess, Visitor},
@@ -15,6 +18,12 @@ impl Deref for Tools {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl DerefMut for Tools {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 

@@ -1,6 +1,7 @@
 //! The patch module is meant to reveal problems in agents when making modifications to the source code. Specifically
 //! in large files and/or files with semantic whitespace.
 
+use crate::agent::session::available_tools;
 use crate::agent::tools;
 use crate::config::Config;
 use crate::evaluations::{
@@ -182,27 +183,28 @@ fn write_failure_info(
     Ok(())
 }
 
-fn get_evaluation_tools() -> Vec<Box<dyn Tool>> {
-    let tools: Vec<Box<dyn Tool>> = vec![
-        tools::search_file(),
-        tools::read_file(),
-        tools::write_file(),
-        tools::read_file_with_line_numbers(),
-        tools::replace_lines(),
-    ];
-
-    tools
-}
-
 async fn run_single_evaluation(iteration: u32) -> Result<(bool, EvalMetrics)> {
     let eval_output = EvalOutput::new("patch", iteration)?;
     let responder = Arc::new(LoggingResponder::new());
 
-    let config_path = Path::new("test-config.toml");
-    let repository =
-        Repository::from_config(Config::load(Some(&config_path)).expect("Failed to load config"));
+    let mut config = Config::load(None)?;
 
-    let tools = get_evaluation_tools();
+    // Blacklist a bunch of tools we don't want the agent to use
+    for blacklisted_tool in [
+        "git",
+        "shell_command",
+        "fetch_url",
+        "explain_code",
+        "run_tests",
+        "run_coverage",
+        "reset_file",
+    ] {
+        config.tools.insert(blacklisted_tool.to_string(), true);
+    }
+
+    let repository = Repository::from_config(config);
+
+    let tools = available_tools(&repository, None, None)?;
     let agent = start_tool_evaluation_agent(&repository, responder.clone(), tools).await?;
 
     agent.query(&prompt()).await?;
