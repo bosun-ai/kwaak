@@ -18,8 +18,8 @@ Line numbers are 1-indexed, you can ONLY use the line numbers retrieved when rea
 
 Do not include the line numbers in the content.
 
-You MUST include one existing line BEFORE and AFTER the lines you want to replace in the content.
-You MUST include do the same for the first and last lines of the file.
+You MUST include TWO existing lines BEFORE and AFTER the lines you want to replace in the content.
+You MUST make sure that the start_line  and end_line number are equal to the line numbers BEFORE replacing content.
 
 It is VITAL you follow these instructions correctly, as otherwise the code will break and your manager will be very upset.
 ";
@@ -49,15 +49,15 @@ It is VITAL you follow these instructions correctly, as otherwise the code will 
     param(name = "file_name", description = "Full path of the file"),
     param(
         name = "start_line",
-        description = "First line before the region you want to replace."
+        description = "First line number of the content you want to replace."
     ),
     param(
         name = "end_line",
-        description = "Last line AFTER the region you want to replace"
+        description = "Last line number of the content of the region you want to replace"
     ),
     param(
         name = "content",
-        description = "Content to replace the region with. Includes ONE line before and ONE line after the replaced content. Do not include line numbers."
+        description = "Content to replace the region with. Include TWO lines before and TWO lines after the replaced content. Do not include line numbers."
     )
 )]
 pub async fn replace_lines(
