@@ -43,7 +43,7 @@ fn prompt() -> String {
             self._content_consumed = True
         ```
 
-        Apply only these fixes, do not make any other changes to the code. The file is long and the modifications are small.
+        Apply only these fixes, do not make any other changes to the code. The file is long and the modifications are small. Start by reading the file.
     "}.to_string()
 }
 

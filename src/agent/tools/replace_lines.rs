@@ -49,11 +49,11 @@ It is VITAL you follow these instructions correctly, as otherwise the code will 
     param(name = "file_name", description = "Full path of the file"),
     param(
         name = "start_line",
-        description = "First line number of the content you want to replace."
+        description = "First line number of the content you want to replace. This MUST align with the first line in content original content before replacement."
     ),
     param(
         name = "end_line",
-        description = "Last line number of the content of the region you want to replace"
+        description = "Last line number of the content you want to replace. This MUST align with the last line in content before replacement."
     ),
     param(
         name = "content",
@@ -124,8 +124,13 @@ fn replace_content(
     let content_first_line = content_lines[0];
 
     if start_line > 1 && !first_line.contains(content_first_line) {
+        if first_line.trim().is_empty() {
+            anyhow::bail!(
+                "Failed to replace content. The line on line number {start_line} is empty, which does not match the first line of the content: `{content_first_line}`."
+            );
+        }
         anyhow::bail!(
-            "The line on line number {start_line} reads: `{first_line}`, which does not match the first line of the content: `{content_first_line}`."
+            "Failed to replace content. The line on line number {start_line} reads: `{first_line}`, which does not match the first line of the content: `{content_first_line}`."
         );
     }
 
@@ -133,8 +138,13 @@ fn replace_content(
     let content_last_line = content_lines[content_lines.len() - 1];
 
     if end_line < lines.len() && !last_line.contains(content_last_line) {
+        if last_line.trim().is_empty() {
+            anyhow::bail!(
+                "Failed to replace content. The line on line number {end_line} is empty, which does not match the last line of the content: `{content_last_line}`."
+            );
+        }
         anyhow::bail!(
-            "The line on line number {end_line} reads: `{last_line}`, which does not match the last line of the content: `{content_last_line}`."
+            "Failed to replace content. The line on line number {end_line} reads: `{last_line}`, which does not match the last line of the content: `{content_last_line}`."
         );
     }
 
