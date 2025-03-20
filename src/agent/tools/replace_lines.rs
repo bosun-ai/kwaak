@@ -14,48 +14,14 @@ You MUST read the file with line numbers first BEFORE EVERY EDIT.
 
 After editing, you MUST read the file again to get the new line numbers.
 
-Line numbers are 1-indexed, you do not need to subtract 1 for start_line and end_line.
+Line numbers are 1-indexed, you can ONLY use the line numbers retrieved when reading the file.
 
 Do not include the line numbers in the content.
 
-You MUST include one existing line BEFORE and AFTER the lines you want to replace.
+You MUST include one existing line BEFORE and AFTER the lines you want to replace in the content.
+You MUST include do the same for the first and last lines of the file.
 
-The first and last lines of the content MUST NOT be blank (expand accordingly).
-
-For example when making a modification to the following file:
-
-2|def a:
-3|  pass
-4|
-5|def b:
-6|  pass
-
-And you want to change line 3 to return True.
-
-Valid values:
-
-start_line: 2
-end_line: 5
-content:
-```
-def a:
-  return True
-
-def b:
-```
-
-Valid because the region is expanded to include lines 2 and 5. Expanding to just 4 would not be enough as it is blank.
-
-Example of invalid values:
-
-start_line: 3
-end_line: 3
-content:
-```
-  return True
-```
-
-Invalid because the region is not expanded to include lines 2 and 5.
+It is VITAL you follow these instructions correctly, as otherwise the code will break and your manager will be very upset.
 ";
 
 // Another invalid pair of values would be old_content:
@@ -83,15 +49,15 @@ Invalid because the region is not expanded to include lines 2 and 5.
     param(name = "file_name", description = "Full path of the file"),
     param(
         name = "start_line",
-        description = "First line of the region that surrounds the modifications"
+        description = "First line before the region you want to replace."
     ),
     param(
         name = "end_line",
-        description = "Last line of the region that surrounds the modifications"
+        description = "Last line AFTER the region you want to replace"
     ),
     param(
         name = "content",
-        description = "Code to replace the region with, containing both the modifications and some lines before and after"
+        description = "Content to replace the region with. Includes ONE line before and ONE line after the replaced content. Do not include line numbers."
     )
 )]
 pub async fn replace_lines(
