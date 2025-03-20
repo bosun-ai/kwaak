@@ -70,6 +70,7 @@ fn compare_changes(eval_output: &EvalOutput) -> Result<bool> {
     let output = Command::new("git")
         .args([
             "diff",
+            "--default-prefix",
             "--",
             "src/evaluations/fixtures/swebench_2148/models.py",
         ])
@@ -81,13 +82,17 @@ fn compare_changes(eval_output: &EvalOutput) -> Result<bool> {
 
     let diff = String::from_utf8(output.stdout)?;
 
+    if diff.is_empty() {
+        return Ok(false);
+    }
+
     eval_output.write_diff(&diff)?;
 
     let mut success = true;
 
     let changes_diff = diff
         .split_once("+++ b/src/evaluations/fixtures/swebench_2148/models.py")
-        .ok_or(anyhow::anyhow!("Failed to split diff"))?
+        .ok_or(anyhow::anyhow!("Failed to split diff, actual:\n{diff}"))?
         .1;
 
     let additions = changes_diff
