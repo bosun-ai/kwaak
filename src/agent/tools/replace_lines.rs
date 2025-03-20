@@ -18,7 +18,7 @@ Line numbers are 1-indexed, you do not need to subtract 1 for start_line and end
 
 Do not include the line numbers in the content.
 
-You MUST include a couple of lines BEFORE and AFTER the lines you want to replace.
+You MUST include one existing line BEFORE and AFTER the lines you want to replace.
 
 The first and last lines of the content MUST NOT be blank (expand accordingly).
 

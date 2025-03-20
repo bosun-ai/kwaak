@@ -250,7 +250,7 @@ pub async fn evaluate(iterations: u32) -> Result<()> {
                     metrics.time_spent.as_secs_f64(),
                 );
             }
-            Err(e) => println!("Iteration {} failed with error: {}", i + 1, e),
+            Err(e) => println!("Iteration {} failed with error: {:?}", i + 1, e),
         }
     }
 
