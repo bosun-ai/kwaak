@@ -32,7 +32,7 @@ impl EvalOutput {
         let eval_dir = output_dir.join(eval_type);
         let iteration_dir = eval_dir.join(format!("iteration_{iteration}"));
 
-        fs::remove_dir_all(&iteration_dir)?;
+        let _ = fs::remove_dir_all(&iteration_dir);
         fs::create_dir_all(&iteration_dir)?;
 
         Ok(Self {
