@@ -184,6 +184,7 @@ pub enum AgentEditMode {
     #[default]
     Whole,
     Line,
+    Patch,
     // i.e. udiff, llm reviewed, etc
 }
 

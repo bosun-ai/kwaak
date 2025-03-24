@@ -14,14 +14,48 @@ You MUST read the file with line numbers first BEFORE EVERY EDIT.
 
 After editing, you MUST read the file again to get the new line numbers.
 
-Line numbers are 1-indexed, you can ONLY use the line numbers retrieved when reading the file.
+Line numbers are 1-indexed, you do not need to subtract 1 for start_line and end_line.
 
 Do not include the line numbers in the content.
 
-You MUST include TWO existing lines BEFORE and AFTER the lines you want to replace in the content.
-You MUST make sure that the start_line  and end_line number are equal to the line numbers BEFORE replacing content.
+You MUST include a couple of lines BEFORE and AFTER the lines you want to replace.
 
-It is VITAL you follow these instructions correctly, as otherwise the code will break and your manager will be very upset.
+The first and last lines of the content MUST NOT be blank (expand accordingly).
+
+For example when making a modification to the following file:
+
+2|def a:
+3|  pass
+4|
+5|def b:
+6|  pass
+
+And you want to change line 3 to return True.
+
+Valid values:
+
+start_line: 2
+end_line: 5
+content:
+```
+def a:
+  return True
+
+def b:
+```
+
+Valid because the region is expanded to include lines 2 and 5. Expanding to just 4 would not be enough as it is blank.
+
+Example of invalid values:
+
+start_line: 3
+end_line: 3
+content:
+```
+  return True
+```
+
+Invalid because the region is not expanded to include lines 2 and 5.
 ";
 
 // Another invalid pair of values would be old_content:
@@ -49,15 +83,15 @@ It is VITAL you follow these instructions correctly, as otherwise the code will 
     param(name = "file_name", description = "Full path of the file"),
     param(
         name = "start_line",
-        description = "First line number of the content you want to replace. This MUST align with the first line in content original content before replacement."
+        description = "First line of the region that surrounds the modifications"
     ),
     param(
         name = "end_line",
-        description = "Last line number of the content you want to replace. This MUST align with the last line in content before replacement."
+        description = "Last line of the region that surrounds the modifications"
     ),
     param(
         name = "content",
-        description = "Content to replace the region with. Include TWO lines before and TWO lines after the replaced content. Do not include line numbers."
+        description = "Code to replace the region with, containing both the modifications and some lines before and after"
     )
 )]
 pub async fn replace_lines(
@@ -124,13 +158,8 @@ fn replace_content(
     let content_first_line = content_lines[0];
 
     if start_line > 1 && !first_line.contains(content_first_line) {
-        if first_line.trim().is_empty() {
-            anyhow::bail!(
-                "Failed to replace content. The line on line number {start_line} is empty, which does not match the first line of the content: `{content_first_line}`."
-            );
-        }
         anyhow::bail!(
-            "Failed to replace content. The line on line number {start_line} reads: `{first_line}`, which does not match the first line of the content: `{content_first_line}`."
+            "The line on line number {start_line} reads: `{first_line}`, which does not match the first line of the content: `{content_first_line}`."
         );
     }
 
@@ -138,13 +167,8 @@ fn replace_content(
     let content_last_line = content_lines[content_lines.len() - 1];
 
     if end_line < lines.len() && !last_line.contains(content_last_line) {
-        if last_line.trim().is_empty() {
-            anyhow::bail!(
-                "Failed to replace content. The line on line number {end_line} is empty, which does not match the last line of the content: `{content_last_line}`."
-            );
-        }
         anyhow::bail!(
-            "Failed to replace content. The line on line number {end_line} reads: `{last_line}`, which does not match the last line of the content: `{content_last_line}`."
+            "The line on line number {end_line} reads: `{last_line}`, which does not match the last line of the content: `{content_last_line}`."
         );
     }
 

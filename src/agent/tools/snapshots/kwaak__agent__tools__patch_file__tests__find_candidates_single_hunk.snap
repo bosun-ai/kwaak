@@ -1,0 +1,14 @@
+---
+source: src/agent/tools/patch_file.rs
+expression: hunk.render_updated().unwrap()
+---
+@@ -642,7 +642,9 @@ def iter_content(self, chunk_size=1, decode_unicode=False):
+                 except IncompleteRead as e:
+                     raise ChunkedEncodingError(e)
+                 except DecodeError as e:
+                     raise ContentDecodingError(e)
++                except socket.error as e:
++                    raise ConnectionError(e)
+             except AttributeError:
+                 # Standard file-like object.
+                 while True:

@@ -402,6 +402,10 @@ pub fn available_tools(
             tools.push(tools::replace_lines());
             tools.push(tools::add_lines());
         }
+        AgentEditMode::Patch => {
+            tools.push(tools::read_file_with_line_numbers());
+            tools.push(tools::patch_file());
+        }
     }
 
     // gitHub-related tools
