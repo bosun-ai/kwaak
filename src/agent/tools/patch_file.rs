@@ -48,20 +48,23 @@ async fn patch_file(
     let cmd = Command::ReadFile(file_name.into());
     let old_content = accept_non_zero_exit(context.exec_cmd(&cmd).await)?.output;
 
-    // let patch = fix_hunk_headers(&content, &patch);
+    let hunks = parse_hunks(&patch).context("Failed to parse patch")?;
+    let candidates = find_candidates(&old_content, &hunks);
+    let hunks = rebuild_hunks(&candidates);
+    let updated_patch = rebuild_patch(&patch, &hunks).context("Failed to render fixed patch")?;
 
-    // let patch = match Patch::from_single(patch) {
-    //     Ok(patch) => patch,
-    //     Err(err) => {
-    //         return Ok(ToolOutput::Fail(format!("Failed to parse patch: {err}")));
-    //     }
-    // };
-    // let patched = diffy::apply(&old_content, &patch).context("Failed to apply patch")?;
+    tracing::debug!(patch, "Applying patch");
 
-    // let cmd = Command::WriteFile(file_name.into(), patched);
+    // Write a temporary patch
+    // TODO: Would be nicer to pipe it
+    let cmd = Command::WriteFile("/tmp/patch".into(), updated_patch);
     context.exec_cmd(&cmd).await?;
 
-    Ok(ToolOutput::Text("Patch applied successfully".into()))
+    // Apply the patch
+    let cmd = Command::shell("git apply /tmp/patch");
+    accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
+
+    Ok("Patch applied successfully".into())
 }
 
 // llms are dumb and cannot count
