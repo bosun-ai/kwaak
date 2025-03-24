@@ -1,6 +1,7 @@
 use std::{borrow::Cow, str::FromStr};
 
 use anyhow::{Context as _, Result};
+use patch::Patch;
 use swiftide::{
     chat_completion::{errors::ToolError, ToolOutput},
     traits::{AgentContext, Command},
@@ -49,15 +50,15 @@ async fn patch_file(
 
     // let patch = fix_hunk_headers(&content, &patch);
 
-    let patch = match diffy::Patch::from_str(patch) {
-        Ok(patch) => patch,
-        Err(err) => {
-            return Ok(ToolOutput::Fail(format!("Failed to parse patch: {err}")));
-        }
-    };
-    let patched = diffy::apply(&old_content, &patch).context("Failed to apply patch")?;
+    // let patch = match Patch::from_single(patch) {
+    //     Ok(patch) => patch,
+    //     Err(err) => {
+    //         return Ok(ToolOutput::Fail(format!("Failed to parse patch: {err}")));
+    //     }
+    // };
+    // let patched = diffy::apply(&old_content, &patch).context("Failed to apply patch")?;
 
-    let cmd = Command::WriteFile(file_name.into(), patched);
+    // let cmd = Command::WriteFile(file_name.into(), patched);
     context.exec_cmd(&cmd).await?;
 
     Ok(ToolOutput::Text("Patch applied successfully".into()))
@@ -120,6 +121,23 @@ fn rebuild_hunks(candidates: &[Candidate<'_>]) -> Vec<Hunk> {
     }
 
     hunks
+}
+
+/// Takes the file lines from the original patch if possible, then rebuilds the patch
+fn rebuild_patch<'a>(original: &str, hunks: &[Hunk]) -> Result<String> {
+    let mut new_patch = original.lines().take(2).collect::<Vec<_>>().join("\n");
+    new_patch.push('\n');
+
+    debug_assert!(
+        !new_patch.is_empty(),
+        "Original file lines in patch tools are empty"
+    );
+
+    for hunk in hunks {
+        new_patch.push_str(&hunk.render_updated()?);
+    }
+
+    Ok(new_patch)
 }
 
 /// Splits the patch into a tuple of the hunk header with the full hunk (including the header)
@@ -506,12 +524,9 @@ mod tests {
         let content = std::fs::read_to_string("src/evaluations/fixtures/swebench_2148/models.py")
             .expect("Failed to read file");
         let candidates = find_candidates(&content, &hunks);
-        dbg!(&candidates);
         assert_eq!(candidates.len(), 1);
 
         let hunk = rebuild_hunks(&candidates).first().unwrap().clone();
-
-        dbg!(&hunk);
 
         assert_eq!(hunk.header.fixed_source_range.as_ref().unwrap().start, 641); // One less than
                                                                                  // in the source file
@@ -521,6 +536,9 @@ mod tests {
         assert_eq!(candidates.first().unwrap().offset(), 2);
 
         insta::assert_snapshot!(hunk.render_updated().unwrap());
+
+        let patch_str = rebuild_patch(&BAD_SINGLE_HUNK, &[hunk]).unwrap();
+        Patch::from_single(&patch_str).expect("Failed to parse patch");
     }
 
     #[test_log::test]
@@ -559,6 +577,10 @@ mod tests {
             .collect::<Result<Vec<_>>>()
             .unwrap()
             .join("\n"));
+
+        let patch_str = rebuild_patch(&BAD_SINGLE_HUNK, &hunks).unwrap();
+        println!("{patch_str}");
+        Patch::from_single(&patch_str).expect("Failed to parse patch");
     }
 
     // #[test]

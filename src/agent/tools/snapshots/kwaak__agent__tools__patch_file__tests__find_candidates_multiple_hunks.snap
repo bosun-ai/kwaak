@@ -1,6 +1,5 @@
 ---
 source: src/agent/tools/patch_file.rs
-assertion_line: 556
 expression: "hunks.iter().map(Hunk::render_updated).collect::<Result<Vec<_>>>().unwrap().join(\"\\n\")"
 ---
 @@ -642,7 +642,9 @@ def iter_content(self, chunk_size=1, decode_unicode=False):

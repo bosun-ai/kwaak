@@ -96,7 +96,7 @@ update-informer = { version = "1.2.0", features = [
   "ureq",
   "rustls-tls",
 ], default-features = false }
-diffy = "0.4.2"
+patch = "0.7"
 
 # Something is still pulling in libssl, this is a quickfix and should be investigated
 [target.'cfg(linux)'.dependencies]
