@@ -53,7 +53,7 @@ async fn patch_file(
     let hunks = rebuild_hunks(&candidates);
     let updated_patch = rebuild_patch(&patch, &hunks).context("Failed to render fixed patch")?;
 
-    tracing::debug!(patch, "Applying patch");
+    tracing::debug!(updated_patch, "Applying patch");
 
     // Write a temporary patch
     // TODO: Would be nicer to pipe it
@@ -61,8 +61,12 @@ async fn patch_file(
     context.exec_cmd(&cmd).await?;
 
     // Apply the patch
-    let cmd = Command::shell("git apply /tmp/patch");
-    accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
+    let cmd = Command::shell("patch --no-backup-if-mismatch -f </tmp/patch");
+    let output = context.exec_cmd(&cmd).await?;
+
+    // TODO: Reset file on failure!
+
+    tracing::debug!(output = ?output, "Patch applied");
 
     Ok("Patch applied successfully".into())
 }

@@ -4,7 +4,7 @@ use kwaak::agent::tools;
 use serde_json::json;
 use swiftide::agents::{tools::local_executor::LocalExecutor, DefaultContext};
 use swiftide_core::{AgentContext, ToolExecutor};
-use tempfile::tempdir;
+use tempfile::{tempdir, tempfile};
 
 macro_rules! invoke {
     ($tool:expr, $context:expr, $json:expr) => {{
@@ -322,30 +322,30 @@ async fn test_patch_file() {
     let tool = tools::patch_file();
     let context = setup_context();
 
-    let tempdir = tempdir().unwrap();
-    std::fs::write(tempdir.path().join("test.txt"), "abc").unwrap();
+    let tmpfile = tempfile::NamedTempFile::new_in("./").unwrap();
+    std::fs::write(tmpfile.path(), "abc").unwrap();
 
     // simple patch to replace abc with abd                            l
-    let patch = indoc::indoc! {"
-        --- a/test.txt
-        +++ b/test.txt
+    let patch = indoc::formatdoc! {"
+        --- a/{path}
+        +++ b/{path}
         @@ -3,1 +1,1 @@
         -abc
         +abd
-        "};
+        ", path = tmpfile.path().file_name().unwrap().to_string_lossy()};
 
     let tool_response = invoke!(
         &tool,
         &context,
         json!({
-            "file_name": tempdir.path().join("test.txt").to_str().unwrap(),
+            "file_name": tmpfile.path().display().to_string(),
             "patch": patch
         })
     );
 
     assert!(tool_response.contains("Patch applied successfully"));
 
-    let new_file_content = std::fs::read_to_string(tempdir.path().join("test.txt")).unwrap();
+    let new_file_content = std::fs::read_to_string(tmpfile.path()).unwrap();
 
     assert_eq!(new_file_content, "abd");
 }
