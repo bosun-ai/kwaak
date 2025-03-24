@@ -529,8 +529,36 @@ mod tests {
         let content = std::fs::read_to_string("src/evaluations/fixtures/swebench_2148/models.py")
             .expect("Failed to read file");
 
-        let adjusted_hunks = find_candidates(&content, &hunks);
-        assert_eq!(adjusted_hunks.len(), hunks.len());
+        let candidates = find_candidates(&content, &hunks);
+        assert_eq!(candidates.len(), hunks.len());
+
+        let expected_ranges = [
+            ((641, 7), (641, 9)),
+            ((651, 7), (653, 9)),
+            ((661, 6), (665, 9)),
+        ];
+
+        let hunks = rebuild_hunks(&candidates);
+
+        for (hunk, (source, dest)) in hunks.iter().zip(expected_ranges.iter()) {
+            assert_eq!(
+                hunk.header.fixed_source_range.as_ref().unwrap().start,
+                source.0
+            );
+            assert_eq!(
+                hunk.header.fixed_source_range.as_ref().unwrap().range,
+                source.1
+            );
+            assert_eq!(hunk.header.fixed_dest_range.as_ref().unwrap().start, dest.0);
+            assert_eq!(hunk.header.fixed_dest_range.as_ref().unwrap().range, dest.1);
+        }
+
+        insta::assert_snapshot!(hunks
+            .iter()
+            .map(Hunk::render_updated)
+            .collect::<Result<Vec<_>>>()
+            .unwrap()
+            .join("\n"));
     }
 
     // #[test]
