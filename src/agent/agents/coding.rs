@@ -213,6 +213,13 @@ pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
         ].into_iter().map(Into::into));
     }
 
+    if repository.config().agent_edit_mode.is_patch() {
+        constraints.extend([
+            "Prefer editing files with `patch_file` over `write_file`".into(),
+            "If `patch_file` continues to be troublesome, defer to `write_file` instead".into(),
+        ]);
+    }
+
     if repository.config().endless_mode {
         constraints
             .push("You cannot ask for feedback and have to try to complete the given task".into());
