@@ -224,7 +224,6 @@ async fn run_single_evaluation(iteration: u32) -> Result<(bool, EvalMetrics)> {
         start_tool_evaluation_agent(&repository, responder.clone(), tools, &prompt()).await?;
 
     agent.query(&prompt()).await?;
-    agent.run().await?;
 
     eval_output.write_agent_log(&responder.get_log())?;
 
