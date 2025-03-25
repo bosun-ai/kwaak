@@ -155,7 +155,6 @@ fn find_candidates<'a>(content: &str, hunks: &'a [Hunk]) -> Vec<Candidate<'a>> {
                 new_candidates.push(new_candidate);
                 false
             } else {
-                dbg!(&c);
                 tracing::trace!(line, "Removing candidate");
                 false
             }

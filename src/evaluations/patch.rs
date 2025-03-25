@@ -29,7 +29,7 @@ fn prompt() -> String {
     indoc::formatdoc! {"
         There is a bug in the `src/evaluations/fixtures/swebench_2148/models.py` file in the `iter_content` method.
 
-        To fix it add an additional exception handler, below the handling of `DecodeError`, to the nested try block that looks like this (but adjusted for indentation; additional lines for context):
+        To fix it add an additional exception handler, below the handling of `DecodeError`, to the nested try block that looks like this ( additional lines for context):
 
         ```
                  except DecodeError as e:
@@ -39,7 +39,7 @@ fn prompt() -> String {
              except AttributeError:
         ```
 
-        And also move the `self._content_consumed` setter into a finally clause on the try block that `self._content_consumed` currently is in. The result should look like this (but adjusted for indentation; additional lines for context):
+        And also move the `self._content_consumed` setter into a finally clause on the try block that `self._content_consumed` currently is in. The result should look like this (additional lines for context):
 
         ```
                      if not chunk:
