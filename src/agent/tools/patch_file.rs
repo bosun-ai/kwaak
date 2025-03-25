@@ -1,7 +1,7 @@
 use std::{borrow::Cow, str::FromStr};
 
 use anyhow::{Context as _, Result};
-use patch::Patch;
+use diffy::Patch;
 use swiftide::{
     chat_completion::{errors::ToolError, ToolOutput},
     traits::{AgentContext, Command},
@@ -11,9 +11,7 @@ use swiftide_macros::tool;
 use crate::util::accept_non_zero_exit;
 
 // TODO:
-// - Fix hunk header parsing
-// - Check if line numbers match?
-// - Handle ambigious
+// - Handle ambigious candidates
 
 const REPLACE_PATCH_DESCRIPTION: &str = "Replace content with a Unified format git patch
 
@@ -22,16 +20,14 @@ Here is an example of a Unified format git patch:
 ```patch
 --- a/src/evaluations/patch.rs
 +++ b/src/evaluations/patch.rs
-@@ -43,7 +43,7 @@ fn prompt() -> String {
+@@ -43,6 +43,6 @@ fn prompt() -> String {
              self._content_consumed = True
-         ```
  
 -        Apply only these fixes, do not make any other changes to the code. The file is long and the modifications are small.
 +        Apply only these fixes, do not make any other changes to the code. The file is long and the modifications are small. Start by reading the file.
      \"}.to_string()
  }
  
--- 
 ```
 ";
 
@@ -46,25 +42,40 @@ async fn patch_file(
     patch: &str,
 ) -> Result<ToolOutput, ToolError> {
     let cmd = Command::ReadFile(file_name.into());
-    let old_content = accept_non_zero_exit(context.exec_cmd(&cmd).await)?.output;
+    let mut old_content = context
+        .exec_cmd(&cmd)
+        .await
+        .with_context(|| format!("Failed to read file {file_name}"))?
+        .output;
+
+    // Patches are very strict on the last line being a newline
+    if !old_content.ends_with('\n') {
+        old_content.push('\n');
+    }
 
     let hunks = parse_hunks(&patch).context("Failed to parse patch")?;
     let candidates = find_candidates(&old_content, &hunks);
     let hunks = rebuild_hunks(&candidates);
     let updated_patch = rebuild_patch(&patch, &hunks).context("Failed to render fixed patch")?;
+    let diffy_patch = Patch::from_str(&updated_patch).context("Failed to parse patch")?;
 
-    tracing::debug!(updated_patch, "Applying patch");
+    tracing::debug!(source = %old_content, input_patch = %patch, %updated_patch, "Applying patch");
 
-    // Write a temporary patch
-    // TODO: Would be nicer to pipe it
-    let cmd = Command::WriteFile("/tmp/patch".into(), updated_patch);
-    context.exec_cmd(&cmd).await?;
-
-    // Apply the patch
-    let cmd = Command::shell("patch --no-backup-if-mismatch -f </tmp/patch");
+    let patched = match diffy::apply(&old_content, &diffy_patch) {
+        Ok(patched) => patched,
+        Err(e) => {
+            tracing::error!(
+                %updated_patch,
+                old_content,
+                file_name,
+                "Failed to apply patch {e:#}"
+            );
+            // Should this be write full instead?
+            return Err(anyhow::anyhow!("Failed to apply patch: {e:#}").into());
+        }
+    };
+    let cmd = Command::WriteFile(file_name.into(), patched);
     let output = context.exec_cmd(&cmd).await?;
-
-    // TODO: Reset file on failure!
 
     tracing::debug!(output = ?output, "Patch applied");
 
@@ -545,7 +556,7 @@ mod tests {
         insta::assert_snapshot!(hunk.render_updated().unwrap());
 
         let patch_str = rebuild_patch(&BAD_SINGLE_HUNK, &[hunk]).unwrap();
-        Patch::from_single(&patch_str).expect("Failed to parse patch");
+        Patch::from_str(&patch_str).expect("Failed to parse patch");
     }
 
     #[test_log::test]
@@ -587,11 +598,33 @@ mod tests {
 
         let patch_str = rebuild_patch(&BAD_SINGLE_HUNK, &hunks).unwrap();
         println!("{patch_str}");
-        Patch::from_single(&patch_str).expect("Failed to parse patch");
+        Patch::from_str(&patch_str).expect("Failed to parse patch");
     }
 
-    // #[test]
-    // fn test_fix_hunk_header() {
-    //     diffy::Patch::from_str(BAD_PATCH).unwrap();
-    // }
+    #[test_log::test]
+    fn test_applying_patch() {
+        let content = "abc\n";
+        let patch = indoc::indoc! {"
+            --- a/test.txt
+            +++ b/test.txt
+            @@ -3,1 +1,1 @@
+            -abc
+            +abd
+            "};
+
+        let hunks = parse_hunks(patch).unwrap();
+        let candidates = find_candidates(content, &hunks);
+        let hunks = rebuild_hunks(&candidates);
+        let updated_patch = rebuild_patch(patch, &hunks).unwrap();
+
+        let patch = Patch::from_str(&updated_patch).unwrap();
+        let updated = match diffy::apply(content, &patch) {
+            Ok(updated) => updated,
+            Err(e) => {
+                tracing::error!(%e, "Failed to apply patch");
+                panic!("Failed to apply patch");
+            }
+        };
+        assert_eq!(updated, "abd\n");
+    }
 }

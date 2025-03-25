@@ -322,8 +322,14 @@ async fn test_patch_file() {
     let tool = tools::patch_file();
     let context = setup_context();
 
-    let tmpfile = tempfile::NamedTempFile::new_in("./").unwrap();
+    let tmpfile = tempfile::Builder::new()
+        .prefix("test")
+        .suffix(".txt")
+        .tempfile()
+        .unwrap();
     std::fs::write(tmpfile.path(), "abc").unwrap();
+    let old_file_content = std::fs::read_to_string(tmpfile.path()).unwrap();
+    assert_eq!(old_file_content, "abc");
 
     // simple patch to replace abc with abd                            l
     let patch = indoc::formatdoc! {"
@@ -338,7 +344,7 @@ async fn test_patch_file() {
         &tool,
         &context,
         json!({
-            "file_name": tmpfile.path().display().to_string(),
+            "file_name": tmpfile.path().to_string_lossy(),
             "patch": patch
         })
     );
@@ -347,5 +353,5 @@ async fn test_patch_file() {
 
     let new_file_content = std::fs::read_to_string(tmpfile.path()).unwrap();
 
-    assert_eq!(new_file_content, "abd");
+    assert_eq!(new_file_content, "abd\n");
 }
