@@ -23,7 +23,7 @@ expression: "hunks.iter().map(Hunk::render_updated).collect::<Result<Vec<_>>>().
 +        
          # simulate reading small chunks of the content
          reused_chunks = iter_slices(self._content, chunk_size)
-         
+ 
 
 @@ -662,6 +666,9 @@ def iter_content(self, chunk_size=1, decode_unicode=False):
  

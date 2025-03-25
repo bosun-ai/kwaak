@@ -123,25 +123,39 @@ fn find_candidates<'a>(content: &str, hunks: &'a [Hunk]) -> Vec<Candidate<'a>> {
             } else if line.trim().is_empty() {
                 tracing::trace!(line, "Current line is empty; keeping candidate around");
                 // We create a new candidate with a whitespace line added at the index of this
-                // candidate plus one. This helps with LLMs misjudging whitespace in the context
+                // candidate. This helps with LLMs misjudging whitespace in the context
                 let mut new_hunk: Hunk = c.hunk.clone().into_owned();
                 new_hunk.insert_line_at(HunkLine::Context(line.into()), c.current_line);
                 let mut new_candidate = Candidate::new(c.start, new_hunk);
                 new_candidate.current_line = c.current_line + 1;
 
                 new_candidates.push(new_candidate);
+                false
+            } else if c
+                .hunk
+                .lines.iter()
+                .skip(c.hunk.real_index(c.current_line + 1))
+                .all(HunkLine::is_context)
+            {
+                // If the following remaining lines, including this one, are context only, accept
+                // the current AI overlords incompetence and add a finished candidate without the
+                // remaining lines.
+                tracing::trace!(line, "Mismatch; remaining is context only, adding finished candidate without the remaining lines");
+                let real_index = c.hunk.real_index(c.current_line);
+                let mut new_hunk = c.hunk.clone().into_owned();
+                new_hunk.lines = new_hunk
+                    .lines
+                    .iter()
+                    .take(real_index)
+                    .cloned()
+                    .collect();
 
-                // let mut new_hunk: Hunk = c.hunk.clone().into_owned();
-                // new_hunk.lines.insert(
-                //     c.current_line.saturating_add(1),
-                //     HunkLine::Context(line.into()),
-                // );
-                // let mut new_candidate = Candidate::new(c.start, new_hunk);
-                // new_candidate.current_line = c.current_line + 1;
-                //
-                // new_candidates.push(new_candidate);
+                let mut new_candidate = Candidate::new(c.start, new_hunk);
+                new_candidate.current_line = c.current_line;
+                new_candidates.push(new_candidate);
                 false
             } else {
+                dbg!(&c);
                 tracing::trace!(line, "Removing candidate");
                 false
             }
@@ -281,13 +295,7 @@ impl HunkLine {
 
     pub fn as_patch_line(&self) -> Cow<str> {
         match self {
-            HunkLine::Context(s) => {
-                if s.starts_with(' ') {
-                    Cow::Borrowed(s)
-                } else {
-                    Cow::Owned(format!(" {s}"))
-                }
-            }
+            HunkLine::Context(s) => Cow::Owned(format!(" {s}")),
             HunkLine::Added(s) => Cow::Owned(format!("+{s}")),
             HunkLine::Removed(s) => Cow::Owned(format!("-{s}")),
         }
@@ -328,15 +336,16 @@ impl Hunk {
     /// Inserts a line at the given index on matcheable lines. Converts the index to the actual
     /// underlying index
     pub fn insert_line_at(&mut self, line: HunkLine, index: usize) {
-        let actual_index = self
-            .lines
+        self.lines.insert(self.real_index(index), line);
+    }
+
+    pub fn real_index(&self, index: usize) -> usize {
+        self.lines
             .iter()
             .enumerate()
             .filter(|(_, l)| l.is_removed() || l.is_context())
             .nth(index)
-            .map_or_else(|| self.lines.len(), |(i, _)| i);
-
-        self.lines.insert(actual_index, line);
+            .map_or_else(|| self.lines.len(), |(i, _)| i)
     }
 
     pub fn matches(&self, line: &str, index: usize, log: bool) -> bool {
@@ -346,10 +355,12 @@ impl Hunk {
             .map(HunkLine::content)
             .next();
 
-        let outcome = expected.map(str::trim) == Some(line.trim());
+        // let outcome = expected.map(str::trim) == Some(line.trim());
+        let outcome = expected == Some(line);
 
         if log {
             if outcome {
+                // Calculate mismatching leading whitespace
                 tracing::trace!(line, expected, "Matched line");
             } else {
                 tracing::trace!(line, expected, "Did not match line");
@@ -500,6 +511,7 @@ impl FromStr for HunkLine {
         } else if let Some(line) = s.strip_prefix('-') {
             Ok(HunkLine::Removed(line.into()))
         } else {
+            let s = s.strip_prefix(' ').unwrap_or(s);
             Ok(HunkLine::Context(s.into()))
         }
     }
@@ -630,6 +642,33 @@ mod tests {
          reused_chunks = iter_slices(self._content, chunk_size)
 "};
 
+    const BAD_PATCH3: &str = indoc::indoc! {"--- a/src/evaluations/fixtures/swebench_2148/models.py
++++ b/src/evaluations/fixtures/swebench_2148/models.py
+@@ -642,15 +642,18 @@
+                     for chunk in self.raw.stream(chunk_size, decode_content=True):
+                         yield chunk
+                 except IncompleteRead as e:
+                     raise ChunkedEncodingError(e)
+                 except DecodeError as e:
+                     raise ContentDecodingError(e)
++                except socket.error as e:
++                    raise ConnectionError(e)
+             except AttributeError:
+                 # Standard file-like object.
+                 while True:
+                     chunk = self.raw.read(chunk_size)
+                     if not chunk:
+                         break
+                     yield chunk
+-
+-            self._content_consumed = True
++
++            finally:
++                self._content_consumed = True
+
+     # simulate reading small chunks of the content
+     reused_chunks = iter_slices(self._content, chunk_size)"};
+
     #[test]
     fn test_split_patch_into_hunks() {
         let hunks = parse_hunks(BAD_PATCH).unwrap();
@@ -753,13 +792,13 @@ mod tests {
 
     #[test_log::test]
     fn test_ambiguity() {
-        let content = "\
+        let content = indoc::indoc! {"\
             a
             b
             c
             b
             d
-            ";
+            "};
 
         // If there are multiple candidates, when rebuilding the patch it should take the one
         // closest to the original number (perhaps also consider only if multiple hunks )
@@ -835,6 +874,27 @@ mod tests {
             .expect("Failed to read file");
 
         let hunks = parse_hunks(BAD_PATCH2).unwrap();
+        let candidates = find_candidates(&content, &hunks);
+
+        dbg!(&candidates);
+
+        let new_hunks = rebuild_hunks(&candidates);
+        dbg!(&new_hunks);
+
+        let updated_patch = rebuild_patch(BAD_PATCH2, &new_hunks).unwrap();
+        println!("---\n{updated_patch}\n---");
+        let patch = Patch::from_str(&updated_patch).unwrap();
+
+        let updated_content = diffy::apply(&content, &patch).unwrap();
+        assert!(updated_content.contains("raise ConnectionError(e)"));
+    }
+
+    #[test_log::test]
+    fn test_applying_bad_patch3() {
+        let content = std::fs::read_to_string("src/evaluations/fixtures/swebench_2148/models.py")
+            .expect("Failed to read file");
+
+        let hunks = parse_hunks(BAD_PATCH3).unwrap();
         let candidates = find_candidates(&content, &hunks);
 
         dbg!(&candidates);
