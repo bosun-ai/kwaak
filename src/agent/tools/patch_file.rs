@@ -11,7 +11,7 @@ use swiftide_macros::tool;
 use crate::util::accept_non_zero_exit;
 
 // TODO:
-// - Handle ambigious candidates
+// - Handle ambiguous candidates
 
 const REPLACE_PATCH_DESCRIPTION: &str = "Replace content with a Unified format git patch
 
@@ -307,7 +307,7 @@ struct Candidate<'a> {
     /// The line number in the file we started at
     start: usize,
 
-    /// The current line we are matchin against
+    /// The current line we are matching against
     current_line: usize,
 
     hunk: &'a Hunk,
@@ -604,6 +604,7 @@ mod tests {
     #[test_log::test]
     fn test_applying_patch() {
         let content = "abc\n";
+        //spellchecker:off
         let patch = indoc::indoc! {"
             --- a/test.txt
             +++ b/test.txt
@@ -611,6 +612,7 @@ mod tests {
             -abc
             +abd
             "};
+        //spellchecker:on
 
         let hunks = parse_hunks(patch).unwrap();
         let candidates = find_candidates(content, &hunks);
@@ -625,6 +627,6 @@ mod tests {
                 panic!("Failed to apply patch");
             }
         };
-        assert_eq!(updated, "abd\n");
+        assert_eq!(updated, "abd\n"); // spellchecker:disable-line
     }
 }

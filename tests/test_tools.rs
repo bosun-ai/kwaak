@@ -332,6 +332,7 @@ async fn test_patch_file() {
     assert_eq!(old_file_content, "abc");
 
     // simple patch to replace abc with abd                            l
+    // spellchecker:off
     let patch = indoc::formatdoc! {"
         --- a/{path}
         +++ b/{path}
@@ -339,6 +340,7 @@ async fn test_patch_file() {
         -abc
         +abd
         ", path = tmpfile.path().file_name().unwrap().to_string_lossy()};
+    // spellchecker:on
 
     let tool_response = invoke!(
         &tool,
