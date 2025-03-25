@@ -8,12 +8,9 @@ use swiftide::{
 };
 use swiftide_macros::tool;
 
-use crate::util::accept_non_zero_exit;
+const REPLACE_PATCH_DESCRIPTION: &str = "Replace content with a Unified format git patch.
 
-// TODO:
-// - Handle ambiguous candidates
-
-const REPLACE_PATCH_DESCRIPTION: &str = "Replace content with a Unified format git patch
+Use this tool to make multiple edits in a file.
 
 Here is an example of a Unified format git patch:
 
@@ -59,7 +56,7 @@ async fn patch_file(
     let updated_patch = rebuild_patch(&patch, &hunks).context("Failed to render fixed patch")?;
     let diffy_patch = Patch::from_str(&updated_patch).context("Failed to parse patch")?;
 
-    tracing::debug!(source = %old_content, input_patch = %patch, %updated_patch, "Applying patch");
+    tracing::debug!(file_name, input_patch = %patch, %updated_patch, "Applying patch");
 
     let patched = match diffy::apply(&old_content, &diffy_patch) {
         Ok(patched) => patched,
@@ -117,14 +114,15 @@ fn find_candidates<'a>(content: &str, hunks: &'a [Hunk]) -> Vec<Candidate<'a>> {
 }
 
 /// Takes a list of candidates and rebuits the hunk headers
+///
+/// Filters out duplicates. The resulting hunks should result in a valid patch.
 fn rebuild_hunks(candidates: &[Candidate<'_>]) -> Vec<Hunk> {
     // Assume that the candidates are sorted by the start line
     // Then we can just iterate over the candidates and update the ranges
-    //
-    // TODO: Deal with duplicated candidates
 
     let mut current_offset: isize = 0;
-    let mut hunks = Vec::new();
+    // TODO: Should be a hashset on the body
+    let mut hunks: Vec<Hunk> = Vec::new();
 
     for candidate in candidates {
         let source_header = candidate.updated_source_header();
@@ -133,16 +131,41 @@ fn rebuild_hunks(candidates: &[Candidate<'_>]) -> Vec<Hunk> {
         current_offset += candidate.offset();
 
         let mut hunk = candidate.hunk.clone();
-        hunk.header.fixed_source_range = Some(source_header);
-        hunk.header.fixed_dest_range = Some(dest_header);
-        hunks.push(hunk);
+        hunk.header.fixed_source = Some(source_header);
+        hunk.header.fixed_dest = Some(dest_header);
+
+        // Filter duplicates. A hunk is a duplicate if the hunk body is the same. If a duplicate
+        // is detected, prefer the one with the fixed_source closest to the original source line
+        // If so, we swap it with the existing hunk.
+
+        if let Some(existing) = hunks.iter_mut().find(|h| *h.body == hunk.body) {
+            let (Some(existing_source), Some(new_source)) =
+                (&existing.header.fixed_source, &hunk.header.fixed_source)
+            else {
+                tracing::warn!("Potential bad duplicate when rebuilding patch; could be a bug, please check the edit");
+                continue;
+            };
+
+            #[allow(clippy::cast_possible_wrap)]
+            if ((existing_source.start as isize)
+                .saturating_sub_unsigned(existing.header.source.start))
+            .abs()
+                < ((new_source.start as isize).saturating_sub_unsigned(hunk.header.source.start))
+                    .abs()
+            {
+                continue;
+            }
+            *existing = hunk;
+        } else {
+            hunks.push(hunk);
+        }
     }
 
     hunks
 }
 
 /// Takes the file lines from the original patch if possible, then rebuilds the patch
-fn rebuild_patch<'a>(original: &str, hunks: &[Hunk]) -> Result<String> {
+fn rebuild_patch(original: &str, hunks: &[Hunk]) -> Result<String> {
     let mut new_patch = original.lines().take(2).collect::<Vec<_>>().join("\n");
     new_patch.push('\n');
 
@@ -194,12 +217,13 @@ struct HeaderRange {
 
 #[derive(Clone, Debug)]
 struct HunkHeader {
-    source_range: HeaderRange,
-    dest_range: HeaderRange,
+    source: HeaderRange,
+    #[allow(dead_code)]
+    dest: HeaderRange,
 
     // Optional values after fixing the ranges
-    fixed_source_range: Option<HeaderRange>,
-    fixed_dest_range: Option<HeaderRange>,
+    fixed_source: Option<HeaderRange>,
+    fixed_dest: Option<HeaderRange>,
 }
 
 #[derive(Clone, Debug, strum_macros::EnumIs)]
@@ -212,17 +236,15 @@ enum HunkLine {
 impl HunkLine {
     pub fn content(&self) -> &str {
         match self {
-            HunkLine::Context(s) => s,
-            HunkLine::Added(s) => s,
-            HunkLine::Removed(s) => s,
+            HunkLine::Removed(s) | HunkLine::Context(s) | HunkLine::Added(s) => s,
         }
     }
 
     pub fn as_patch_line(&self) -> Cow<str> {
         match self {
             HunkLine::Context(s) => Cow::Borrowed(s),
-            HunkLine::Added(s) => Cow::Owned(format!("+{}", s)),
-            HunkLine::Removed(s) => Cow::Owned(format!("-{}", s)),
+            HunkLine::Added(s) => Cow::Owned(format!("+{s}")),
+            HunkLine::Removed(s) => Cow::Owned(format!("-{s}")),
         }
     }
 }
@@ -235,7 +257,7 @@ struct Hunk {
     /// Parsed lines of the hunk
     lines: Vec<HunkLine>,
 
-    /// The full hunk body
+    /// The original full hunk body
     body: String,
 }
 
@@ -279,10 +301,14 @@ impl Hunk {
 
         let source = self
             .header
-            .fixed_source_range
+            .fixed_source
             .as_ref()
-            .context("Expected")?;
-        let dest = self.header.fixed_dest_range.as_ref().context("Expected")?;
+            .context("Expected updated source")?;
+        let dest = self
+            .header
+            .fixed_dest
+            .as_ref()
+            .context("Expected updated dest")?;
 
         let mut updated = format!(
             "@@ -{},{} +{},{} @@{header_context}\n",
@@ -326,6 +352,7 @@ impl<'a> Candidate<'a> {
     ///
     /// If lines were added, the following hunk will start at an increased line number, if lines
     /// were removed, the following hunk will start at a decreased line number
+    #[allow(clippy::cast_possible_wrap)]
     pub fn offset(&self) -> isize {
         self.hunk.lines.iter().filter(|l| l.is_added()).count() as isize
             - self.hunk.lines.iter().filter(|l| l.is_removed()).count() as isize
@@ -407,8 +434,7 @@ impl FromStr for HunkLine {
     }
 }
 
-// For the header we just parse, as there is nothing to borrow
-impl std::str::FromStr for HunkHeader {
+impl FromStr for HunkHeader {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -445,10 +471,10 @@ impl std::str::FromStr for HunkHeader {
         };
 
         Ok(HunkHeader {
-            source_range: old_lines,
-            dest_range: new_lines,
-            fixed_source_range: None,
-            fixed_dest_range: None,
+            source: old_lines,
+            dest: new_lines,
+            fixed_source: None,
+            fixed_dest: None,
         })
     }
 }
@@ -507,32 +533,31 @@ mod tests {
 
     #[test]
     fn test_split_patch_into_hunks() {
-        // TODO: Add some more unit tests to check parsing is correct
         let hunks = parse_hunks(BAD_PATCH).unwrap();
         assert_eq!(hunks.len(), 3);
 
         let header = &hunks[0].header;
 
-        assert_eq!(header.source_range.start, 637);
-        assert_eq!(header.source_range.range, 6);
+        assert_eq!(header.source.start, 637);
+        assert_eq!(header.source.range, 6);
 
-        assert_eq!(header.dest_range.start, 637);
-        assert_eq!(header.dest_range.range, 7);
+        assert_eq!(header.dest.start, 637);
+        assert_eq!(header.dest.range, 7);
 
         let header = &hunks[1].header;
-        assert_eq!(header.source_range.start, 652);
-        assert_eq!(header.source_range.range, 8);
+        assert_eq!(header.source.start, 652);
+        assert_eq!(header.source.range, 8);
 
-        assert_eq!(header.dest_range.start, 653);
-        assert_eq!(header.dest_range.range, 9);
+        assert_eq!(header.dest.start, 653);
+        assert_eq!(header.dest.range, 9);
 
         let header = &hunks[2].header;
 
-        assert_eq!(header.source_range.start, 664);
-        assert_eq!(header.source_range.range, 6);
+        assert_eq!(header.source.start, 664);
+        assert_eq!(header.source.range, 6);
 
-        assert_eq!(header.dest_range.start, 666);
-        assert_eq!(header.dest_range.range, 8);
+        assert_eq!(header.dest.start, 666);
+        assert_eq!(header.dest.range, 8);
     }
 
     #[test_log::test]
@@ -546,11 +571,11 @@ mod tests {
 
         let hunk = rebuild_hunks(&candidates).first().unwrap().clone();
 
-        assert_eq!(hunk.header.fixed_source_range.as_ref().unwrap().start, 641); // One less than
-                                                                                 // in the source file
-        assert_eq!(hunk.header.fixed_source_range.as_ref().unwrap().range, 7);
-        assert_eq!(hunk.header.fixed_dest_range.as_ref().unwrap().start, 641);
-        assert_eq!(hunk.header.fixed_dest_range.as_ref().unwrap().range, 9);
+        assert_eq!(hunk.header.fixed_source.as_ref().unwrap().start, 641); // One less than
+                                                                           // in the source file
+        assert_eq!(hunk.header.fixed_source.as_ref().unwrap().range, 7);
+        assert_eq!(hunk.header.fixed_dest.as_ref().unwrap().start, 641);
+        assert_eq!(hunk.header.fixed_dest.as_ref().unwrap().range, 9);
         assert_eq!(candidates.first().unwrap().offset(), 2);
 
         insta::assert_snapshot!(hunk.render_updated().unwrap());
@@ -577,16 +602,10 @@ mod tests {
         let hunks = rebuild_hunks(&candidates);
 
         for (hunk, (source, dest)) in hunks.iter().zip(expected_ranges.iter()) {
-            assert_eq!(
-                hunk.header.fixed_source_range.as_ref().unwrap().start,
-                source.0
-            );
-            assert_eq!(
-                hunk.header.fixed_source_range.as_ref().unwrap().range,
-                source.1
-            );
-            assert_eq!(hunk.header.fixed_dest_range.as_ref().unwrap().start, dest.0);
-            assert_eq!(hunk.header.fixed_dest_range.as_ref().unwrap().range, dest.1);
+            assert_eq!(hunk.header.fixed_source.as_ref().unwrap().start, source.0);
+            assert_eq!(hunk.header.fixed_source.as_ref().unwrap().range, source.1);
+            assert_eq!(hunk.header.fixed_dest.as_ref().unwrap().start, dest.0);
+            assert_eq!(hunk.header.fixed_dest.as_ref().unwrap().range, dest.1);
         }
 
         insta::assert_snapshot!(hunks
@@ -628,5 +647,38 @@ mod tests {
             }
         };
         assert_eq!(updated, "abd\n"); // spellchecker:disable-line
+    }
+
+    #[test_log::test]
+    fn test_ambiguity() {
+        let content = "\
+            a
+            b
+            c
+            b
+            d
+            ";
+
+        // If there are multiple candidates, when rebuilding the patch it should take the one
+        // closest to the original number (perhaps also consider only if multiple hunks )
+        let patch = indoc::indoc! {"
+            --- a/test.txt
+            +++ b/test.txt
+            @@ -4,1 +4,1 @@
+            -b
+            +e
+            "};
+
+        let hunks = parse_hunks(patch).unwrap();
+        let candidates = find_candidates(content, &hunks);
+
+        assert_eq!(candidates.len(), 2);
+        assert_eq!(candidates[0].start, 1);
+        assert_eq!(candidates[1].start, 3);
+
+        let hunks = rebuild_hunks(&candidates);
+        assert_eq!(hunks.len(), 1);
+        let hunk = hunks.first().unwrap();
+        assert_eq!(hunk.header.fixed_source.as_ref().unwrap().start, 3);
     }
 }
