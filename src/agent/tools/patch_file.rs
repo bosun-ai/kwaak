@@ -112,6 +112,7 @@ fn find_candidates<'a>(content: &str, hunks: &'a [Hunk]) -> Vec<Candidate<'a>> {
 
         // 2. For each active candidate, check if the next line matches. If it does, increment the
         // the index of the candidate. Otherwise, remove the candidate
+        let mut new_candidates = Vec::new();
         candidates.retain_mut(|c| {
             if c.is_complete() {
                 tracing::trace!("Candidate already completed");
@@ -120,11 +121,26 @@ fn find_candidates<'a>(content: &str, hunks: &'a [Hunk]) -> Vec<Candidate<'a>> {
                 tracing::trace!(line, "Candidate matched line");
                 c.current_line += 1;
                 true
+            } else if line.trim().is_empty() {
+                tracing::trace!(line, "Current line is empty; keeping candidate around");
+                // We create a new candidate with a whitespace line added at the index of this
+                // candidate plus one. This helps with LLMs misjudging whitespace in the context
+                let mut new_hunk: Hunk = c.hunk.clone().into_owned();
+                new_hunk.lines.insert(
+                    c.current_line.saturating_add(1),
+                    HunkLine::Context(line.into()),
+                );
+                let mut new_candidate = Candidate::new(c.start, new_hunk);
+                new_candidate.current_line = c.current_line + 1;
+
+                new_candidates.push(new_candidate);
+                false
             } else {
                 tracing::trace!(line, "Removing candidate");
                 false
             }
         });
+        candidates.append(&mut new_candidates);
     }
 
     candidates
@@ -147,7 +163,8 @@ fn rebuild_hunks(candidates: &[Candidate<'_>]) -> Vec<Hunk> {
         let dest_header = candidate.updated_dest_header(current_offset);
         current_offset += candidate.offset();
 
-        let mut hunk = candidate.hunk.clone();
+        // Could probably continue the cow, but at this point the number of hunks should be small
+        let mut hunk = candidate.hunk.clone().into_owned();
         hunk.header.fixed_source = Some(source_header);
         hunk.header.fixed_dest = Some(dest_header);
 
@@ -259,7 +276,13 @@ impl HunkLine {
 
     pub fn as_patch_line(&self) -> Cow<str> {
         match self {
-            HunkLine::Context(s) => Cow::Borrowed(s),
+            HunkLine::Context(s) => {
+                if s.starts_with(' ') {
+                    Cow::Borrowed(s)
+                } else {
+                    Cow::Owned(format!(" {s}"))
+                }
+            }
             HunkLine::Added(s) => Cow::Owned(format!("+{s}")),
             HunkLine::Removed(s) => Cow::Owned(format!("-{s}")),
         }
@@ -276,6 +299,18 @@ struct Hunk {
 
     /// The original full hunk body
     body: String,
+}
+
+impl<'a> From<&'a Hunk> for Cow<'a, Hunk> {
+    fn from(val: &'a Hunk) -> Self {
+        Cow::Borrowed(val)
+    }
+}
+
+impl From<Hunk> for Cow<'_, Hunk> {
+    fn from(val: Hunk) -> Self {
+        Cow::Owned(val)
+    }
 }
 
 impl Hunk {
@@ -340,7 +375,7 @@ impl Hunk {
             updated.push('\n');
         }
 
-        Ok(updated)
+        Ok(updated.trim().to_string())
     }
 }
 
@@ -353,15 +388,15 @@ struct Candidate<'a> {
     /// The current line we are matching against
     current_line: usize,
 
-    hunk: &'a Hunk,
+    hunk: Cow<'a, Hunk>,
 }
 
 impl<'a> Candidate<'a> {
-    pub fn new(line: usize, hunk: &'a Hunk) -> Self {
+    pub fn new(line: usize, hunk: impl Into<Cow<'a, Hunk>>) -> Self {
         Self {
             start: line,
             current_line: 0,
-            hunk,
+            hunk: hunk.into(),
         }
     }
 
@@ -697,5 +732,51 @@ mod tests {
         assert_eq!(hunks.len(), 1);
         let hunk = hunks.first().unwrap();
         assert_eq!(hunk.header.fixed_source.as_ref().unwrap().start, 3);
+    }
+
+    #[test_log::test]
+    fn test_flexible_whitespace_in_content() {
+        let mut content = indoc::indoc! {"
+            a
+            b
+
+            c
+            "}
+        .to_string();
+
+        if !content.ends_with('\n') {
+            content.push('\n');
+        }
+        let patch = indoc::indoc! {"
+            --- a/test.txt
+            +++ b/test.txt
+            @@ -4,1 +4,1 @@
+            a
+            -b
+            +e
+            c"};
+
+        let hunks = parse_hunks(patch).unwrap();
+        let candidates = find_candidates(&content, &hunks);
+
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(candidates[0].start, 0);
+
+        let hunks = rebuild_hunks(&candidates);
+        assert_eq!(hunks.len(), 1);
+        let hunk = hunks.first().unwrap();
+        dbg!(&hunk.lines);
+        assert_eq!(hunk.header.fixed_source.as_ref().unwrap().start, 0);
+        // The updated patch will now have the whitespace line added
+        assert_eq!(hunk.header.fixed_source.as_ref().unwrap().range, 4);
+
+        let mut updated_patch = rebuild_patch(patch, &hunks).unwrap();
+        updated_patch.push('\n');
+        println!("---\n{updated_patch}\n---");
+        println!("---\n{content}\n---");
+        let patch = Patch::from_str(&updated_patch).unwrap();
+
+        let updated_content = diffy::apply(&content, &patch).unwrap();
+        assert_eq!(updated_content, "a\ne\n\nc\n");
     }
 }

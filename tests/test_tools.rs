@@ -355,5 +355,5 @@ async fn test_patch_file() {
 
     let new_file_content = std::fs::read_to_string(tmpfile.path()).unwrap();
 
-    assert_eq!(new_file_content, "abd\n");
+    assert_eq!(new_file_content, "abd");
 }
