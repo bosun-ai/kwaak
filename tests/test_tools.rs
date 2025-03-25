@@ -4,7 +4,7 @@ use kwaak::agent::tools;
 use serde_json::json;
 use swiftide::agents::{tools::local_executor::LocalExecutor, DefaultContext};
 use swiftide_core::{AgentContext, ToolExecutor};
-use tempfile::{tempdir, tempfile};
+use tempfile::tempdir;
 
 macro_rules! invoke {
     ($tool:expr, $context:expr, $json:expr) => {{

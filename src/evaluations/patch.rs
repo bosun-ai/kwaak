@@ -56,7 +56,7 @@ fn prompt() -> String {
 
         Apply only these fixes, do not make any other changes to the code. The file is long and the modifications are small. Start by reading the file.
 
-        After the file has been succesfully updated you are done. When you are, call the stop tool.
+        After the file has been successfully updated you are done. When you are, call the stop tool.
     "}.to_string()
 }
 
