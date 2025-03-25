@@ -63,13 +63,6 @@ async fn patch_file(
     let patched = match diffy::apply(&old_content, &diffy_patch) {
         Ok(patched) => patched,
         Err(e) => {
-            tracing::error!(
-                %updated_patch,
-                old_content,
-                file_name,
-                "Failed to apply patch {e:#}"
-            );
-            // Should this be write full instead?
             return Err(anyhow::anyhow!("Failed to apply patch: {e:#}").into());
         }
     };
@@ -113,7 +106,7 @@ fn find_candidates<'a>(content: &str, hunks: &'a [Hunk]) -> Vec<Candidate<'a>> {
     for (line_n, line) in content.lines().enumerate() {
         // 1. Check if a hunk matches the line, then create a candidate if it does
         if let Some(hunk) = hunks.iter().find(|h| h.matches(line, 0, false)) {
-            tracing::warn!(line, "Found hunk match; creating new candidate");
+            tracing::trace!(line, "Found hunk match; creating new candidate");
             candidates.push(Candidate::new(line_n, hunk));
         }
 
@@ -121,14 +114,14 @@ fn find_candidates<'a>(content: &str, hunks: &'a [Hunk]) -> Vec<Candidate<'a>> {
         // the index of the candidate. Otherwise, remove the candidate
         candidates.retain_mut(|c| {
             if c.is_complete() {
-                tracing::warn!("Candidate already completed");
+                tracing::trace!("Candidate already completed");
                 true
             } else if c.next_line_matches(line) {
-                tracing::warn!(line, "Candidate matched line");
+                tracing::trace!(line, "Candidate matched line");
                 c.current_line += 1;
                 true
             } else {
-                tracing::warn!(line, "Removing candidate");
+                tracing::trace!(line, "Removing candidate");
                 false
             }
         });
@@ -303,9 +296,9 @@ impl Hunk {
 
         if log {
             if outcome {
-                tracing::warn!(line, expected, "Matched line");
+                tracing::trace!(line, expected, "Matched line");
             } else {
-                tracing::debug!(line, expected, "Did not match line");
+                tracing::trace!(line, expected, "Did not match line");
             }
         }
         outcome
