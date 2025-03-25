@@ -50,10 +50,12 @@ async fn patch_file(
         old_content.push('\n');
     }
 
-    let hunks = parse_hunks(&patch).context("Failed to parse patch")?;
-    let candidates = find_candidates(&old_content, &hunks);
-    let hunks = rebuild_hunks(&candidates);
-    let updated_patch = rebuild_patch(&patch, &hunks).context("Failed to render fixed patch")?;
+    let old_hunks = parse_hunks(&patch).context("Failed to parse patch")?;
+    let candidates = find_candidates(&old_content, &old_hunks);
+    let new_hunks = rebuild_hunks(&candidates);
+
+    let updated_patch =
+        rebuild_patch(&patch, &new_hunks).context("Failed to render fixed patch")?;
     let diffy_patch = Patch::from_str(&updated_patch).context("Failed to parse patch")?;
 
     tracing::debug!(file_name, input_patch = %patch, %updated_patch, "Applying patch");
@@ -75,6 +77,28 @@ async fn patch_file(
     let output = context.exec_cmd(&cmd).await?;
 
     tracing::debug!(output = ?output, "Patch applied");
+
+    if new_hunks.len() != old_hunks.len() {
+        let failed = old_hunks
+            .iter()
+            .filter(|h| !new_hunks.iter().any(|h2| h2.body == h.body))
+            .collect::<Vec<_>>();
+
+        return Ok(ToolOutput::Fail(indoc::formatdoc! {"
+            Failed to apply all hunks. {failed_len} hunks failed to apply.
+
+            The following hunks failed to apply as their context lines could not be matched to the file, other hunks were applied successfully:
+
+            ---
+            {failed}
+            ---
+
+            Make sure all lines are correct. Are you also sure that the changes have not been applied already?
+            ",
+        failed_len = failed.len(),
+        failed = failed.iter().map(|h| h.body.as_str()).collect::<Vec<_>>().join("\n")
+        }));
+    }
 
     Ok("Patch applied successfully".into())
 }

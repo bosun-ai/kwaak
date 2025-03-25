@@ -19,8 +19,11 @@ pub async fn start_tool_evaluation_agent(
 ) -> Result<RunningAgent> {
     // Create agent with simplified tools
     let system_prompt = agents::coding::build_system_prompt(repository)?;
-    let agent_context: Arc<dyn AgentContext> =
-        Arc::new(DefaultContext::default()) as Arc<dyn AgentContext>;
+    let agent_context: Arc<dyn AgentContext> = Arc::new(
+        DefaultContext::default()
+            .with_stop_on_assistant(false)
+            .to_owned(),
+    ) as Arc<dyn AgentContext>;
 
     let backoff = repository.config().backoff;
 

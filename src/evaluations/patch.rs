@@ -29,21 +29,34 @@ fn prompt() -> String {
     indoc::formatdoc! {"
         There is a bug in the `src/evaluations/fixtures/swebench_2148/models.py` file in the `iter_content` method.
 
-        To fix it add an additional exception handler to the nested try block that looks like this (but adjusted for indentation):
+        To fix it add an additional exception handler, below the handling of `DecodeError`, to the nested try block that looks like this (but adjusted for indentation; additional lines for context):
 
         ```
-        except socket.error as e:
-            raise ConnectionError(e)
+                 except DecodeError as e:
+                     raise ContentDecodingError(e)
+                 except socket.error as e:
+                     raise ConnectionError(e)
+             except AttributeError:
         ```
 
-        And also move the content consumed setter to a new finally clause on the outer try block that looks like this (but adjusted for indentation):
+        And also move the `self._content_consumed` setter into a finally clause on the try block that `self._content_consumed` currently is in. The result should look like this (but adjusted for indentation; additional lines for context):
 
         ```
-        finally:
-            self._content_consumed = True
+                     if not chunk:
+                         break
+                     yield chunk
+             finally:
+                 self._content_consumed = True
+ 
+         # simulate reading small chunks of the content
+         reused_chunks = iter_slices(self._content, chunk_size)
         ```
+
+        Note that the edit should result in valid python code.
 
         Apply only these fixes, do not make any other changes to the code. The file is long and the modifications are small. Start by reading the file.
+
+        After the file has been succesfully updated you are done. When you are, call the stop tool.
     "}.to_string()
 }
 
