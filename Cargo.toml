@@ -141,6 +141,9 @@ default = ["otel"]
   "dep:opentelemetry",
   "dep:opentelemetry-otlp",
 ]
+# Compile kwaak with evaluation capacity
+# See `EVALUATIONS.md` for more information
+evaluations = []
 
 
 [patch.crates-io]

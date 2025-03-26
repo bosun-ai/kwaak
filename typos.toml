@@ -14,4 +14,5 @@ extend-exclude = [
   "cliff.toml",
   "src/resources/*",
   "src/evaluations/fixtures/*",
+  "benchmarks/notebooks",
 ]
