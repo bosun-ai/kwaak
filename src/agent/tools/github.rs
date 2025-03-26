@@ -113,3 +113,44 @@ impl CreateOrUpdatePullRequest {
         Ok(response.into())
     }
 }
+
+// TODO:
+// list issues
+#[tool(
+    description = "list issues from the associated github repository, returns a list of issues with their titles, the issue number. The result is paginated.",
+    param(
+        name = "page",
+        description = "The page number of the issues to fetch. Always start with 0."
+    )
+)]
+#[derive(Tool, Clone, Debug)]
+pub struct ListIssues {
+    github_session: Arc<GithubSession>,
+}
+
+impl ListIssues {
+    pub fn new(github_session: &Arc<GithubSession>) -> Self {
+        Self {
+            github_session: Arc::clone(github_session),
+        }
+    }
+
+    pub async fn list_issues(
+        &self,
+        context: &dyn AgentContext,
+        page: usize,
+    ) -> Result<ToolOutput, ToolError> {
+        let issues = self.github_session.list_issues(page).await?;
+
+        let context =
+            tera::Context::from_serialize(issues).context("Failed to serialize issues")?;
+        let output = Templates::render("github_list_issues.md", &issues)
+            .map(Into::into)
+            .context("Failed to render github list issues")?;
+
+        Ok(output.into())
+    }
+}
+// search issues
+// fetch issue
+// comment issue

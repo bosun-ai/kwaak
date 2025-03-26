@@ -64,15 +64,45 @@ impl GithubSession {
             .context("Failed to list issues")
     }
 
-    /// Get a specific issue by its number
-    pub async fn get_issue(&self, issue_number: u64) -> Result<Issue> {
-        let (owner, repo) = self.get_owner_and_repo()?;
+    /// Fetches a GitHub issue and its comments
+    ///
+    /// # Arguments
+    ///
+    /// * `issue_number` - The number of the issue to fetch
+    ///
+    /// # Returns
+    ///
+    /// The issue and its comments
+    #[tracing::instrument(skip(self), err)]
+    pub async fn fetch_issue(&self, issue_number: u64) -> Result<GithubIssueWithComments> {
+        if !self.repository.config().is_github_enabled() {
+            return Err(anyhow::anyhow!("Github is not enabled"));
+        }
 
-        self.octocrab
+        // Above checks make the unwrap infallible
+        let owner = self.repository.config().git.owner.as_deref().unwrap();
+        let repo = self.repository.config().git.repository.as_deref().unwrap();
+
+        let issue = self
+            .octocrab
             .issues(owner, repo)
             .get(issue_number)
             .await
-            .context("Failed to get issue")
+            .context("Failed to fetch issue")?;
+
+        let comments = self
+            .octocrab
+            .issues(owner, repo)
+            .list_comments(issue_number)
+            .send()
+            .await
+            .context("Failed to fetch issue comments")?
+            .items;
+
+        Ok(GithubIssueWithComments {
+            issue,
+            comments: Some(comments),
+        })
     }
 
     /// Search for issues in the repository, takes a github search query
@@ -251,7 +281,7 @@ pub struct GithubIssueWithComments {
     /// The issue
     pub issue: octocrab::models::issues::Issue,
     /// The comments on the issue
-    pub comments: Vec<octocrab::models::issues::Comment>,
+    pub comments: Option<Vec<octocrab::models::issues::Comment>>,
 }
 
 impl GithubIssueWithComments {
@@ -288,62 +318,24 @@ impl GithubIssueWithComments {
         }
 
         // add comments if any
-        if !comments.is_empty() {
-            summary.push_str("## Comments\n\n");
-            for (i, comment) in comments.iter().enumerate() {
-                summary.push_str(&format!(
-                    "### Comment #{} by {}\n",
-                    i + 1,
-                    comment.user.login
-                ));
+        if let Some(comments) = comments {
+            if !comments.is_empty() {
+                summary.push_str("## Comments\n\n");
+                for (i, comment) in comments.iter().enumerate() {
+                    summary.push_str(&format!(
+                        "### Comment #{} by {}\n",
+                        i + 1,
+                        comment.user.login
+                    ));
 
-                if let Some(body) = &comment.body {
-                    summary.push_str(body);
-                    summary.push('\n');
+                    if let Some(body) = &comment.body {
+                        summary.push_str(body);
+                        summary.push('\n');
+                    }
                 }
             }
         }
         summary
-    }
-}
-
-impl GithubSession {
-    /// Fetches a GitHub issue and its comments
-    ///
-    /// # Arguments
-    ///
-    /// * `issue_number` - The number of the issue to fetch
-    ///
-    /// # Returns
-    ///
-    /// The issue and its comments
-    #[tracing::instrument(skip(self), err)]
-    pub async fn fetch_issue(&self, issue_number: u64) -> Result<GithubIssueWithComments> {
-        if !self.repository.config().is_github_enabled() {
-            return Err(anyhow::anyhow!("Github is not enabled"));
-        }
-
-        // Above checks make the unwrap infallible
-        let owner = self.repository.config().git.owner.as_deref().unwrap();
-        let repo = self.repository.config().git.repository.as_deref().unwrap();
-
-        let issue = self
-            .octocrab
-            .issues(owner, repo)
-            .get(issue_number)
-            .await
-            .context("Failed to fetch issue")?;
-
-        let comments = self
-            .octocrab
-            .issues(owner, repo)
-            .list_comments(issue_number)
-            .send()
-            .await
-            .context("Failed to fetch issue comments")?
-            .items;
-
-        Ok(GithubIssueWithComments { issue, comments })
     }
 }
 
