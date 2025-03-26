@@ -36,6 +36,4 @@ RUN mkdir src \
 
 # Build the actual project
 # Build test binaries so we can get started right away
-ENV RUSTFLAGS="-C link-arg=-fuse-ld=lld"
 COPY . .
-RUN cargo test --no-run
