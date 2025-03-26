@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::{Context as _, Result};
+use serde_json::json;
 use swiftide::{
     chat_completion::{errors::ToolError, ToolOutput},
     traits::{AgentContext, Command},
@@ -116,6 +117,7 @@ impl CreateOrUpdatePullRequest {
 
 // TODO:
 // list issues
+#[derive(Tool, Clone, Debug)]
 #[tool(
     description = "list issues from the associated github repository, returns a list of issues with their titles, the issue number. The result is paginated.",
     param(
@@ -123,7 +125,6 @@ impl CreateOrUpdatePullRequest {
         description = "The page number of the issues to fetch. Always start with 0."
     )
 )]
-#[derive(Tool, Clone, Debug)]
 pub struct ListIssues {
     github_session: Arc<GithubSession>,
 }
@@ -137,20 +138,77 @@ impl ListIssues {
 
     pub async fn list_issues(
         &self,
-        context: &dyn AgentContext,
-        page: usize,
+        _context: &dyn AgentContext,
+        page: &str,
     ) -> Result<ToolOutput, ToolError> {
+        // meh derive doesn't support custom types yet
+        let page = page.parse::<u8>().ok();
         let issues = self.github_session.list_issues(page).await?;
 
-        let context =
-            tera::Context::from_serialize(issues).context("Failed to serialize issues")?;
-        let output = Templates::render("github_list_issues.md", &issues)
-            .map(Into::into)
+        let mut context =
+            tera::Context::from_serialize(&issues.items).context("Failed to serialize issues")?;
+
+        context.insert(
+            "page",
+            &json!({
+                "total_count": issues.total_count,
+                "incomplete_results": issues.incomplete_results,
+            }),
+        );
+
+        let output = Templates::render("github_list_issues.md", &context)
             .context("Failed to render github list issues")?;
 
         Ok(output.into())
     }
 }
+
+#[derive(Tool, Clone, Debug)]
+#[tool(
+    description = "fetches an issue from github including comments",
+    param(
+        name = "page",
+        description = "The page number of the issues to fetch. Always start with 0."
+    )
+)]
+pub struct ListIssues {
+    github_session: Arc<GithubSession>,
+}
+
+impl ListIssues {
+    pub fn new(github_session: &Arc<GithubSession>) -> Self {
+        Self {
+            github_session: Arc::clone(github_session),
+        }
+    }
+
+    pub async fn list_issues(
+        &self,
+        _context: &dyn AgentContext,
+        page: &str,
+    ) -> Result<ToolOutput, ToolError> {
+        // meh derive doesn't support custom types yet
+        let page = page.parse::<u8>().ok();
+        let issues = self.github_session.list_issues(page).await?;
+
+        let mut context =
+            tera::Context::from_serialize(&issues.items).context("Failed to serialize issues")?;
+
+        context.insert(
+            "page",
+            &json!({
+                "total_count": issues.total_count,
+                "incomplete_results": issues.incomplete_results,
+            }),
+        );
+
+        let output = Templates::render("github_list_issues.md", &context)
+            .context("Failed to render github list issues")?;
+
+        Ok(output.into())
+    }
+}
+
 // search issues
 // fetch issue
 // comment issue
