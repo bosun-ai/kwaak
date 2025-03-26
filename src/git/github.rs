@@ -4,7 +4,10 @@
 use std::sync::Mutex;
 
 use anyhow::{Context, Result};
-use octocrab::{models::pulls::PullRequest, Octocrab, Page};
+use octocrab::{
+    models::{issues::Issue, pulls::PullRequest},
+    Octocrab, Page,
+};
 use reqwest::header::{HeaderMap, ACCEPT};
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
@@ -45,6 +48,91 @@ impl GithubSession {
             repository: repository.to_owned(),
             active_pull_request: Mutex::new(None),
         })
+    }
+
+    /// List all open issues in the repository
+    pub async fn list_issues(&self, page: Option<u8>) -> Result<Page<Issue>> {
+        let (owner, repo) = self.get_owner_and_repo()?;
+
+        self.octocrab
+            .issues(owner, repo)
+            .list()
+            .state(octocrab::params::State::Open)
+            .page(page.unwrap_or(1u8))
+            .send()
+            .await
+            .context("Failed to list issues")
+    }
+
+    /// Fetches a GitHub issue and its comments
+    ///
+    /// # Arguments
+    ///
+    /// * `issue_number` - The number of the issue to fetch
+    ///
+    /// # Returns
+    ///
+    /// The issue and its comments
+    #[tracing::instrument(skip(self), err)]
+    pub async fn fetch_issue(&self, issue_number: u64) -> Result<GithubIssueWithComments> {
+        if !self.repository.config().is_github_enabled() {
+            return Err(anyhow::anyhow!("Github is not enabled"));
+        }
+
+        // Above checks make the unwrap infallible
+        let owner = self.repository.config().git.owner.as_deref().unwrap();
+        let repo = self.repository.config().git.repository.as_deref().unwrap();
+
+        let issue = self
+            .octocrab
+            .issues(owner, repo)
+            .get(issue_number)
+            .await
+            .context("Failed to fetch issue")?;
+
+        let comments = self
+            .octocrab
+            .issues(owner, repo)
+            .list_comments(issue_number)
+            .send()
+            .await
+            .context("Failed to fetch issue comments")?
+            .items;
+
+        Ok(GithubIssueWithComments {
+            issue,
+            comments: Some(comments),
+        })
+    }
+
+    /// Search for issues in the repository, takes a github search query
+    ///
+    /// Only searches through `issues` (not pull requests) and only `open` issues
+    pub async fn search_issues(&self, query: &str, page: Option<u8>) -> Result<Page<Issue>> {
+        let (owner, repo) = self.get_owner_and_repo()?;
+
+        self.octocrab
+            .search()
+            .issues_and_pull_requests(&format!(
+                "repo:{owner}/{repo} type:issues state:open {query}"
+            ))
+            .page(page.unwrap_or(1u8))
+            .send()
+            .await
+            .context("Failed to search issues")
+    }
+
+    /// Add a comment to an issue
+    pub async fn add_comment_to_issue(&self, issue_number: u64, comment: &str) -> Result<()> {
+        let (owner, repo) = self.get_owner_and_repo()?;
+
+        self.octocrab
+            .issues(owner, repo)
+            .create_comment(issue_number, comment)
+            .await
+            .context("Failed to add comment to issue")?;
+
+        Ok(())
     }
 
     /// Adds the github token to the repository url
@@ -90,6 +178,30 @@ impl GithubSession {
             .context("Failed to search code")
     }
 
+    pub fn get_owner_and_repo(&self) -> Result<(&str, &str)> {
+        if !self.repository.config().is_github_enabled() {
+            return Err(anyhow::anyhow!("Github is not enabled"));
+        }
+
+        // Should be enforced throughout the app
+        let owner = self
+            .repository
+            .config()
+            .git
+            .owner
+            .as_deref()
+            .context("github owner is not present")?;
+        let repo = self
+            .repository
+            .config()
+            .git
+            .repository
+            .as_deref()
+            .context("repo owner is not present")?;
+
+        Ok((owner, repo))
+    }
+
     #[tracing::instrument(skip_all)]
     pub async fn create_or_update_pull_request(
         &self,
@@ -99,12 +211,7 @@ impl GithubSession {
         description: impl AsRef<str>,
         messages: &[ChatMessage],
     ) -> Result<PullRequest> {
-        if !self.repository.config().is_github_enabled() {
-            return Err(anyhow::anyhow!("Github is not enabled"));
-        }
-        // Above checks make the unwrap infallible
-        let owner = self.repository.config().git.owner.as_deref().unwrap();
-        let repo = self.repository.config().git.repository.as_deref().unwrap();
+        let (owner, repo) = self.get_owner_and_repo()?;
 
         tracing::debug!(messages = ?messages,
             "Creating pull request for {}/{} from branch {} onto {}",
@@ -174,7 +281,7 @@ pub struct GithubIssueWithComments {
     /// The issue
     pub issue: octocrab::models::issues::Issue,
     /// The comments on the issue
-    pub comments: Vec<octocrab::models::issues::Comment>,
+    pub comments: Option<Vec<octocrab::models::issues::Comment>>,
 }
 
 impl GithubIssueWithComments {
@@ -211,62 +318,24 @@ impl GithubIssueWithComments {
         }
 
         // add comments if any
-        if !comments.is_empty() {
-            summary.push_str("## Comments\n\n");
-            for (i, comment) in comments.iter().enumerate() {
-                summary.push_str(&format!(
-                    "### Comment #{} by {}\n",
-                    i + 1,
-                    comment.user.login
-                ));
+        if let Some(comments) = comments {
+            if !comments.is_empty() {
+                summary.push_str("## Comments\n\n");
+                for (i, comment) in comments.iter().enumerate() {
+                    summary.push_str(&format!(
+                        "### Comment #{} by {}\n",
+                        i + 1,
+                        comment.user.login
+                    ));
 
-                if let Some(body) = &comment.body {
-                    summary.push_str(body);
-                    summary.push('\n');
+                    if let Some(body) = &comment.body {
+                        summary.push_str(body);
+                        summary.push('\n');
+                    }
                 }
             }
         }
         summary
-    }
-}
-
-impl GithubSession {
-    /// Fetches a GitHub issue and its comments
-    ///
-    /// # Arguments
-    ///
-    /// * `issue_number` - The number of the issue to fetch
-    ///
-    /// # Returns
-    ///
-    /// The issue and its comments
-    #[tracing::instrument(skip(self), err)]
-    pub async fn fetch_issue(&self, issue_number: u64) -> Result<GithubIssueWithComments> {
-        if !self.repository.config().is_github_enabled() {
-            return Err(anyhow::anyhow!("Github is not enabled"));
-        }
-
-        // Above checks make the unwrap infallible
-        let owner = self.repository.config().git.owner.as_deref().unwrap();
-        let repo = self.repository.config().git.repository.as_deref().unwrap();
-
-        let issue = self
-            .octocrab
-            .issues(owner, repo)
-            .get(issue_number)
-            .await
-            .context("Failed to fetch issue")?;
-
-        let comments = self
-            .octocrab
-            .issues(owner, repo)
-            .list_comments(issue_number)
-            .send()
-            .await
-            .context("Failed to fetch issue comments")?
-            .items;
-
-        Ok(GithubIssueWithComments { issue, comments })
     }
 }
 
