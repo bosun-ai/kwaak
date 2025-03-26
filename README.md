@@ -230,13 +230,15 @@ Additionally, kwaak provides a number of slash commands, `/help` will show all a
 
 ### How does it work?
 
-On initial boot up, Kwaak will index your codebase. This can take a while, depending on the size. Once indexing has been completed once, subsequent startups will be faster. Indexes are stored with [duckdb](https://duckdb.org), and indexing is cached with [redb](https://github.com/cberner/redb).
+On initial boot up, Kwaak will index your codebase. This can take a while, depending on the size. Once indexing has been completed once, subsequent startups will be faster. Indexes are stored with [duckdb](https://duckdb.org). Kwaak uses the index to provide context to the agents.
 
 Kwaak provides a chat interface similar to other LLM chat applications. You can type messages to the agent, and the agent will try to accomplish the task and respond.
 
 When starting a chat, the code of the current branch is copied into an on-the-fly created docker container. This container is then used to run the code and execute the commands.
 
-After each chat completion, kwaak will lint, commit, and push the code to the remote repository if any code changes have been made. Kwaak can also create a pull request. Pull requests include an issue link to #48. This helps us identify the success rate of the agents, and also enforces transparency for code reviewers.
+After each chat completion, kwaak can lint, commit, and push the code to the remote repository if any code changes have been made. Kwaak can also create a pull request. Pull requests include an issue link to #48. This helps us identify the success rate of the agents, and also enforces transparency for code reviewers. This behaviour is fully configurable.
+
+Kwaak uses patch based editing by default. This means that only the changed lines are sent to the agent. This is more efficient. If you experience issues, try changing the edit mode to `whole` or `line`.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -376,7 +378,7 @@ max_elapsed_time_sec = 120
 #### Other configuration
 
 - **`agent_custom_constraints`**: Additional constraints / instructions for the agent.
-  These are passes to the agent in the system prompt and are rendered in a list. If you
+  These are passes to the agent in the system prompt. If you
   intend to use more complicated instructions, consider adding a file to read in the
   repository instead.
 - **`cache_dir`, `log_dir`**: Directories for cache and logs. Defaults are within your system's cache directory.
@@ -386,7 +388,7 @@ max_elapsed_time_sec = 120
 - **`otel_enabled`**: Enables OpenTelemetry tracing if set and respects all the standard OpenTelemetry environment variables.
 - **`tool_executor`**: Defaults to `docker`. Can also be `local`. We **HIGHLY** recommend using `docker` for security reasons unless you are running in a secure environment.
 - **`tavily_api_key`**: Enables the agent to use [tavily](https://tavily.com) for web search. Their entry-level plan is free. (we are not affiliated)
-- **`agent_edit_mode`**: Defaults to `whole` (write full files at the time). If you experience issues with (very) large files, you can experiment with `line` edits.
+- **`agent_edit_mode`**: Defaults to `patch`. Other options are `whole` and `line`. If you experience issues, try changing the edit mode. `whole` will always write the full file. This consumes more tokens and can have side effects.
 - **`git.auto_push_remote`**: Enabled by default if a github key is present. Automatically pushes to the remote repository after each chat completion. You can disable this by setting it to `false`.
 - **`git.auto_commit_disabled`**: Opt-out of automatic commits after each chat completion.
 - **`tools`**: A list of tool names to enable or disable.
