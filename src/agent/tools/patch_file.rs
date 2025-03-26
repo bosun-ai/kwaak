@@ -80,7 +80,7 @@ async fn patch_file(
         return Ok(ToolOutput::Fail(indoc::formatdoc! {"
             Failed to apply all hunks. {failed_len} hunks failed to apply.
 
-            The following hunks failed to apply as their context lines could not be matched to the file, other hunks were applied successfully:
+            The following hunks failed to apply as their context lines could not be matched to the file, no changes were applied:
 
             ---
             {failed}
@@ -96,6 +96,8 @@ async fn patch_file(
     Ok("Patch applied successfully".into())
 }
 
+// For each hunks, finds potential candidates in the file
+//
 // llms are dumb and cannot count
 //
 // However, with a patch we can reasonably fix the headers
@@ -233,7 +235,7 @@ fn rebuild_patch(original: &str, hunks: &[Hunk]) -> Result<String> {
     Ok(new_patch)
 }
 
-/// Splits the patch into a tuple of the hunk header with the full hunk (including the header)
+/// Parses the hunks from a patch
 fn parse_hunks(patch: &str) -> Result<Vec<Hunk>> {
     let mut hunks = Vec::new();
     let mut current_hunk_lines = Vec::new();
