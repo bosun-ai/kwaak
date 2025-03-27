@@ -369,7 +369,7 @@ impl LLMConfiguration {
 
         if let Some(base_url) = base_url {
             config = config.with_api_base(base_url.to_string());
-        };
+        }
 
         let client = async_openai::Client::with_config(config).with_backoff(backoff.into());
 
@@ -401,7 +401,7 @@ impl LLMConfiguration {
 
         if let Some(base_url) = base_url {
             config.with_api_base(base_url.as_str());
-        };
+        }
 
         let mut builder = Ollama::builder()
             .client(async_openai::Client::with_config(config))

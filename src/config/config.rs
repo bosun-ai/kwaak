@@ -394,7 +394,7 @@ impl Config {
     pub fn indexing_concurrency(&self) -> usize {
         if let Some(concurrency) = self.indexing_concurrency {
             return concurrency;
-        };
+        }
 
         match self.indexing_provider() {
             LLMConfiguration::OpenAI { .. } => num_cpus::get() * 4,
@@ -412,7 +412,7 @@ impl Config {
     pub fn indexing_batch_size(&self) -> usize {
         if let Some(batch_size) = self.indexing_batch_size {
             return batch_size;
-        };
+        }
 
         match self.indexing_provider() {
             LLMConfiguration::OpenAI { .. } => 12,

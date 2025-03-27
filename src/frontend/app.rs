@@ -392,12 +392,12 @@ impl App<'_> {
             UIEvent::RenameChat(uuid, name) => {
                 if let Some(chat) = self.find_chat_mut(*uuid) {
                     chat.name = name.to_string();
-                };
+                }
             }
             UIEvent::RenameBranch(uuid, branch_name) => {
                 if let Some(chat) = self.find_chat_mut(*uuid) {
                     chat.branch_name = Some(branch_name.to_string());
-                };
+                }
             }
             UIEvent::NextChat => self.next_chat(),
             UIEvent::ChangeMode(mode) => self.change_mode(*mode),

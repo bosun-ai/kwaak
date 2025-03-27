@@ -334,7 +334,7 @@ impl Hunk {
             .filter(|l| l.is_removed() || l.is_context())
     }
 
-    /// Inserts a line at the given index on matcheable lines. Converts the index to the actual
+    /// Inserts a line at the given index on matchable lines. Converts the index to the actual
     /// underlying index
     pub fn insert_line_at(&mut self, line: HunkLine, index: usize) {
         self.lines.insert(self.real_index(index), line);

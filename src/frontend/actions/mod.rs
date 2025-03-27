@@ -43,7 +43,7 @@ pub fn copy_last_message(app: &mut App) {
             c.messages
                 .iter()
                 .filter(|m| m.role().is_assistant() || m.role().is_user())
-                .last()
+                .next_back()
         })
         .map(ChatMessage::content)
     else {

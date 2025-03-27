@@ -142,7 +142,7 @@ pub async fn start(
                     command_responder.update("running lint and fix").await;
                     accept_non_zero_exit(agent.context().exec_cmd(&Command::shell(lint_fix_command)).await)
                         .context("Could not run lint and fix")?;
-                };
+                }
 
                 Ok(())
             })

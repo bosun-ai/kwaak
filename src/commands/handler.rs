@@ -101,7 +101,7 @@ impl CommandHandler {
                                 "Failed to handle command: {error:#}"
                             )).await;
 
-                    };
+                    }
                 });
             }
 
@@ -125,7 +125,7 @@ impl CommandHandler {
                 self.stop_agent(event.uuid(), event.clone_responder())
                     .await?;
             }
-            Command::IndexRepository { .. } => {
+            Command::IndexRepository => {
                 indexing::index_repository(repository, Some(event.clone_responder())).await?;
             }
             Command::ShowConfig => {
@@ -198,7 +198,7 @@ impl CommandHandler {
 
                 }?;
             }
-            Command::Quit { .. } => unreachable!("Quit should be handled earlier"),
+            Command::Quit => unreachable!("Quit should be handled earlier"),
         }
         // Sleep for a tiny bit to avoid racing with agent responses
         tokio::time::sleep(Duration::from_millis(100)).await;

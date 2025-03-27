@@ -99,7 +99,7 @@ async fn main() -> Result<()> {
 
                 if let Ok(result) = result.as_deref() {
                     println!("{result}");
-                };
+                }
 
                 result.map(|_| ())
             }

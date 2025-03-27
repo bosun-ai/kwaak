@@ -241,7 +241,7 @@ impl<'repository> GarbageCollector<'repository> {
             if let Err(e) = self.delete_files_from_cache(&files) {
                 self.update_last_cleaned_up_at(SystemTime::now()).await;
                 return Err(e);
-            };
+            }
 
             if let Err(e) = self.delete_files_from_index(files).await {
                 self.update_last_cleaned_up_at(SystemTime::now()).await;
