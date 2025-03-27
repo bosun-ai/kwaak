@@ -38,7 +38,7 @@ impl RuntimeSettings {
     pub async fn get<VALUE: for<'a> Deserialize<'a>>(&self, key: &str) -> Option<VALUE> {
         self.lazy_create_schema().await.ok()?;
 
-        let conn = self.db.connection().lock().await;
+        let conn = self.db.connection().lock().unwrap();
         let sql = "SELECT value FROM runtime_settings WHERE key = ?";
 
         serde_json::from_str(
@@ -51,7 +51,7 @@ impl RuntimeSettings {
 
     pub async fn set<VALUE: Serialize>(&self, key: &str, value: VALUE) -> Result<()> {
         self.lazy_create_schema().await?;
-        let conn = self.db.connection().lock().await;
+        let conn = self.db.connection().lock().unwrap();
         let sql = "INSERT OR REPLACE INTO runtime_settings (key, value) VALUES (?, ?)";
 
         conn.execute(sql, [key, &serde_json::to_string(&value)?])
@@ -67,7 +67,7 @@ impl RuntimeSettings {
         let mut lock = self.schema_created.write().await;
 
         let sql = "CREATE TABLE IF NOT EXISTS runtime_settings (key TEXT PRIMARY KEY, value TEXT)";
-        let conn = self.db.connection().lock().await;
+        let conn = self.db.connection().lock().unwrap();
         conn.execute(sql, [])
             .context("Failed to create runtime settings table")?;
 

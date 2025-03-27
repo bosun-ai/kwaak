@@ -168,7 +168,7 @@ impl<'repository> GarbageCollector<'repository> {
             tracing::debug!("Failed to setup duckdb in GC (this is ok): {:#}", err);
         }
 
-        let mut conn = self.duckdb.connection().lock().await;
+        let mut conn = self.duckdb.connection().lock().unwrap();
         let tx = conn.transaction()?;
 
         {
@@ -185,10 +185,10 @@ impl<'repository> GarbageCollector<'repository> {
         Ok(())
     }
 
-    async fn delete_files_from_cache(&self, files: &[PathBuf]) -> Result<()> {
+    fn delete_files_from_cache(&self, files: &[PathBuf]) -> Result<()> {
         tracing::info!("Deleting files from cache: {:?}", files);
 
-        let mut conn = self.duckdb.connection().lock().await;
+        let mut conn = self.duckdb.connection().lock().unwrap();
         let tx = conn.transaction()?;
         {
             let mut stmt = tx.prepare(&format!(
@@ -238,7 +238,7 @@ impl<'repository> GarbageCollector<'repository> {
         tracing::debug!(?files, "Files changed since last index");
 
         {
-            if let Err(e) = self.delete_files_from_cache(&files).await {
+            if let Err(e) = self.delete_files_from_cache(&files) {
                 self.update_last_cleaned_up_at(SystemTime::now()).await;
                 return Err(e);
             };
@@ -259,7 +259,7 @@ impl<'repository> GarbageCollector<'repository> {
     // Returns true if no rows were indexed, or otherwise errors were encountered
     #[tracing::instrument(skip(self))]
     async fn never_been_indexed(&self) -> bool {
-        let conn = self.duckdb.connection().lock().await;
+        let conn = self.duckdb.connection().lock().unwrap();
         let table = self.duckdb.table_name();
 
         let num = conn.query_row_and_then(&format!("SELECT count(*) FROM {table}"), [], |row| {
@@ -322,7 +322,7 @@ mod tests {
 
         {
             duckdb.set(&node).await;
-            let conn = duckdb.connection().lock().await;
+            let conn = duckdb.connection().lock().unwrap();
             conn.flush_prepared_statement_cache();
         }
         assert!(duckdb.get(&node).await);
@@ -354,7 +354,7 @@ mod tests {
 
             let table_name = $context.duckdb.table_name();
             let count = {
-                let conn = $context.duckdb.connection().lock().await;
+                let conn = $context.duckdb.connection().lock().unwrap();
                 conn.query_row_and_then(
                     &format!("SELECT COUNT (*) FROM {table_name} WHERE {predicate}"),
                     [],
