@@ -1,6 +1,7 @@
 use anyhow::Result;
 use std::{path::PathBuf, time::Duration};
 use strum::IntoEnumIterator as _;
+use swiftide_integrations::duckdb::Duckdb;
 use tui_logger::TuiWidgetState;
 use tui_textarea::TextArea;
 use update_informer::{registry, Check};
@@ -33,15 +34,15 @@ const TICK_RATE: u64 = 250;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Handles user and TUI interaction
-pub struct App<'a> {
-    pub splash: splash::Splash<'a>,
+pub struct App<'app, S> {
+    pub splash: splash::Splash<'app>,
     pub has_indexed_on_boot: bool,
     // /// The chat input
     // pub input: String,
-    pub text_input: TextArea<'a>,
+    pub text_input: TextArea<'app>,
 
     /// All known chats
-    pub chats: Vec<Chat>,
+    pub chats: Vec<Chat<'app, S>>,
 
     /// UUID of the current chat
     pub current_chat_uuid: uuid::Uuid,
@@ -105,7 +106,7 @@ pub enum AppMode {
 }
 
 impl AppMode {
-    fn on_key(self, app: &mut App, key: &KeyEvent) {
+    fn on_key<S>(self, app: &mut App<S>, key: &KeyEvent) {
         match self {
             AppMode::Chat => chat_mode::on_key(app, key),
             AppMode::Logs => logs_mode::on_key(app, key),
@@ -113,7 +114,7 @@ impl AppMode {
         }
     }
 
-    fn ui(self, f: &mut ratatui::Frame, area: Rect, app: &mut App) {
+    fn ui<S>(self, f: &mut ratatui::Frame, area: Rect, app: &mut App<S>) {
         match self {
             AppMode::Chat => chat_mode::ui(f, area, app),
             AppMode::Logs => logs_mode::ui(f, area, app),
@@ -138,7 +139,7 @@ impl AppMode {
     }
 }
 
-impl Default for App<'_> {
+impl Default for App<'_, Duckdb> {
     fn default() -> Self {
         let (ui_tx, ui_rx) = mpsc::unbounded_channel();
 
@@ -195,7 +196,7 @@ fn new_text_area() -> TextArea<'static> {
     text_area
 }
 
-impl App<'_> {
+impl<'app, S> App<'app, S> {
     pub async fn recv_messages(&mut self) -> Option<UIEvent> {
         self.ui_rx.recv().await
     }
@@ -263,7 +264,11 @@ impl App<'_> {
             .expect("Failed to dispatch command");
     }
 
-    pub fn add_chat_message(&mut self, chat_id: Uuid, message: impl Into<ChatMessage>) {
+    pub fn find_chat_mut(&mut self, uuid: Uuid) -> Option<&'app mut Chat<S>> {
+        self.chats.iter_mut().find(move |chat| chat.uuid == uuid)
+    }
+
+    pub fn add_chat_message(&'app mut self, chat_id: Uuid, message: impl Into<ChatMessage>) {
         let message = message.into();
         if chat_id == self.boot_uuid {
             return;
@@ -378,15 +383,9 @@ impl App<'_> {
                 }
             }
             UIEvent::NewChat => {
-                let chat = Chat {
-                    // add the repo from the current chat to the new chat
-                    // TODO eventually this should be updated for more complex multi-repo setups
-                    repository: self
-                        .current_chat()
-                        .map(|c| c.repository.clone())
-                        .unwrap_or_default(),
-                    ..Default::default()
-                };
+                // NOTE: This might be problematic...
+                let repository = self.current_chat().expect("No current chat").repository;
+                let chat = Chat::for_repository(repository);
                 self.add_chat(chat);
             }
             UIEvent::RenameChat(uuid, name) => {
@@ -456,23 +455,19 @@ impl App<'_> {
         None
     }
 
-    pub fn find_chat_mut(&mut self, uuid: Uuid) -> Option<&mut Chat> {
-        self.chats.iter_mut().find(|chat| chat.uuid == uuid)
-    }
-
-    pub fn find_chat(&self, uuid: Uuid) -> Option<&Chat> {
+    pub fn find_chat(&self, uuid: Uuid) -> Option<&Chat<S>> {
         self.chats.iter().find(|chat| chat.uuid == uuid)
     }
 
-    pub fn current_chat(&self) -> Option<&Chat> {
+    pub fn current_chat(&self) -> Option<&Chat<S>> {
         self.find_chat(self.current_chat_uuid)
     }
 
-    pub fn current_chat_mut(&mut self) -> Option<&mut Chat> {
+    pub fn current_chat_mut(&'app mut self) -> Option<&mut Chat<S>> {
         self.find_chat_mut(self.current_chat_uuid)
     }
 
-    pub fn add_chat(&mut self, mut new_chat: Chat) {
+    pub fn add_chat(&mut self, mut new_chat: Chat<S>) {
         new_chat.name = format!("Chat #{}", self.chats.len() + 1);
 
         self.current_chat_uuid = new_chat.uuid;
@@ -497,7 +492,7 @@ impl App<'_> {
                     "No chats in app found when selecting next app, this should never happen"
                 );
 
-                self.add_chat(Chat::default());
+                self.add_chat(Chat::for_repository(self.r));
                 return;
             };
 

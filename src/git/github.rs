@@ -15,14 +15,14 @@ use url::Url;
 use crate::{config::ApiKey, repository::Repository, templates::Templates};
 
 #[derive(Debug)]
-pub struct GithubSession {
+pub struct GithubSession<S> {
     token: ApiKey,
     octocrab: Octocrab,
-    repository: Repository,
+    repository: Repository<S>,
     active_pull_request: Mutex<Option<PullRequest>>,
 }
-impl GithubSession {
-    pub fn from_repository(repository: &Repository) -> Result<Self> {
+impl<S: Clone> GithubSession<S> {
+    pub fn from_repository(repository: &Repository<S>) -> Result<Self> {
         let token = repository
             .config()
             .github_api_key
@@ -230,7 +230,7 @@ impl GithubIssueWithComments {
     }
 }
 
-impl GithubSession {
+impl<S> GithubSession<S> {
     /// Fetches a GitHub issue and its comments
     ///
     /// # Arguments
