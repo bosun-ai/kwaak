@@ -10,15 +10,15 @@ use tokio::sync::RwLock;
 
 use crate::{repository::Repository, storage};
 
-pub struct RuntimeSettings {
-    db: Duckdb,
+pub struct RuntimeSettings<'a> {
+    db: &'a Duckdb,
     schema_created: RwLock<bool>,
 }
 
-impl RuntimeSettings {
+impl<'settings> RuntimeSettings<'settings> {
     #[must_use]
-    pub fn from_repository(repository: &Repository) -> Self {
-        let db = storage::get_duckdb(repository.config());
+    pub fn from_repository(repository: &'settings Repository<Duckdb>) -> Self {
+        let db = repository.storage();
 
         Self {
             db,
@@ -27,7 +27,7 @@ impl RuntimeSettings {
     }
 
     #[must_use]
-    pub fn from_db(db: Duckdb) -> Self {
+    pub fn from_db(db: &'settings Duckdb) -> Self {
         Self {
             db,
             schema_created: false.into(),

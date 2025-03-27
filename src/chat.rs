@@ -1,11 +1,12 @@
 use std::collections::HashSet;
 
 use ratatui::widgets::ScrollbarState;
+use swiftide_integrations::duckdb::Duckdb;
 
 use crate::{chat_message::ChatMessage, repository::Repository};
 
 #[derive(Debug, Clone)]
-pub struct Chat {
+pub struct Chat<'repo, S> {
     /// Display name of the chat
     pub name: String,
     /// Identifier used to match responses
@@ -25,10 +26,26 @@ pub struct Chat {
     // Whether to auto-tail the chat on new messages
     pub auto_tail: bool,
 
-    pub repository: Option<Repository>,
+    pub repository: &'repo Repository<S>,
 }
 
-impl Chat {
+impl<'repo, S> Chat<'repo, S> {
+    pub fn for_repository(repository: &'repo Repository<S>) -> Self {
+        Self {
+            repository,
+            name: "Chat".to_string(),
+            uuid: uuid::Uuid::new_v4(),
+            branch_name: None,
+            messages: Vec::new(),
+            state: ChatState::default(),
+            new_message_count: 0,
+            completed_tool_call_ids: HashSet::new(),
+            vertical_scroll_state: ScrollbarState::default(),
+            vertical_scroll: 0,
+            num_lines: 0,
+            auto_tail: true,
+        }
+    }
     pub fn add_message(&mut self, message: ChatMessage) {
         if !message.role().is_user() {
             self.new_message_count += 1;
@@ -79,35 +96,17 @@ pub enum ChatState {
     Ready,
 }
 
-impl Default for Chat {
-    fn default() -> Self {
-        Self {
-            name: "Chat".to_string(),
-            uuid: uuid::Uuid::new_v4(),
-            branch_name: None,
-            messages: Vec::new(),
-            state: ChatState::default(),
-            new_message_count: 0,
-            completed_tool_call_ids: HashSet::new(),
-            vertical_scroll_state: ScrollbarState::default(),
-            vertical_scroll: 0,
-            num_lines: 0,
-            auto_tail: true,
-            repository: None,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use swiftide::chat_completion;
 
     use super::*;
-    use crate::chat_message::ChatMessage;
+    use crate::{chat_message::ChatMessage, test_utils::test_repository};
 
     #[test]
     fn test_add_message_increases_new_message_count() {
-        let mut chat = Chat::default();
+        let (repository, _repository_guard) = test_repository();
+        let mut chat = Chat::for_repository(&repository);
         let message = ChatMessage::new_system("Test message");
 
         chat.add_message(message);

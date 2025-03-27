@@ -8,6 +8,7 @@ use swiftide::agents::tools::local_executor::LocalExecutor;
 use swiftide::agents::{Agent, DefaultContext};
 use swiftide::chat_completion::{ChatCompletion, ChatCompletionResponse};
 use swiftide::traits::{EmbeddingModel, Persist as _, SimplePrompt, ToolExecutor};
+use swiftide_integrations::duckdb::Duckdb;
 use tokio_util::task::AbortOnDropHandle;
 use uuid::Uuid;
 
@@ -26,7 +27,7 @@ pub struct TestGuard {
 /// * Safe to use with docker executor
 /// * Safe to use with git
 /// * Safe to use with LLMs (noop)
-pub fn test_repository() -> (Repository, TestGuard) {
+pub fn test_repository() -> (Repository<Duckdb>, TestGuard) {
     let toml = r#"
             language = "rust"
 
@@ -158,7 +159,7 @@ pub fn test_repository() -> (Repository, TestGuard) {
 // Creates a noop test agent based on a repository
 // useful for ie hooks
 #[must_use]
-pub fn test_agent_for_repository(repository: &Repository) -> Agent {
+pub fn test_agent_for_repository(repository: &Repository<Duckdb>) -> Agent {
     let llm = repository
         .config()
         .query_provider()
@@ -250,9 +251,9 @@ macro_rules! assert_agent_responded {
 }
 
 pub struct IntegrationContext {
-    pub app: App<'static>,
+    pub app: App<'static, Duckdb>,
     pub uuid: Uuid,
-    pub repository: Repository,
+    pub repository: Repository<Duckdb>,
     pub terminal: Terminal<TestBackend>,
     pub workdir: std::path::PathBuf,
 

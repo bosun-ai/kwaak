@@ -25,7 +25,7 @@ impl Drop for Guard {
 /// # Panics
 ///
 /// Panics if setting up tracing fails
-pub fn init(repository: &Repository, tui_logger_enabled: bool) -> Result<Guard> {
+pub fn init<S>(repository: &Repository<S>, tui_logger_enabled: bool) -> Result<Guard> {
     let log_dir = repository.config().log_dir();
 
     let file_appender = tracing_appender::rolling::daily(

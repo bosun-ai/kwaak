@@ -1,16 +1,14 @@
 use std::sync::Arc;
-use std::sys_common::AsInner;
 
 use crate::commands::Responder;
 use crate::repository::Repository;
-use crate::storage;
 use anyhow::Result;
 use swiftide::indexing::loaders;
 use swiftide::indexing::transformers;
 use swiftide::indexing::Node;
 use swiftide::traits::EmbeddingModel;
-use swiftide::traits::NodeCache;
 use swiftide::traits::SimplePrompt;
+use swiftide_integrations::duckdb::Duckdb;
 
 use super::garbage_collection::GarbageCollector;
 use super::progress_updater::ProgressUpdater;
@@ -21,8 +19,8 @@ const MARKDOWN_CHUNK_RANGE: std::ops::Range<usize> = 100..1024;
 // NOTE: Indexing in parallel guarantees a bad time
 
 #[tracing::instrument(skip_all)]
-pub async fn index_repository(
-    repository: &Repository,
+pub async fn index_repository<'a>(
+    repository: &'a Repository<Duckdb>,
     responder: Option<Arc<dyn Responder>>,
 ) -> Result<()> {
     let mut updater = ProgressUpdater::from(responder);
@@ -32,7 +30,7 @@ pub async fn index_repository(
 
     if repository.config().indexing_garbage_collection_enabled {
         updater.send_update("Cleaning up the index ...");
-        let garbage_collector = GarbageCollector::from_repository(repository);
+        let garbage_collector = GarbageCollector::from_repository(&repository);
         garbage_collector.clean_up().await?;
     }
 
@@ -58,7 +56,7 @@ pub async fn index_repository(
     let (mut markdown, mut code) = swiftide::indexing::Pipeline::from_loader(loader)
         .with_concurrency(repository.config().indexing_concurrency())
         .with_default_llm_client(indexing_provider)
-        .filter_cached(duckdb.clone() as Arc<dyn NodeCache>)
+        .filter_cached(duckdb.clone())
         .split_by(|node| {
             let Ok(node) = node else { return true };
 
@@ -93,7 +91,7 @@ pub async fn index_repository(
             Ok(chunk)
         })
         .then(updater.count_processed_fn())
-        .then_store_with(duckdb.clone() as Arc<dyn swiftide::traits::Persist>)
+        .then_store_with(duckdb.clone())
         .run()
         .await?;
 

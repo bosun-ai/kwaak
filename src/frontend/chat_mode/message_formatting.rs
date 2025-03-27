@@ -36,7 +36,7 @@ pub fn get_style_and_prefix(role: &ChatRole) -> (&'static str, Style) {
 }
 
 // TODO: Maybe have tool state just on the message?
-pub fn format_chat_message<'a>(current_chat: &Chat, message: &'a ChatMessage) -> Text<'a> {
+pub fn format_chat_message<'a, S>(current_chat: &Chat<S>, message: &'a ChatMessage) -> Text<'a> {
     // TODO: Use this as a cache
     if let Some(rendered) = message.rendered() {
         return rendered.to_owned();

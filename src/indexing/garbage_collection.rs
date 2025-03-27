@@ -14,20 +14,20 @@ const LAST_CLEANED_UP_AT: &str = "last_cleaned_up_at";
 #[derive(Debug)]
 pub struct GarbageCollector<'repository> {
     /// The last index date
-    repository: Cow<'repository, Repository>,
-    duckdb: Duckdb,
+    repository: Cow<'repository, Repository<Duckdb>>,
+    duckdb: Cow<'repository, Duckdb>,
     /// Extensions to consider for GC
     file_extensions: Vec<&'repository str>,
 }
 
 impl<'repository> GarbageCollector<'repository> {
-    pub fn from_repository(repository: &'repository Repository) -> Self {
+    pub fn from_repository(repository: &'repository Repository<Duckdb>) -> Self {
         let mut file_extensions = repository.config().language.file_extensions().to_vec();
         file_extensions.push("md");
 
         Self {
             repository: Cow::Borrowed(repository),
-            duckdb: storage::get_duckdb(repository),
+            duckdb: Cow::Borrowed(repository.storage()),
             file_extensions,
         }
     }
@@ -35,11 +35,11 @@ impl<'repository> GarbageCollector<'repository> {
     fn runtime_settings(&self) -> RuntimeSettings {
         // TODO: Bit of a code smell, maybe just pass it around from the repository instead
         // singleton is painful
-        if cfg!(test) {
-            RuntimeSettings::from_db(self.duckdb.clone())
-        } else {
-            self.repository.runtime_settings()
-        }
+        // if cfg!(test) {
+        //     RuntimeSettings::from_db(&self.duckdb)
+        // } else {
+        self.repository.runtime_settings()
+        // }
     }
 
     async fn get_last_cleaned_up_at(&self) -> Option<SystemTime> {
@@ -292,7 +292,7 @@ mod tests {
         node: Node,
         subject: GarbageCollector<'static>,
         _guard: TestGuard,
-        repository: Repository,
+        repository: Repository<Duckdb>,
     }
 
     async fn setup() -> TestContext {
@@ -336,9 +336,10 @@ mod tests {
 
         let subject = GarbageCollector {
             repository: Cow::Owned(repository.clone()),
-            duckdb: duckdb.clone(),
+            duckdb: Cow::Owned(duckdb.clone()),
             file_extensions: vec!["md"],
         };
+        GarbageCollector::from_repository(&repository);
         TestContext {
             duckdb,
             node,
