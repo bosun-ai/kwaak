@@ -82,3 +82,112 @@ pub async fn run(file: Option<PathBuf>, dry_run: bool) -> Result<()> {
 
     Ok(())
 }
+
+pub fn generate_dockerfile(language: &str, output: Option<PathBuf>) -> Result<()> {
+    let dockerfile_content = match language {
+        "Python" => {
+            """
+            FROM python:latest
+
+            RUN apt-get update && apt install git -y --no-install-recommends
+
+            
+            COPY . /app
+            
+            WORKDIR /app
+            """
+        },
+        "TypeScript" | "Javascript" => {
+            """
+            FROM node:latest
+
+            RUN apt-get update && apt install git -y --no-install-recommends
+
+            
+            COPY . /app
+            
+            WORKDIR /app
+            """
+        },
+        "Go" => {
+            """
+            FROM golang:latest
+
+            RUN apt-get update && apt install git -y --no-install-recommends
+
+            
+            COPY . /app
+            
+            WORKDIR /app
+            """
+        },
+        "Java" => {
+            """
+            FROM openjdk:latest
+
+            RUN apt-get update && apt install git -y --no-install-recommends
+
+            
+            COPY . /app
+            
+            WORKDIR /app
+            """
+        },
+        "Ruby" => {
+            """
+            FROM ruby:latest
+
+            RUN apt-get update && apt install git -y --no-install-recommends
+
+            
+            COPY . /app
+            
+            WORKDIR /app
+            """
+        },
+        "Solidity" => {
+            """
+            FROM ethereum/solc:stable
+
+            
+            COPY . /app
+            
+            WORKDIR /app
+            """
+        },
+        "C" | "C++" => {
+            """
+            FROM gcc:latest
+
+            RUN apt-get update && apt install git -y --no-install-recommends
+
+            
+            COPY . /app
+            
+            WORKDIR /app
+            """
+        },
+        "Rust" => {
+            """
+            FROM rust:latest
+
+            RUN apt-get update && apt install git -y --no-install-recommends
+
+            
+            COPY . /app
+            
+            WORKDIR /app
+            """
+        },
+        _ => anyhow::bail!("Language not supported for Dockerfile generation")
+    };
+
+    let output_path = output.unwrap_or_else(|| PathBuf::from("Dockerfile"));
+    let mut file = File::create(&output_path)?;
+    file.write_all(dockerfile_content.as_bytes())?;
+    println!("Dockerfile created at {}", output_path.display());
+
+    // Implement calling `generate_dockerfile` after other onboarding steps
+
+    Ok(())
+}
