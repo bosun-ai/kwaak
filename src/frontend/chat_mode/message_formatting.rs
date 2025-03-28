@@ -185,6 +185,14 @@ fn pretty_format_tool(tool_call: &swiftide::chat_completion::ToolCall) -> Option
             "searching github for code matching `{}`",
             get_value(parsed_args, "query")?
         ),
+        "patch_file" => format!(
+            "applying patch to file `{}`",
+            get_value(parsed_args, "file_name")?
+        ),
+        "reset_file" => format!(
+            "resetting file `{}` to last committed state",
+            get_value(parsed_args, "file_name")?
+        ),
         "replace_lines" => format!(
             "replacing lines in file `{}`",
             get_value(parsed_args, "file_name")?
