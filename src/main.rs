@@ -113,8 +113,8 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             cli::Commands::GenerateDockerfile { output } => {
-                let language = repository.config().language.as_str(); // Example for fetching configured language if available
-                onboarding::generate_dockerfile(language, output)
+                let language = repository.config().language.to_string(); // Convert to string representation
+                onboarding::generate_dockerfile(&language, output.clone())
             }
             #[cfg(feature = "evaluations")]
             cli::Commands::Eval { eval_type } => match eval_type {
