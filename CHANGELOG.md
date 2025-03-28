@@ -6,9 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### 🚀 Features
 
+- Vastly improved file edits with self correcting patches (#441)
 - Support OpenAI o3-mini (#392)
 - Opt-out of indexing garbage collection (#435)
-- Edit with self correcting patches (#441)
 - Agents continue if their only response is a reasoning completion
 
 ### 🐛 Bug Fixes
