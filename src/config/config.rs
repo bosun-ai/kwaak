@@ -16,7 +16,7 @@ use super::defaults::{
 use super::{api_key::ApiKey, tools::Tools};
 use super::{CommandConfiguration, LLMConfiguration, LLMConfigurations};
 
-// TODO: Improving parsing by enforcing invariants
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Config {
     #[serde(default = "default_project_name")]
@@ -105,7 +105,7 @@ pub struct Config {
     #[serde(default)]
     pub endless_mode: bool,
 
-    /// When stop_on_empty_messages is enabled, the agent will stop if the next completion does not
+    /// When `stop_on_empty_messages` is enabled, the agent will stop if the next completion does not
     /// contain new messages.
     ///
     /// Often, agents return a reasoning completion before calling any tools. Previously this would
