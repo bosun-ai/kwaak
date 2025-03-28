@@ -42,7 +42,7 @@ mod test_utils;
 async fn main() -> Result<()> {
     let args = cli::Args::parse();
 
-    // Handle the `init` command immediately after parsing args
+    // Handle the `init` command immediately
     if let Some(cli::Commands::Init { dry_run, file }) = args.command {
         if let Err(error) = onboarding::run(file, dry_run).await {
             eprintln!("{error:#}");
@@ -68,7 +68,6 @@ async fn main() -> Result<()> {
     fs::create_dir_all(repository.config().log_dir()).await?;
 
     let app_result = {
-        // Only enable the tui logger if we're running the tui
         let command = args.command.as_ref().unwrap_or(&cli::Commands::Tui);
 
         let tui_logger_enabled = matches!(command, cli::Commands::Tui);
@@ -112,6 +111,10 @@ async fn main() -> Result<()> {
             cli::Commands::PrintConfig => {
                 println!("{}", toml::to_string_pretty(repository.config())?);
                 Ok(())
+            }
+            cli::Commands::GenerateDockerfile { output } => {
+                let language = repository.config().language.as_str(); // Example for fetching configured language if available
+                onboarding::generate_dockerfile(language, output)
             }
             #[cfg(feature = "evaluations")]
             cli::Commands::Eval { eval_type } => match eval_type {
@@ -207,7 +210,7 @@ async fn start_agent(
                     println!("{message}");
                 }
                 CommandResponse::Activity(message) => {
-                    println!(">> {message}");
+                    println!(" >> {message}");
                 }
                 CommandResponse::BackendMessage(message) => {
                     println!("Backend: {message}");
@@ -232,8 +235,6 @@ async fn start_agent(
 async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Result<()> {
     ::tracing::info!("Loaded configuration: {:?}", repository.config());
 
-    // Before starting the TUI, check if there is already a kwaak running on the project
-    // TODO: This is not very reliable. Potentially redb needs to be reconsidered
     if panic::catch_unwind(|| {
         storage::get_duckdb(&repository);
     })
@@ -243,10 +244,8 @@ async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Res
         std::process::exit(1);
     }
 
-    // Setup terminal
     let mut terminal = init_tui()?;
 
-    // Start the application
     let mut app = App::default();
     app.ui_config = repository.config().ui.clone();
     app.current_chat_mut()
@@ -275,14 +274,12 @@ async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Res
         std::process::exit(1);
     }
 
-    // Force exit the process, as any dangling threads can now safely be dropped
     std::process::exit(0);
 }
 
 pub fn init_panic_hook() {
     let original_hook = take_hook();
     set_hook(Box::new(move |panic_info| {
-        // intentionally ignore errors here since we're already in a panic
         ::tracing::error!("Panic: {:?}", panic_info);
         let _ = restore_tui();
 
@@ -290,11 +287,6 @@ pub fn init_panic_hook() {
     }));
 }
 
-/// Initializes the terminal backend in raw mode
-///
-/// # Errors
-///
-/// Errors if the terminal backend cannot be initialized
 pub fn init_tui() -> io::Result<Terminal<impl Backend>> {
     enable_raw_mode()?;
     execute!(stdout(), EnterAlternateScreen)?;
@@ -305,11 +297,6 @@ pub fn init_tui() -> io::Result<Terminal<impl Backend>> {
     Terminal::new(CrosstermBackend::new(stdout()))
 }
 
-/// Restores the terminal to its original state
-///
-/// # Errors
-///
-/// Errors if the terminal cannot be restored
 pub fn restore_tui() -> io::Result<()> {
     disable_raw_mode()?;
     execute!(stdout(), LeaveAlternateScreen)?;
