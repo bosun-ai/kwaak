@@ -14,6 +14,8 @@ use std::path::PathBuf;
 
 use crate::templates::Templates;
 use anyhow::{Context, Result};
+use std::fs::File;
+use std::io::Write;
 use commands::command_questions;
 use git::git_questions;
 use llm::llm_questions;
@@ -74,6 +76,9 @@ pub async fn run(file: Option<PathBuf>, dry_run: bool) -> Result<()> {
             file.display()
         );
     }
+
+    // Prompt user for Dockerfile generation after setup
+    // Implement calling `generate_dockerfile` after other onboarding steps
 
     Ok(())
 }
