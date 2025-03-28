@@ -62,6 +62,12 @@ pub enum Commands {
         #[command(subcommand)]
         eval_type: EvalCommands,
     },
+    /// Generate a Dockerfile based on the configured language
+    GenerateDockerfile {
+        /// Optional path to output the Dockerfile
+        #[arg(long)]
+        output: Option<PathBuf>,
+    },
 }
 
 #[derive(Subcommand, Debug, Clone)]
