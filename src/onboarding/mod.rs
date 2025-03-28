@@ -11,6 +11,8 @@
 //! In the future it would be much nicer if it builds an actual `Config` struct. Then this can also
 //! be used for
 use std::path::PathBuf;
+use std::fs::File;
+use std::io::Write;
 
 use crate::templates::Templates;
 use anyhow::{Context, Result};
@@ -74,6 +76,27 @@ pub async fn run(file: Option<PathBuf>, dry_run: bool) -> Result<()> {
             file.display()
         );
     }
+
+    Ok(())
+}
+
+pub fn generate_dockerfile(language: &str, output: Option<PathBuf>) -> Result<()> {
+    let dockerfile_content = match language {
+        "Python" => "FROM python:3.9-slim-buster\nRUN pip install --no-cache --upgrade pip\nWORKDIR /app\nCOPY . /app\nRUN pip install -r requirements.txt\nCMD [\"python\", \"app.py\"]",
+        "TypeScript" | "Javascript" => "FROM node:14\nWORKDIR /app\nCOPY . /app\nRUN npm install\nCMD [\"npm\", \"start\"]",
+        "Go" => "FROM golang:1.16\nWORKDIR /app\nCOPY . /app\nRUN go mod tidy\nRUN go build -o main .\nCMD [\"./main\"]",
+        "Java" => "FROM openjdk:11-jre-slim\nWORKDIR /app\nCOPY . /app\nRUN ./mvnw package\nCMD [\"java\", \"-jar\", \"target/app.jar\"]",
+        "Ruby" => "FROM ruby:2.7\nWORKDIR /app\nCOPY . /app\nRUN bundle install\nCMD [\"ruby\", \"app.rb\"]",
+        "Solidity" => "FROM ethereum/solc:0.8.6\nWORKDIR /app\nCOPY . /app\n# Additional commands may be required",
+        "C" | "C++" => "FROM gcc:10\nWORKDIR /app\nCOPY . /app\nRUN make\nCMD [\"./app\"]",
+        "Rust" => "FROM rust:1.50\nWORKDIR /app\nCOPY . /app\nRUN cargo build --release\nCMD [\"./target/release/app\"]",
+        _ => anyhow::bail!("Language not supported for Dockerfile generation"),
+    };
+
+    let output_path = output.unwrap_or_else(|| PathBuf::from("Dockerfile"));
+    let mut file = File::create(&output_path)?;
+    file.write_all(dockerfile_content.as_bytes())?;
+    println!("Dockerfile created at {}", output_path.display());
 
     Ok(())
 }
