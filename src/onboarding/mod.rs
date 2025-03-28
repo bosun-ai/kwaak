@@ -19,6 +19,7 @@ use anyhow::{Context, Result};
 use commands::command_questions;
 use git::git_questions;
 use llm::llm_questions;
+use std::fs;
 use project::project_questions;
 
 mod commands;
@@ -99,4 +100,32 @@ pub fn generate_dockerfile(language: &str, output: Option<PathBuf>) -> Result<()
     println!("Dockerfile created at {}", output_path.display());
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_generate_dockerfile_python() {
+        let temp_dir = std::env::temp_dir();
+        let output_path = temp_dir.join("Dockerfile");
+        
+        // Clean up any existing file
+        if output_path.exists() {
+            fs::remove_file(&output_path).unwrap();
+        }
+
+        // Generate the Dockerfile
+        generate_dockerfile("Python", Some(output_path.clone())).unwrap();
+
+        // Check if the file was created
+        assert!(output_path.exists(), "Dockerfile should be created");
+
+        // Verify content
+        let content = fs::read_to_string(output_path).unwrap();
+        let expected_content = "FROM python:3.9-slim-buster\nRUN pip install --no-cache --upgrade pip\nWORKDIR /app\nCOPY . /app\nRUN pip install -r requirements.txt\nCMD [\"python\", \"app.py\"]";
+        assert_eq!(content, expected_content);
+    }
 }
