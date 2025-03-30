@@ -2,8 +2,9 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::{Context as _, Result};
 use derive_builder::Builder;
+use rmcp::{transport::TokioChildProcess, ServiceExt as _};
 use swiftide::{
-    agents::tools::local_executor::LocalExecutor,
+    agents::tools::{local_executor::LocalExecutor, mcp::McpClient},
     chat_completion::{ParamSpec, Tool, ToolSpec},
     traits::{SimplePrompt, ToolExecutor},
 };
@@ -16,7 +17,7 @@ use uuid::Uuid;
 use crate::{
     agent::{tools::DelegateAgent, util},
     commands::Responder,
-    config::{self, AgentEditMode, SupportedToolExecutors},
+    config::{self, mcp::McpTool, AgentEditMode, SupportedToolExecutors},
     git::github::GithubSession,
     indexing,
     repository::Repository,
@@ -127,6 +128,34 @@ impl SessionBuilder {
             github_session.as_ref(),
             Some(&agent_environment),
         )?;
+
+        if let Some(mcp_services) = &session.repository.config().mcp {
+            for service in mcp_services {
+                match service {
+                    McpTool::Process { cmd } => {
+                        if cmd.is_empty() {
+                            anyhow::bail!("Empty command for mcp tool");
+                        }
+                        let (cmd, args) = cmd
+                            .split_whitespace()
+                            .map(str::to_string)
+                            .collect::<Vec<String>>()
+                            .split_first()
+                            .map_or((String::default(), Vec::default()), |s| {
+                                (s.0.to_string(), s.1.to_vec())
+                            });
+
+                        let service = ()
+                            .serve(TokioChildProcess::new(
+                                tokio::process::Command::new(cmd).args(args),
+                            )?)
+                            .await?;
+
+                        let service = McpClient::from_running_service(service);
+                    }
+                }
+            }
+        }
 
         let active_agent = match session.repository.config().agent {
             config::SupportedAgentConfigurations::Coding => {
