@@ -7,6 +7,7 @@ use swiftide::{
     prompt::Prompt,
     traits::{AgentContext, Command, SimplePrompt, ToolExecutor},
 };
+use swiftide_core::ToolBox;
 
 use crate::{
     agent::{
@@ -22,7 +23,7 @@ use crate::{
 pub async fn start(
     session: &Session,
     executor: &Arc<dyn ToolExecutor>,
-    tools: &[Box<dyn Tool>],
+    tool_boxes: &[Box<dyn ToolBox>],
     agent_env: &AgentEnvironment,
     initial_context: String,
 ) -> Result<RunningAgent> {
