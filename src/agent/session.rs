@@ -2,12 +2,17 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::{Context as _, Result};
 use derive_builder::Builder;
-use rmcp::{transport::TokioChildProcess, ServiceExt as _};
-use swiftide::{
-    agents::tools::{local_executor::LocalExecutor, mcp::McpClient},
-    chat_completion::{ParamSpec, Tool, ToolSpec},
-    traits::{SimplePrompt, ToolExecutor},
+use rmcp::{
+    model::{ClientInfo, Implementation},
+    transport::TokioChildProcess,
+    ServiceExt as _,
 };
+use swiftide::{
+    agents::tools::{local_executor::LocalExecutor, mcp::McpToolbox},
+    chat_completion::{ParamSpec, Tool, ToolSpec},
+    traits::{SimplePrompt, ToolBox, ToolExecutor},
+};
+use swiftide_core::ToolBox as _;
 use swiftide_docker_executor::DockerExecutor;
 use tavily::Tavily;
 use tokio::sync::mpsc::UnboundedSender;
@@ -123,46 +128,24 @@ impl SessionBuilder {
         let env_setup = EnvSetup::new(&session.repository, github_session.as_deref(), &*executor);
         let agent_environment = env_setup.exec_setup_commands(branch_name).await?;
 
-        let available_tools = available_tools(
+        let builtin_toolbox = available_tools(
             &session.repository,
             github_session.as_ref(),
             Some(&agent_environment),
-        )?;
+        )?
+        .boxed();
 
-        if let Some(mcp_services) = &session.repository.config().mcp {
-            for service in mcp_services {
-                match service {
-                    McpTool::Process { cmd } => {
-                        if cmd.is_empty() {
-                            anyhow::bail!("Empty command for mcp tool");
-                        }
-                        let (cmd, args) = cmd
-                            .split_whitespace()
-                            .map(str::to_string)
-                            .collect::<Vec<String>>()
-                            .split_first()
-                            .map_or((String::default(), Vec::default()), |s| {
-                                (s.0.to_string(), s.1.to_vec())
-                            });
+        let mcp_toolboxes =
+            Box::new(start_mcp_toolboxes(&session.repository).await?) as Box<dyn ToolBox>;
 
-                        let service = ()
-                            .serve(TokioChildProcess::new(
-                                tokio::process::Command::new(cmd).args(args),
-                            )?)
-                            .await?;
-
-                        let service = McpClient::from_running_service(service);
-                    }
-                }
-            }
-        }
+        let agent_toolboxes: Vec<Box<dyn ToolBox>> = vec![builtin_toolbox, mcp_toolboxes];
 
         let active_agent = match session.repository.config().agent {
             config::SupportedAgentConfigurations::Coding => {
                 agents::coding::start(
                     &session,
                     &executor,
-                    &available_tools,
+                    &agent_toolboxes,
                     &agent_environment,
                     initial_context,
                 )
@@ -173,7 +156,7 @@ impl SessionBuilder {
                 start_plan_and_act(
                     &session,
                     &executor,
-                    &available_tools,
+                    &agent_toolboxes,
                     &agent_environment,
                     &initial_context,
                 )
@@ -187,7 +170,7 @@ impl SessionBuilder {
             github_session,
             executor,
             agent_environment,
-            available_tools: available_tools.into(),
+            available_tools: builtin_toolbox.into(),
             cancel_token: Arc::new(Mutex::new(CancellationToken::new())),
             message_task_handle: None,
         };
@@ -230,7 +213,7 @@ static BLACKLIST_DELEGATE_TOOLS: &[&str] = &[
 async fn start_plan_and_act(
     session: &Arc<Session>,
     executor: &Arc<dyn ToolExecutor>,
-    available_tools: &[Box<dyn Tool>],
+    tool_boxes: &[Box<dyn ToolBox>],
     agent_environment: &AgentEnvironment,
     initial_context: &str,
 ) -> Result<RunningAgent> {
@@ -472,4 +455,44 @@ pub fn available_tools(
     });
 
     Ok(tools)
+}
+
+async fn start_mcp_toolboxes(repository: &Repository) -> Result<Vec<Box<dyn ToolBox>>> {
+    let mut services = Vec::new();
+    if let Some(mcp_services) = &repository.config().mcp {
+        for service in mcp_services {
+            match service {
+                McpTool::Process { cmd } => {
+                    if cmd.is_empty() {
+                        anyhow::bail!("Empty command for mcp tool");
+                    }
+                    let (cmd, args) = cmd
+                        .split_whitespace()
+                        .map(str::to_string)
+                        .collect::<Vec<String>>()
+                        .split_first()
+                        .map_or((String::default(), Vec::default()), |s| {
+                            (s.0.to_string(), s.1.to_vec())
+                        });
+
+                    let client_info = ClientInfo {
+                        client_info: Implementation {
+                            name: "kwaak".into(),
+                            version: env!("CARGO_PKG_VERSION").into(),
+                        },
+                        ..Default::default()
+                    };
+
+                    let service = client_info
+                        .serve(TokioChildProcess::new(
+                            tokio::process::Command::new(cmd).args(args),
+                        )?)
+                        .await?;
+
+                    services.push(McpToolbox::from_running_service(service).boxed());
+                }
+            }
+        }
+    }
+    Ok(services)
 }
