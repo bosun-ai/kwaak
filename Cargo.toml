@@ -1,6 +1,6 @@
 [package]
 name = "kwaak"
-version = "0.16.0"
+version = "0.16.1"
 edition = "2021"
 categories = ["development-tools", "command-line-utilities"]
 readme = "README.md"
