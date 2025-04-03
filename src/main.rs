@@ -108,6 +108,7 @@ async fn main() -> Result<()> {
 
                     for tool in toolbox.available_tools().await? {
                         println!(" - {}", tool.name());
+                        println!("{:?}", tool.tool_spec());
                     }
                 }
 
