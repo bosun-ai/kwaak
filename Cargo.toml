@@ -36,7 +36,7 @@ swiftide = { version = "0.22.6", features = [
   "mcp",
 
 ] }
-rmcp = { version = "0.1.0", features = ["transport-child-process"] }
+rmcp = { version = "0.1.0", features = ["transport-child-process", "client"] }
 swiftide-macros = { version = "0.22.6" }
 swiftide-integrations = { version = "0.22.6" }
 fastembed = "4.6.0"

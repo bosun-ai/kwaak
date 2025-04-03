@@ -52,6 +52,8 @@ pub enum Commands {
         tool_name: String,
         tool_args: Option<String>,
     },
+    /// Lists all built-in tools and mcp tools
+    ListTools,
     /// Print the configuration and exit
     PrintConfig,
     /// Clear the index and cache for this project and exit

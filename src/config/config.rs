@@ -15,7 +15,7 @@ use super::{
         default_auto_push_remote, default_cache_dir, default_docker_context, default_dockerfile,
         default_log_dir, default_main_branch, default_project_name,
     },
-    mcp::McpTool,
+    mcp::McpServer,
 };
 use super::{CommandConfiguration, LLMConfiguration, LLMConfigurations};
 
@@ -152,7 +152,7 @@ pub struct Config {
 
     /// Add tools from MCP servers to the agents
     #[serde(default)]
-    pub mcp: Option<Vec<McpTool>>,
+    pub mcp: Option<Vec<McpServer>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
