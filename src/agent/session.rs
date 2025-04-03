@@ -12,7 +12,6 @@ use swiftide::{
     chat_completion::{ParamSpec, Tool, ToolSpec},
     traits::{SimplePrompt, ToolBox, ToolExecutor},
 };
-use swiftide_core::ToolBox as _;
 use swiftide_docker_executor::DockerExecutor;
 use tavily::Tavily;
 use tokio::sync::mpsc::UnboundedSender;
@@ -22,7 +21,7 @@ use uuid::Uuid;
 use crate::{
     agent::{tools::DelegateAgent, util},
     commands::Responder,
-    config::{self, mcp::McpTool, AgentEditMode, SupportedToolExecutors},
+    config::{self, mcp::McpServer, AgentEditMode, SupportedToolExecutors},
     git::github::GithubSession,
     indexing,
     repository::Repository,
@@ -38,6 +37,9 @@ use super::{
 /// Session represents the abstract state of an ongoing agent interaction (i.e. in a chat)
 ///
 /// Consider the implementation 'emergent architecture' (an excuse for an isolated mess)
+///
+/// NOTE: Seriously though, this file is a mess on purpose so we can figure out the best way to
+/// to architect this.
 ///
 /// Some future ideas:
 ///     - Session configuration from a file
@@ -128,24 +130,21 @@ impl SessionBuilder {
         let env_setup = EnvSetup::new(&session.repository, github_session.as_deref(), &*executor);
         let agent_environment = env_setup.exec_setup_commands(branch_name).await?;
 
-        let builtin_toolbox = available_tools(
+        let builtin_tools = available_builtin_tools(
             &session.repository,
             github_session.as_ref(),
             Some(&agent_environment),
-        )?
-        .boxed();
+        )?;
 
-        let mcp_toolboxes =
-            Box::new(start_mcp_toolboxes(&session.repository).await?) as Box<dyn ToolBox>;
-
-        let agent_toolboxes: Vec<Box<dyn ToolBox>> = vec![builtin_toolbox, mcp_toolboxes];
+        let mcp_toolboxes = start_mcp_toolboxes(&session.repository).await?;
 
         let active_agent = match session.repository.config().agent {
             config::SupportedAgentConfigurations::Coding => {
                 agents::coding::start(
                     &session,
                     &executor,
-                    &agent_toolboxes,
+                    &builtin_tools,
+                    &mcp_toolboxes,
                     &agent_environment,
                     initial_context,
                 )
@@ -156,7 +155,8 @@ impl SessionBuilder {
                 start_plan_and_act(
                     &session,
                     &executor,
-                    &agent_toolboxes,
+                    &builtin_tools,
+                    &mcp_toolboxes,
                     &agent_environment,
                     &initial_context,
                 )
@@ -170,7 +170,6 @@ impl SessionBuilder {
             github_session,
             executor,
             agent_environment,
-            available_tools: builtin_toolbox.into(),
             cancel_token: Arc::new(Mutex::new(CancellationToken::new())),
             message_task_handle: None,
         };
@@ -213,6 +212,7 @@ static BLACKLIST_DELEGATE_TOOLS: &[&str] = &[
 async fn start_plan_and_act(
     session: &Arc<Session>,
     executor: &Arc<dyn ToolExecutor>,
+    available_tools: &[Box<dyn Tool>],
     tool_boxes: &[Box<dyn ToolBox>],
     agent_environment: &AgentEnvironment,
     initial_context: &str,
@@ -221,6 +221,7 @@ async fn start_plan_and_act(
         &session,
         &executor,
         &available_tools,
+        &tool_boxes,
         &agent_environment,
         String::new(),
     )
@@ -254,6 +255,7 @@ async fn start_plan_and_act(
         &session,
         &executor,
         &delegate_tools,
+        &tool_boxes,
         &agent_environment,
         initial_context,
     )
@@ -273,7 +275,6 @@ pub struct RunningSession {
     github_session: Option<Arc<GithubSession>>,
     executor: Arc<dyn ToolExecutor>,
     agent_environment: AgentEnvironment,
-    available_tools: Arc<Vec<Box<dyn Tool>>>,
 
     cancel_token: Arc<Mutex<CancellationToken>>,
 }
@@ -387,7 +388,7 @@ async fn generate_initial_context(repository: &Repository, query: &str) -> Resul
     Ok(formatted_context)
 }
 
-pub fn available_tools(
+pub fn available_builtin_tools(
     repository: &Repository,
     github_session: Option<&Arc<GithubSession>>,
     agent_env: Option<&env_setup::AgentEnvironment>,
@@ -457,24 +458,21 @@ pub fn available_tools(
     Ok(tools)
 }
 
-async fn start_mcp_toolboxes(repository: &Repository) -> Result<Vec<Box<dyn ToolBox>>> {
+pub async fn start_mcp_toolboxes(repository: &Repository) -> Result<Vec<Box<dyn ToolBox>>> {
     let mut services = Vec::new();
     if let Some(mcp_services) = &repository.config().mcp {
         for service in mcp_services {
             match service {
-                McpTool::Process { cmd } => {
-                    if cmd.is_empty() {
+                McpServer::SubProcess {
+                    name,
+                    command,
+                    args,
+                    filter,
+                    env,
+                } => {
+                    if command.is_empty() {
                         anyhow::bail!("Empty command for mcp tool");
                     }
-                    let (cmd, args) = cmd
-                        .split_whitespace()
-                        .map(str::to_string)
-                        .collect::<Vec<String>>()
-                        .split_first()
-                        .map_or((String::default(), Vec::default()), |s| {
-                            (s.0.to_string(), s.1.to_vec())
-                        });
-
                     let client_info = ClientInfo {
                         client_info: Implementation {
                             name: "kwaak".into(),
@@ -483,13 +481,27 @@ async fn start_mcp_toolboxes(repository: &Repository) -> Result<Vec<Box<dyn Tool
                         ..Default::default()
                     };
 
-                    let service = client_info
-                        .serve(TokioChildProcess::new(
-                            tokio::process::Command::new(cmd).args(args),
-                        )?)
-                        .await?;
+                    let mut cmd = tokio::process::Command::new(command);
 
-                    services.push(McpToolbox::from_running_service(service).boxed());
+                    cmd.args(args);
+
+                    if let Some(env) = env {
+                        for (key, value) in env {
+                            cmd.env(key, value.expose_secret());
+                        }
+                    }
+
+                    let service = client_info.serve(TokioChildProcess::new(&mut cmd)?).await?;
+
+                    let mut toolbox = McpToolbox::from_running_service(service)
+                        .with_name(name)
+                        .to_owned();
+
+                    if let Some(filter) = filter {
+                        toolbox.with_filter(filter.clone());
+                    }
+
+                    services.push(toolbox.boxed());
                 }
             }
         }

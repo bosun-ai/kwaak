@@ -1,7 +1,7 @@
 //! The patch module is meant to reveal problems in agents when making modifications to the source code. Specifically
 //! in large files and/or files with semantic whitespace.
 
-use crate::agent::session::available_tools;
+use crate::agent::session::available_builtin_tools;
 use crate::config::Config;
 use crate::evaluations::{
     logging_responder::LoggingResponder,
@@ -223,7 +223,7 @@ async fn run_single_evaluation(iteration: u32) -> Result<(bool, EvalMetrics)> {
 
     let repository = Repository::from_config(config);
 
-    let tools = available_tools(&repository, None, None)?;
+    let tools = available_builtin_tools(&repository, None, None)?;
     let agent =
         start_tool_evaluation_agent(&repository, responder.clone(), tools, &prompt()).await?;
 
