@@ -244,7 +244,7 @@ Kwaak uses patch based editing by default. This means that only the changed line
 
 ### Configuration
 
-Kwaak supports configuring different Large Language Models (LLMs) for distinct tasks like indexing, querying, and embedding to optimize performance and accuracy. Be sure to tailor the configurations to fit the scope and blend of the tasks you're tackling.
+Kwaak supports configuring different Large Language Models (LLMs) for distinct tasks like indexing, querying, and embedding to optimize performance and accuracy. Be sure to tailor the configurations to fit the scope and blend of the tasks you're tackling. Configuration is done in a `kwaak.toml` file in the root of the project, and can be overridden by a `kwaak.local.toml` file and/or via ENV variables.
 
 #### General Configuration
 
@@ -260,6 +260,32 @@ Kwaak uses tests, coverages, and lints as an additional opportunity to steer the
 - **`test`**: Command to run tests, e.g., `cargo test`.
 - **`coverage`**: Command for running coverage checks, e.g., `cargo llvm-cov --summary-only`. Expects coverage results as output. Currently handled unparsed via an LLM call. A friendly output is preferred
 - **`lint_and_fix`**: Optional command to lint and fix project issues, e.g., `cargo clippy --fix --allow-dirty; cargo fmt` in Rust.
+
+#### Custom tools via MCP
+
+The community has made many amazing tools available via the MCP protocol. Kwaak can be extended with these.
+
+Example:
+
+```toml
+[[mcp]]
+# A name for your convenience
+name = "server-everything"
+
+# The command and arguments to start up the mcp server
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-everything"]
+
+# Optionally whitelist or blacklist tools
+filter = { type = "whitelist", tool_names = ["add"] }
+
+# Optionally set environment variables. Values are assumed to be secret and follow the same syntax as api keys (prefixed with env:, text:, or file:)
+env = {
+  SECRET_CALCULATOR_API_KEY = "env:SECRET_CALCULATOR_API_KEY"
+}
+```
+
+You can verify the mcp tools work by listing them with `kwaak --allow-dirty list-tools`.
 
 #### API Key Management
 
