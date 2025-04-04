@@ -8,7 +8,7 @@ use swiftide::indexing::loaders;
 use swiftide::indexing::transformers;
 use swiftide::indexing::Node;
 use swiftide::traits::EmbeddingModel;
-use swiftide::traits::SimplePrompt;
+use swiftide::traits::{NodeCache, Persist, SimplePrompt};
 
 use super::garbage_collection::GarbageCollector;
 use super::progress_updater::ProgressUpdater;
@@ -19,10 +19,14 @@ const MARKDOWN_CHUNK_RANGE: std::ops::Range<usize> = 100..1024;
 // NOTE: Indexing in parallel guarantees a bad time
 
 #[tracing::instrument(skip_all)]
-pub async fn index_repository(
+pub async fn index_repository<S>(
     repository: &Repository,
+    storage: S,
     responder: Option<Arc<dyn Responder>>,
-) -> Result<()> {
+) -> Result<()>
+where
+    S: Persist + NodeCache + Clone + 'static,
+{
     let mut updater = ProgressUpdater::from(responder);
 
     // The updater forwards formatted progress updates to the connected frontend
@@ -51,12 +55,10 @@ pub async fn index_repository(
         .embedding_provider()
         .get_embedding_model(backoff)?;
 
-    let duckdb = storage::get_duckdb(repository);
-
     let (mut markdown, mut code) = swiftide::indexing::Pipeline::from_loader(loader)
         .with_concurrency(repository.config().indexing_concurrency())
         .with_default_llm_client(indexing_provider)
-        .filter_cached(duckdb.clone())
+        .filter_cached(storage.clone())
         .split_by(|node| {
             let Ok(node) = node else { return true };
 
@@ -91,7 +93,7 @@ pub async fn index_repository(
             Ok(chunk)
         })
         .then(updater.count_processed_fn())
-        .then_store_with(duckdb)
+        .then_store_with(storage)
         .run()
         .await?;
 

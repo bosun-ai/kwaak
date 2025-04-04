@@ -89,7 +89,9 @@ async fn main() -> Result<()> {
                 start_agent(repository, initial_message, &args).await
             }
             cli::Commands::Tui => start_tui(&repository, &args).await,
-            cli::Commands::Index => index_repository(&repository, None).await,
+            cli::Commands::Index => {
+                index_repository(&repository, storage::get_duckdb(&repository), None).await
+            }
             cli::Commands::TestTool {
                 tool_name,
                 tool_args,
@@ -195,7 +197,7 @@ async fn start_agent(
     repository.config_mut().endless_mode = true;
 
     if !args.skip_indexing {
-        indexing::index_repository(&repository, None).await?;
+        indexing::index_repository(&repository, storage::get_duckdb(&repository), None).await?;
     }
 
     let (tx, mut rx) = mpsc::unbounded_channel();

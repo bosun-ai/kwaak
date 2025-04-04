@@ -13,6 +13,7 @@ use crate::{
     frontend::App,
     git, indexing,
     repository::Repository,
+    storage,
     util::accept_non_zero_exit,
 };
 
@@ -126,7 +127,10 @@ impl CommandHandler {
                     .await?;
             }
             Command::IndexRepository => {
-                indexing::index_repository(repository, Some(event.clone_responder())).await?;
+                // TODO: This should be setup when starting the handler
+                let storage = storage::get_duckdb(repository);
+                indexing::index_repository(repository, storage, Some(event.clone_responder()))
+                    .await?;
             }
             Command::ShowConfig => {
                 event
