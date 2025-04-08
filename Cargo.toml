@@ -15,7 +15,7 @@ arrow = { version = "=54.2.1" }
 # chrono = "=0.4.38"
 arrow-arith = { version = "=54.2.1" }
 
-swiftide-docker-executor = "0.7.0"
+swiftide-docker-executor = "0.7.1"
 anyhow = "1.0.97"
 crossterm = "0.28.1"
 ratatui = { version = "0.29.0", features = ["unstable-rendered-line-info"] }
@@ -24,7 +24,7 @@ tokio = { version = "1.43.0", features = ["full"] }
 tokio-util = { version = "0.7.13", features = ["rt"] }
 strum = "0.27.1"
 strum_macros = "0.27.1"
-swiftide = { version = "=0.22.8", features = [
+swiftide = { version = "=0.23.0", features = [
   "openai",
   "tree-sitter",
   "ollama",
@@ -35,8 +35,8 @@ swiftide = { version = "=0.22.8", features = [
   "duckdb",
 
 ] }
-swiftide-macros = { version = "=0.22.8" }
-swiftide-integrations = { version = "=0.22.8" }
+swiftide-macros = { version = "=0.23.0" }
+swiftide-integrations = { version = "=0.23.0" }
 fastembed = "4.6.0"
 toml = "0.8.20"
 serde = { version = "1.0.218", features = ["derive"] }
@@ -108,7 +108,7 @@ test-log = { version = "0.2.17", features = ["trace"] }
 insta = "1.42.2"
 assert_cmd = "2.0.16"
 predicates = "3.1.3"
-swiftide-core = { version = "=0.22.8", features = ["test-utils"] }
+swiftide-core = { version = "=0.23.0", features = ["test-utils"] }
 mockall = "0.13.1"
 rexpect = "0.6.0"
 
@@ -152,9 +152,9 @@ evaluations = []
 # diffy = { git = "https://github.com/timonv/diffy", branch = "fix/debug-wrong-line" }
 # arrow = { version = "=53.2.0", optional = false }
 # arrow-arith = { version = "=53.2.0", optional = false }
-swiftide = { path = "../swiftide/swiftide" }
-swiftide-macros = { path = "../swiftide/swiftide-macros" }
-swiftide-core = { path = "../swiftide/swiftide-core" }
+# swiftide = { path = "../swiftide/swiftide" }
+# swiftide-macros = { path = "../swiftide/swiftide-macros" }
+# swiftide-core = { path = "../swiftide/swiftide-core" }
 
 [workspace.metadata.cross.target.x86_64-unknown-linux-gnu]
 image = "rust:1.83.0"
