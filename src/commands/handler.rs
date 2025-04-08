@@ -136,8 +136,6 @@ impl<I: Index + Clone + 'static> CommandHandler<I> {
                     .await?;
             }
             Command::IndexRepository => {
-                // TODO: This should be setup when starting the handler
-
                 index
                     .index_repository(repository, Some(event.clone_responder()))
                     .await?;
