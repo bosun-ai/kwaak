@@ -87,10 +87,7 @@ impl ConversationSummarizer {
                     )?
                     .output;
 
-                    let prompt = prompt
-                        .with_context_value("diff", current_diff)
-                        .render()
-                        .await?;
+                    let prompt = prompt.with_context_value("diff", current_diff).render()?;
 
                     let mut messages =
                         filter_messages_since_summary(agent.context().history().await);
