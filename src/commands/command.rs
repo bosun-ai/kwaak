@@ -45,6 +45,7 @@ pub enum Command {
 #[derive(Debug, Clone, Builder)]
 pub struct CommandEvent {
     command: Command,
+    #[builder(default)]
     repository: Option<Arc<Repository>>,
     uuid: Uuid,
     responder: Arc<dyn Responder>,
@@ -56,6 +57,7 @@ impl CommandEvent {
         CommandEventBuilder::default()
     }
 
+    #[must_use]
     pub fn repository(&self) -> Option<&Repository> {
         self.repository.as_deref()
     }
