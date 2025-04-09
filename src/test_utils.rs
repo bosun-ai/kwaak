@@ -12,6 +12,7 @@ use tokio_util::task::AbortOnDropHandle;
 use uuid::Uuid;
 
 use crate::frontend;
+use crate::indexing::DuckdbIndex;
 use crate::{
     commands::CommandHandler, config::Config, frontend::App, git, repository::Repository, storage,
 };
@@ -282,7 +283,8 @@ pub async fn setup_integration() -> Result<IntegrationContext> {
     duckdb.setup().await.unwrap();
     let terminal = Terminal::new(TestBackend::new(160, 40)).unwrap();
 
-    let mut handler = CommandHandler::from_repository(repository.clone());
+    let index = DuckdbIndex::default();
+    let mut handler = CommandHandler::from_repository_and_index(repository.clone(), index);
     handler.register_ui(&mut app);
     let handler_guard = handler.start();
 

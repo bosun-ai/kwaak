@@ -747,40 +747,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "edca88bc138befd0323b20752846e6587272d3b03b0343c8ea28a6f819e6e71f"
 dependencies = [
  "async-trait",
- "axum-core 0.4.5",
+ "axum-core",
  "bytes",
  "futures-util",
  "http 1.3.1",
  "http-body 1.0.1",
  "http-body-util",
  "itoa",
- "matchit 0.7.3",
- "memchr",
- "mime",
- "percent-encoding",
- "pin-project-lite",
- "rustversion",
- "serde",
- "sync_wrapper 1.0.2",
- "tower 0.5.2",
- "tower-layer",
- "tower-service",
-]
-
-[[package]]
-name = "axum"
-version = "0.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de45108900e1f9b9242f7f2e254aa3e2c029c921c258fe9e6b4217eeebd54288"
-dependencies = [
- "axum-core 0.5.2",
- "bytes",
- "futures-util",
- "http 1.3.1",
- "http-body 1.0.1",
- "http-body-util",
- "itoa",
- "matchit 0.8.4",
+ "matchit",
  "memchr",
  "mime",
  "percent-encoding",
@@ -802,25 +776,6 @@ dependencies = [
  "async-trait",
  "bytes",
  "futures-util",
- "http 1.3.1",
- "http-body 1.0.1",
- "http-body-util",
- "mime",
- "pin-project-lite",
- "rustversion",
- "sync_wrapper 1.0.2",
- "tower-layer",
- "tower-service",
-]
-
-[[package]]
-name = "axum-core"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68464cd0412f486726fb3373129ef5d2993f90c34bc2bc1c1e9943b2f4fc7ca6"
-dependencies = [
- "bytes",
- "futures-core",
  "http 1.3.1",
  "http-body 1.0.1",
  "http-body-util",
@@ -998,7 +953,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
- "tonic 0.12.3",
+ "tonic",
  "tower-service",
  "url",
  "winapi",
@@ -1012,7 +967,7 @@ checksum = "4565dfbe8ac1deb443211d55a1985cc33fd9d3606cf86377edbb538682993f30"
 dependencies = [
  "prost",
  "prost-types",
- "tonic 0.12.3",
+ "tonic",
  "ureq",
 ]
 
@@ -3628,12 +3583,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e7465ac9959cc2b1404e8e2367b43684a6d13790fe23056cc8c6c5a6b7bcb94"
 
 [[package]]
-name = "matchit"
-version = "0.8.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
-
-[[package]]
 name = "matrixmultiply"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4209,7 +4158,7 @@ dependencies = [
  "opentelemetry",
  "opentelemetry_sdk",
  "prost",
- "tonic 0.12.3",
+ "tonic",
 ]
 
 [[package]]
@@ -6133,9 +6082,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "swiftide"
-version = "0.23.0"
+version = "0.22.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f91868c84fe80d23d76b77711102d26c74067234d946f9d8ac253a2cbdecc72"
+checksum = "cda57adb4d38ccccd539100ebe4ea3d0f25786f47467c27a40d5d545b76d7a73"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6151,9 +6100,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-agents"
-version = "0.23.0"
+version = "0.22.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d41cee50b33eb748da269ed9ff7608912b5cec06cc697059e21893b30031bf05"
+checksum = "61006a8660218d2ed98f3ff069ba132c585d46ce01bb0710d54ecddfd3bad5dc"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6166,16 +6115,15 @@ dependencies = [
  "strum 0.27.1",
  "strum_macros 0.27.1",
  "swiftide-core",
- "thiserror 2.0.12",
  "tokio",
  "tracing",
 ]
 
 [[package]]
 name = "swiftide-core"
-version = "0.23.0"
+version = "0.22.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "afb9434bb4913006b58294f3f720c42e7a2f7207ad2e7ad151d8c0e574e3eefe"
+checksum = "790fc4f741c511ae210bcb62f108f9982ea80882c849c63e7034b8fbff904db9"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6201,9 +6149,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-docker-executor"
-version = "0.7.1"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3360b573b2b23389a58b592a9d071d8f3d5b437a72fc85b2116840846d6d5c8"
+checksum = "f36912a4af5f69ef7bba290e8cfd169ec064bd87f1f1f2ecb6febfbd5c8a72eb"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6220,7 +6168,7 @@ dependencies = [
  "thiserror 2.0.12",
  "tokio",
  "tokio-tar",
- "tonic 0.13.0",
+ "tonic",
  "tonic-build",
  "tracing",
  "uuid",
@@ -6229,9 +6177,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-indexing"
-version = "0.23.0"
+version = "0.22.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e6222fc29eec0684e2461d4e29de55e7be3621bc9a9cbe06a6d692e0642f1b2"
+checksum = "559f71be9050ef156abbf2680017df5a1bd017af27cc199a75d9c3aac881ba2a"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6256,9 +6204,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-integrations"
-version = "0.23.0"
+version = "0.22.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ac943ae767393e0118035fd362ddd794611b8f262462a7658517f8bd69540dd"
+checksum = "23e6d8bf901218d47e247b6a738e57098e589b13824501fa9f9d999c98d2fec5"
 dependencies = [
  "anyhow",
  "async-anthropic",
@@ -6301,9 +6249,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-macros"
-version = "0.23.0"
+version = "0.22.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1feb725a0df2bd298d36aed999ea8273765f3086fba493c08d18d10136d85956"
+checksum = "46334386ba042461124528354fd9245235236b857e3bd7d67b8eeb181d64275d"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6319,9 +6267,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-query"
-version = "0.23.0"
+version = "0.22.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e801e8e2e3fd23471c4a2ac368723c6a088b997c44f4ec137c8d958c8e0b082"
+checksum = "eda3198042b1b698e9fc91d1cb97f89c60948dd4706f95456f90d22f374c5c7b"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6913,7 +6861,7 @@ checksum = "877c5b330756d856ffcc4553ab34a5684481ade925ecc54bcd1bf02b1d0d4d52"
 dependencies = [
  "async-stream",
  "async-trait",
- "axum 0.7.9",
+ "axum",
  "base64 0.22.1",
  "bytes",
  "h2 0.4.8",
@@ -6936,39 +6884,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "tonic"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85839f0b32fd242bb3209262371d07feda6d780d16ee9d2bc88581b89da1549b"
-dependencies = [
- "async-trait",
- "axum 0.8.3",
- "base64 0.22.1",
- "bytes",
- "h2 0.4.8",
- "http 1.3.1",
- "http-body 1.0.1",
- "http-body-util",
- "hyper 1.6.0",
- "hyper-timeout",
- "hyper-util",
- "percent-encoding",
- "pin-project",
- "prost",
- "socket2",
- "tokio",
- "tokio-stream",
- "tower 0.5.2",
- "tower-layer",
- "tower-service",
- "tracing",
-]
-
-[[package]]
 name = "tonic-build"
-version = "0.13.0"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d85f0383fadd15609306383a90e85eaed44169f931a5d2be1b42c76ceff1825e"
+checksum = "9557ce109ea773b399c9b9e5dca39294110b74f1f342cb347a80d1fce8c26a11"
 dependencies = [
  "prettyplease",
  "proc-macro2",
@@ -7006,9 +6925,7 @@ checksum = "d039ad9159c98b70ecfd540b2573b97f7f52c3e8d9f8ad57a24b916a536975f9"
 dependencies = [
  "futures-core",
  "futures-util",
- "indexmap 2.8.0",
  "pin-project-lite",
- "slab",
  "sync_wrapper 1.0.2",
  "tokio",
  "tokio-util",

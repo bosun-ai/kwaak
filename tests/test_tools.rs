@@ -3,7 +3,7 @@ use std::sync::Arc;
 use kwaak::agent::tools;
 use serde_json::json;
 use swiftide::agents::{tools::local_executor::LocalExecutor, DefaultContext};
-use swiftide_core::{AgentContext, ToolExecutor};
+use swiftide::traits::{AgentContext, ToolExecutor};
 use tempfile::tempdir;
 
 macro_rules! invoke {
