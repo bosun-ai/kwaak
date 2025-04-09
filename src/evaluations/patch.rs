@@ -8,6 +8,7 @@ use crate::evaluations::{
     output::{EvalMetrics, EvalOutput},
     start_tool_evaluation_agent,
 };
+use crate::indexing::DuckdbIndex;
 use crate::repository::Repository;
 use anyhow::Result;
 use std::fmt::Write as _;
@@ -223,7 +224,9 @@ async fn run_single_evaluation(iteration: u32) -> Result<(bool, EvalMetrics)> {
 
     let repository = Repository::from_config(config);
 
-    let tools = available_builtin_tools(&repository, None, None)?;
+    let kwaak_index = DuckdbIndex::default();
+    let tools = available_builtin_tools(&repository, None, None, &kwaa_index)?;
+
     let agent =
         start_tool_evaluation_agent(&repository, responder.clone(), tools, &prompt()).await?;
 

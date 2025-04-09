@@ -1,6 +1,8 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use anyhow::Result;
+use swiftide::query::search_strategies::SimilaritySingleEmbedding;
+use swiftide::traits::{NodeCache, Persist, Retrieve};
 use tokio::{
     sync::mpsc,
     task::{self},
@@ -8,11 +10,13 @@ use tokio::{
 use tokio_util::task::AbortOnDropHandle;
 use uuid::Uuid;
 
+use crate::indexing::Index;
 use crate::{
     agent::{self, session::RunningSession},
     frontend::App,
     git, indexing,
     repository::Repository,
+    storage,
     util::accept_non_zero_exit,
 };
 
@@ -24,7 +28,7 @@ use super::{
 /// Commands always flow via the `CommandHandler`
 ///
 /// It is the principle entry point for the backend, and handles all commands
-pub struct CommandHandler {
+pub struct CommandHandler<S: Index> {
     /// Receives commands
     rx: Option<mpsc::UnboundedReceiver<CommandEvent>>,
     /// Sends commands
@@ -35,10 +39,12 @@ pub struct CommandHandler {
 
     // agent_sessions: Arc<RwLock<HashMap<Uuid, RunningSession>>>,
     agent_sessions: HashMap<Uuid, RunningSession>,
+
+    index: S,
 }
 
-impl CommandHandler {
-    pub fn from_repository(repository: impl Into<Repository>) -> Self {
+impl<I: Index + Clone + 'static> CommandHandler<I> {
+    pub fn from_repository_and_index(repository: impl Into<Repository>, index: I) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
 
         CommandHandler {
@@ -47,6 +53,7 @@ impl CommandHandler {
             repository: Arc::new(repository.into()),
             // agent_sessions: Arc::new(RwLock::new(HashMap::new())),
             agent_sessions: HashMap::new(),
+            index,
         }
     }
 
@@ -68,6 +75,7 @@ impl CommandHandler {
     /// - Missing receiver for commands
     pub fn start(mut self) -> AbortOnDropHandle<()> {
         let repository = Arc::clone(&self.repository);
+        let index = self.index.clone();
         let mut rx = self.rx.take().expect("Expected a receiver");
         // Arguably we're spawning a single task and moving it once, the arc mutex should not be
         // needed.
@@ -89,10 +97,11 @@ impl CommandHandler {
                 }
 
                 let repository = Arc::clone(&repository);
+                let storage = index.clone();
                 let this_handler = Arc::clone(&this_handler);
 
                 joinset.spawn(async move {
-                    let result = Box::pin(this_handler.lock().await.handle_command_event(&repository, &event, &event.command())).await;
+                    let result = Box::pin(this_handler.lock().await.handle_command_event(&repository, &storage, &event, &event.command())).await;
                     event.responder().send(CommandResponse::Completed).await;
 
                     if let Err(error) = result {
@@ -113,6 +122,7 @@ impl CommandHandler {
     async fn handle_command_event(
         &mut self,
         repository: &Repository,
+        index: &I,
         event: &CommandEvent,
         cmd: &Command,
     ) -> Result<()> {
@@ -126,7 +136,9 @@ impl CommandHandler {
                     .await?;
             }
             Command::IndexRepository => {
-                indexing::index_repository(repository, Some(event.clone_responder())).await?;
+                index
+                    .index_repository(repository, Some(event.clone_responder()))
+                    .await?;
             }
             Command::ShowConfig => {
                 event
@@ -233,7 +245,8 @@ impl CommandHandler {
             return Ok(session.clone());
         }
 
-        let running_agent = agent::start_session(uuid, &self.repository, query, responder).await?;
+        let running_agent =
+            agent::start_session(uuid, &self.repository, &self.index, query, responder).await?;
         let cloned = running_agent.clone();
 
         self.agent_sessions.insert(uuid, running_agent);

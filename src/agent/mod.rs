@@ -7,8 +7,10 @@ pub mod session;
 mod tool_summarizer;
 pub mod tools;
 mod util;
+use crate::{commands::Responder, indexing::Index, repository::Repository};
 use session::{RunningSession, Session};
 use std::sync::Arc;
+use uuid::Uuid;
 
 use anyhow::Result;
 
@@ -17,6 +19,7 @@ use anyhow::Result;
 pub async fn start_session(
     uuid: Uuid,
     repository: &Repository,
+    index: &impl Index,
     initial_query: &str,
     command_responder: Arc<dyn Responder>,
 ) -> Result<RunningSession> {
@@ -29,10 +32,6 @@ pub async fn start_session(
         .repository(repository.clone())
         .default_responder(command_responder)
         .initial_query(initial_query.to_string())
-        .start()
+        .start(index)
         .await
 }
-
-use uuid::Uuid;
-
-use crate::{commands::Responder, repository::Repository};
