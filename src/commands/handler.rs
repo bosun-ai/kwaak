@@ -1,7 +1,6 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use anyhow::Result;
-use swiftide::traits::NodeCache;
 use tokio::{
     sync::mpsc,
     task::{self},

@@ -44,6 +44,7 @@ pub trait Index: Send + Sync + std::fmt::Debug {
 pub struct DuckdbIndex {}
 
 impl DuckdbIndex {
+    #[allow(clippy::unused_self)]
     fn get_duckdb(&self, repository: &Repository) -> Duckdb {
         get_duckdb(repository)
     }
