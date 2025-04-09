@@ -285,7 +285,7 @@ pub async fn setup_integration() -> Result<IntegrationContext> {
     let terminal = Terminal::new(TestBackend::new(160, 40)).unwrap();
 
     let index = DuckdbIndex::default();
-    let mut handler = CommandHandler::from_repository_and_index(repository.clone(), index);
+    let mut handler = CommandHandler::from_index(index);
     handler.register_ui(&mut app);
     let handler_guard = handler.start();
 

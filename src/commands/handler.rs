@@ -1,8 +1,8 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use tokio::{
-    sync::mpsc,
+    sync::{mpsc, Mutex},
     task::{self},
 };
 use tokio_util::task::AbortOnDropHandle;
@@ -31,25 +31,19 @@ pub struct CommandHandler<S: Index> {
     /// Sends commands
     tx: mpsc::UnboundedSender<CommandEvent>,
 
-    /// Repository to interact with
-    repository: Arc<Repository>,
-
-    // agent_sessions: Arc<RwLock<HashMap<Uuid, RunningSession>>>,
-    agent_sessions: HashMap<Uuid, RunningSession>,
+    agent_sessions: Mutex<HashMap<Uuid, RunningSession>>,
 
     index: S,
 }
 
-impl<I: Index + Clone + 'static> CommandHandler<I> {
-    pub fn from_repository_and_index(repository: impl Into<Repository>, index: I) -> Self {
+impl<'command, I: Index + Clone + 'static> CommandHandler<I> {
+    pub fn from_index(index: I) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
 
         CommandHandler {
             rx: Some(rx),
             tx,
-            repository: Arc::new(repository.into()),
-            // agent_sessions: Arc::new(RwLock::new(HashMap::new())),
-            agent_sessions: HashMap::new(),
+            agent_sessions: Mutex::new(HashMap::new()),
             index,
         }
     }
@@ -60,7 +54,7 @@ impl<I: Index + Clone + 'static> CommandHandler<I> {
         &self.tx
     }
 
-    pub fn register_ui(&mut self, app: &mut App) {
+    pub fn register_ui(&mut self, app: &'command mut App) {
         app.command_tx = Some(self.tx.clone());
     }
 
@@ -71,12 +65,11 @@ impl<I: Index + Clone + 'static> CommandHandler<I> {
     /// - Missing ui sender
     /// - Missing receiver for commands
     pub fn start(mut self) -> AbortOnDropHandle<()> {
-        let repository = Arc::clone(&self.repository);
         let index = self.index.clone();
         let mut rx = self.rx.take().expect("Expected a receiver");
         // Arguably we're spawning a single task and moving it once, the arc mutex should not be
         // needed.
-        let this_handler = Arc::new(tokio::sync::Mutex::new(self));
+        let this_handler = Arc::new(self);
 
         AbortOnDropHandle::new(task::spawn(async move {
             // Handle spawned commands gracefully on quit
@@ -93,12 +86,12 @@ impl<I: Index + Clone + 'static> CommandHandler<I> {
                     break;
                 }
 
-                let repository = Arc::clone(&repository);
                 let storage = index.clone();
                 let this_handler = Arc::clone(&this_handler);
 
                 joinset.spawn(async move {
-                    let result = Box::pin(this_handler.lock().await.handle_command_event(&repository, &storage, &event, &event.command())).await;
+                    let event = event.clone();
+                    let result = Box::pin(this_handler.handle_command_event(event.repository(), &storage, &event, &event.command())).await;
                     event.responder().send(CommandResponse::Completed).await;
 
                     if let Err(error) = result {
@@ -117,8 +110,8 @@ impl<I: Index + Clone + 'static> CommandHandler<I> {
 
     #[tracing::instrument(skip_all, fields(otel.name = %cmd.to_string(), uuid = %event.uuid()), err)]
     async fn handle_command_event(
-        &mut self,
-        repository: &Repository,
+        &self,
+        repository: Option<&Repository>,
         index: &I,
         event: &CommandEvent,
         cmd: &Command,
@@ -133,20 +126,34 @@ impl<I: Index + Clone + 'static> CommandHandler<I> {
                     .await?;
             }
             Command::IndexRepository => {
+                let Some(repository) = repository else {
+                    bail!("Expected a repository")
+                };
                 index
                     .index_repository(repository, Some(event.clone_responder()))
                     .await?;
             }
             Command::ShowConfig => {
+                let Some(repository) = repository else {
+                    bail!("Expected a repository")
+                };
                 event
                     .responder()
                     .system_message(&toml::to_string_pretty(repository.config())?)
                     .await;
             }
             Command::Chat { message } => {
+                let Some(repository) = repository else {
+                    bail!("Expected a repository")
+                };
                 let message = message.clone();
                 let session = self
-                    .find_or_start_agent_by_uuid(event.uuid(), &message, event.clone_responder())
+                    .find_or_start_agent_by_uuid(
+                        event.uuid(),
+                        &message,
+                        &repository,
+                        event.clone_responder(),
+                    )
                     .await?;
                 let token = session.cancel_token().clone();
 
@@ -156,8 +163,9 @@ impl<I: Index + Clone + 'static> CommandHandler<I> {
 
                 }?;
             }
+            // TODO: Can be replaced by using `Exec` on the other side to keep this clean
             Command::Diff => {
-                let Some(session) = self.find_agent_by_uuid(event.uuid()) else {
+                let Some(session) = self.find_agent_by_uuid(event.uuid()).await else {
                     event
                         .responder()
                         .system_message("No agent found (yet), is it starting up?")
@@ -171,7 +179,7 @@ impl<I: Index + Clone + 'static> CommandHandler<I> {
                 event.responder().system_message(&diff).await;
             }
             Command::Exec { cmd } => {
-                let Some(session) = self.find_agent_by_uuid(event.uuid()) else {
+                let Some(session) = self.find_agent_by_uuid(event.uuid()).await else {
                     event
                         .responder()
                         .system_message("No agent found (yet), is it starting up?")
@@ -184,7 +192,7 @@ impl<I: Index + Clone + 'static> CommandHandler<I> {
                 event.responder().system_message(&output).await;
             }
             Command::RetryChat => {
-                let Some(session) = self.find_agent_by_uuid(event.uuid()) else {
+                let Some(session) = self.find_agent_by_uuid(event.uuid()).await else {
                     event
                         .responder()
                         .system_message("No agent found (yet), is it starting up?")
@@ -194,7 +202,7 @@ impl<I: Index + Clone + 'static> CommandHandler<I> {
                 let mut token = session.cancel_token().clone();
                 if token.is_cancelled() {
                     // if let Some(session) = self.agent_sessions.write().await.get_mut(&event.uuid())
-                    if let Some(session) = self.agent_sessions.get_mut(&event.uuid()) {
+                    if let Some(session) = self.agent_sessions.lock().await.get_mut(&event.uuid()) {
                         session.reset_cancel_token();
                         token = session.cancel_token().clone();
                     }
@@ -231,35 +239,37 @@ impl<I: Index + Clone + 'static> CommandHandler<I> {
     }
 
     async fn find_or_start_agent_by_uuid(
-        &mut self,
+        &self,
         uuid: Uuid,
         query: &str,
+        repository: &Repository,
         responder: Arc<dyn Responder>,
     ) -> Result<RunningSession> {
-        if let Some(session) = self.agent_sessions.get_mut(&uuid) {
+        if let Some(session) = self.agent_sessions.lock().await.get_mut(&uuid) {
             session.reset_cancel_token();
 
             return Ok(session.clone());
         }
 
         let running_agent =
-            agent::start_session(uuid, &self.repository, &self.index, query, responder).await?;
+            agent::start_session(uuid, repository, &self.index, query, responder).await?;
         let cloned = running_agent.clone();
 
-        self.agent_sessions.insert(uuid, running_agent);
+        self.agent_sessions.lock().await.insert(uuid, running_agent);
 
         Ok(cloned)
     }
 
-    fn find_agent_by_uuid(&self, uuid: Uuid) -> Option<RunningSession> {
-        if let Some(session) = self.agent_sessions.get(&uuid) {
+    async fn find_agent_by_uuid(&self, uuid: Uuid) -> Option<RunningSession> {
+        if let Some(session) = self.agent_sessions.lock().await.get(&uuid) {
             return Some(session.clone());
         }
         None
     }
 
     async fn stop_agent(&self, uuid: Uuid, responder: Arc<dyn Responder>) -> Result<()> {
-        let Some(session) = self.agent_sessions.get(&uuid) else {
+        let lock = self.agent_sessions.lock().await;
+        let Some(session) = lock.get(&uuid) else {
             responder
                 .system_message("No agent found (yet), is it starting up?")
                 .await;

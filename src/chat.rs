@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 use ratatui::widgets::ScrollbarState;
 
@@ -25,7 +25,7 @@ pub struct Chat {
     // Whether to auto-tail the chat on new messages
     pub auto_tail: bool,
 
-    pub repository: Option<Repository>,
+    pub repository: Option<Arc<Repository>>,
 }
 
 impl Chat {

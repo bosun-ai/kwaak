@@ -240,10 +240,16 @@ impl App<'_> {
             chat.transition(ChatState::Loading);
         }
 
+        let repository = self
+            .current_chat()
+            .and_then(|chat| chat.repository.as_ref())
+            .cloned();
+
         let event = CommandEvent::builder()
             .command(cmd)
             .uuid(uuid)
             .responder(self.command_responder.for_chat_id(uuid))
+            .repository(repository)
             .build()
             .expect("Infallible; Failed to build command event");
 
