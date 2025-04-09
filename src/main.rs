@@ -15,7 +15,7 @@ use git::github::GithubSession;
 use kwaak::evaluations;
 use kwaak::{
     agent, cli, commands, config, frontend, git,
-    indexing::{self, index_repository},
+    indexing::{self, index_repository, DuckdbIndex},
     onboarding, repository, storage,
 };
 
@@ -90,14 +90,16 @@ async fn main() -> Result<()> {
             }
             cli::Commands::Tui => start_tui(&repository, &args).await,
             cli::Commands::Index => {
-                index_repository(&repository, storage::get_duckdb(&repository), None).await
+                index_repository(&repository, &storage::get_duckdb(&repository), None).await
             }
             cli::Commands::TestTool {
                 tool_name,
                 tool_args,
             } => test_tool(&repository, tool_name, tool_args.as_deref()).await,
             cli::Commands::Query { query: query_param } => {
-                let result = indexing::query(&repository, query_param).await;
+                let result =
+                    indexing::query(&repository, &storage::get_duckdb(&repository), query_param)
+                        .await;
 
                 if let Ok(result) = result.as_deref() {
                     println!("{result}");
@@ -156,7 +158,8 @@ async fn test_tool(
     tool_args: Option<&str>,
 ) -> Result<()> {
     let github_session = Arc::new(GithubSession::from_repository(&repository)?);
-    let tool = available_tools(repository, Some(&github_session), None)?
+    let index = DuckdbIndex::default();
+    let tool = available_tools(repository, Some(&github_session), None, &index)?
         .into_iter()
         .find(|tool| tool.name() == tool_name)
         .context("Tool not found")?;
@@ -197,7 +200,7 @@ async fn start_agent(
     repository.config_mut().endless_mode = true;
 
     if !args.skip_indexing {
-        indexing::index_repository(&repository, storage::get_duckdb(&repository), None).await?;
+        indexing::index_repository(&repository, &storage::get_duckdb(&repository), None).await?;
     }
 
     let (tx, mut rx) = mpsc::unbounded_channel();
@@ -222,7 +225,9 @@ async fn start_agent(
     });
 
     let query = initial_message.to_string();
-    let agent = agent::start_session(Uuid::new_v4(), &repository, &query, Arc::new(tx)).await?;
+    let index = DuckdbIndex::default();
+    let agent =
+        agent::start_session(Uuid::new_v4(), &repository, &index, &query, Arc::new(tx)).await?;
 
     agent.active_agent().query(&query).await?;
     handle.abort();
@@ -259,7 +264,9 @@ async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Res
     }
 
     let app_result = {
-        let mut handler = commands::CommandHandler::from_repository(repository);
+        let kwaak_index = DuckdbIndex::default();
+        let mut handler =
+            commands::CommandHandler::from_repository_and_index(repository, kwaak_index);
         handler.register_ui(&mut app);
 
         let _guard = handler.start();

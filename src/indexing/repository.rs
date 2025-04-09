@@ -21,7 +21,7 @@ const MARKDOWN_CHUNK_RANGE: std::ops::Range<usize> = 100..1024;
 #[tracing::instrument(skip_all)]
 pub async fn index_repository<S>(
     repository: &Repository,
-    storage: S,
+    storage: &S,
     responder: Option<Arc<dyn Responder>>,
 ) -> Result<()>
 where
@@ -93,7 +93,7 @@ where
             Ok(chunk)
         })
         .then(updater.count_processed_fn())
-        .then_store_with(storage)
+        .then_store_with(storage.clone())
         .run()
         .await?;
 

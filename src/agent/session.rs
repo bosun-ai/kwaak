@@ -18,7 +18,7 @@ use crate::{
     commands::Responder,
     config::{self, AgentEditMode, SupportedToolExecutors},
     git::github::GithubSession,
-    indexing,
+    indexing::{self, Index},
     repository::Repository,
 };
 
@@ -79,7 +79,7 @@ impl Session {
 impl SessionBuilder {
     /// Starts a session
     #[tracing::instrument(skip_all)]
-    pub async fn start(&mut self) -> Result<RunningSession> {
+    pub async fn start(&mut self, index: &impl Index) -> Result<RunningSession> {
         let (running_session_tx, running_session_rx) = tokio::sync::mpsc::unbounded_channel();
 
         let session = Arc::new(
@@ -116,7 +116,7 @@ impl SessionBuilder {
                 &fast_query_provider,
                 &session.default_responder
             ),
-            generate_initial_context(&session.repository, &session.initial_query)
+            generate_initial_context(&session.repository, &session.initial_query, index)
         )?;
 
         let env_setup = EnvSetup::new(&session.repository, github_session.as_deref(), &*executor);
@@ -126,6 +126,7 @@ impl SessionBuilder {
             &session.repository,
             github_session.as_ref(),
             Some(&agent_environment),
+            index,
         )?;
 
         let active_agent = match session.repository.config().agent {
@@ -369,8 +370,12 @@ async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Arc<
 }
 
 #[tracing::instrument(skip_all)]
-async fn generate_initial_context(repository: &Repository, query: &str) -> Result<String> {
-    let retrieved_context = indexing::query(repository, &query).await?;
+async fn generate_initial_context(
+    repository: &Repository,
+    query: &str,
+    index: &impl Index,
+) -> Result<String> {
+    let retrieved_context = index.query_repository(repository, &query).await?;
     let formatted_context = format!("Additional information:\n\n{retrieved_context}");
     Ok(formatted_context)
 }
@@ -379,8 +384,9 @@ pub fn available_tools(
     repository: &Repository,
     github_session: Option<&Arc<GithubSession>>,
     agent_env: Option<&env_setup::AgentEnvironment>,
+    index: &impl Index,
 ) -> Result<Vec<Box<dyn Tool>>> {
-    let query_pipeline = indexing::build_query_pipeline(repository, None)?;
+    let query_pipeline = index.build_query_pipeline(repository)?;
     let mut tools = vec![
         tools::write_file(),
         tools::search_file(),

@@ -4,7 +4,7 @@ use std::path::Path;
 
 use swiftide::query::evaluators::ragas;
 
-use crate::{indexing::build_query_pipeline, repository::Repository};
+use crate::{indexing::build_query_pipeline, repository::Repository, storage};
 
 /// Evaluate a query pipeline with RAGAS
 ///
@@ -58,7 +58,11 @@ pub async fn evaluate_query_pipeline(
 
     // Build query pipeline
     tracing::info!("Building query pipeline");
-    let pipeline = build_query_pipeline(repository, Some(Box::new(ragas.clone())))?;
+    let pipeline = build_query_pipeline(
+        repository,
+        &storage::get_duckdb(repository),
+        Some(Box::new(ragas.clone())),
+    )?;
 
     // Query all questions from the dataset
     tracing::info!("Querying all questions");
