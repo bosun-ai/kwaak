@@ -225,7 +225,7 @@ async fn run_single_evaluation(iteration: u32) -> Result<(bool, EvalMetrics)> {
     let repository = Repository::from_config(config);
 
     let kwaak_index = DuckdbIndex::default();
-    let tools = available_builtin_tools(&repository, None, None, &kwaa_index)?;
+    let tools = available_builtin_tools(&repository, None, None, &kwaak_index)?;
 
     let agent =
         start_tool_evaluation_agent(&repository, responder.clone(), tools, &prompt()).await?;

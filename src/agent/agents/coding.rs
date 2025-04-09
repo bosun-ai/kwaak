@@ -154,9 +154,9 @@ pub async fn start(
         .after_each(conversation_summarizer.summarize_hook())
         .llm(&query_provider).to_owned();
 
-for tool_box in tool_boxes {
-            builder.add_toolbox(tool_box.clone());
-        }
+    for tool_box in tool_boxes {
+        builder.add_toolbox(tool_box.clone());
+    }
 
     let agent = builder.build()?;
 
