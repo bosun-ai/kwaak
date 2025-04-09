@@ -10,6 +10,7 @@ use crate::evaluations::{
 };
 use crate::repository::Repository;
 use anyhow::Result;
+use std::fmt::Write as _;
 use std::process::Command;
 use std::sync::Arc;
 use std::time::Duration;
@@ -169,29 +170,32 @@ fn write_failure_info(
     found_additions: &[&str],
 ) -> Result<()> {
     let mut content = String::new();
-    content.push_str("Expected changes were not found in the patch.\n\n");
+    writeln!(
+        &mut content,
+        "Expected changes were not found in the patch.\n\n"
+    )?;
 
-    content.push_str("Missing removals:\n");
+    writeln!(&mut content, "Missing removals:")?;
     for removal in missing_removals {
-        content.push_str(&format!("{removal}\n"));
+        writeln!(&mut content, "{removal}\n")?;
     }
     content.push('\n');
 
-    content.push_str("Missing additions:\n");
+    writeln!(&mut content, "Missing additions:")?;
     for addition in missing_additions {
-        content.push_str(&format!("{addition}\n"));
+        writeln!(&mut content, "{addition}")?;
     }
     content.push('\n');
 
-    content.push_str("Found removals:\n");
+    writeln!(&mut content, "Found removals:")?;
     for removal in found_removals {
-        content.push_str(&format!("{removal}\n"));
+        writeln!(&mut content, "{removal}")?;
     }
     content.push('\n');
 
-    content.push_str("Found additions:\n");
+    writeln!(&mut content, "Found additions:")?;
     for addition in found_additions {
-        content.push_str(&format!("{addition}\n"));
+        writeln!(&mut content, "{addition}")?;
     }
 
     eval_output.write_file("failed", &content)?;

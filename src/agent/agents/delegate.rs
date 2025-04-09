@@ -200,7 +200,6 @@ mod tests {
 
         assert!(prompt
             .render()
-            .await
             .unwrap()
             .contains("You cannot ask for feedback and have to try to complete the given task"));
     }
@@ -215,11 +214,7 @@ mod tests {
         let (mut repository, _guard) = test_repository();
         repository.config_mut().agent_custom_constraints = Some(custom_constraints);
 
-        let prompt = build_system_prompt(&repository)
-            .unwrap()
-            .render()
-            .await
-            .unwrap();
+        let prompt = build_system_prompt(&repository).unwrap().render().unwrap();
         assert!(prompt.contains("Custom constraint 1"));
         assert!(prompt.contains("Custom constraint 2"));
     }

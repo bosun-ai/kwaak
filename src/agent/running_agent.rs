@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use derive_builder::Builder;
 use std::sync::Arc;
 use swiftide::traits::AgentContext;
@@ -25,15 +25,25 @@ impl RunningAgent {
     }
 
     pub async fn query(&self, query: &str) -> Result<()> {
-        self.agent.lock().await.query(query).await
+        self.agent
+            .lock()
+            .await
+            .query(query)
+            .await
+            .context("Failed to query agent")
     }
 
     pub async fn run(&self) -> Result<()> {
-        self.agent.lock().await.run().await
+        self.agent
+            .lock()
+            .await
+            .run()
+            .await
+            .context("Failed to run agent")
     }
 
     pub async fn stop(&self) {
-        self.agent.lock().await.stop();
+        self.agent.lock().await.stop("Stopped from kwaak").await;
     }
 }
 
