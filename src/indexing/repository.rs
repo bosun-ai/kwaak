@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use crate::commands::Responder;
 use crate::repository::Repository;
-use crate::storage;
 use anyhow::Result;
 use swiftide::indexing::loaders;
 use swiftide::indexing::transformers;

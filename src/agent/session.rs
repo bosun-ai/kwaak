@@ -23,7 +23,7 @@ use crate::{
     commands::Responder,
     config::{self, mcp::McpServer, AgentEditMode, SupportedToolExecutors},
     git::github::GithubSession,
-    indexing::{self, Index},
+    indexing::Index,
     repository::Repository,
 };
 
@@ -388,7 +388,7 @@ async fn generate_initial_context(
     query: &str,
     index: &impl Index,
 ) -> Result<String> {
-    let retrieved_context = index.query_repository(repository, &query).await?;
+    let retrieved_context = index.query_repository(repository, query).await?;
     let formatted_context = format!("Additional information:\n\n{retrieved_context}");
     Ok(formatted_context)
 }

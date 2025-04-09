@@ -12,7 +12,7 @@ use swiftide::traits::CommandError;
 use anyhow::{Context as _, Result};
 use swiftide::{
     chat_completion::{errors::ToolError, ToolOutput},
-    query::{search_strategies, states, SearchStrategy},
+    query::{states, SearchStrategy},
     traits::{AgentContext, Command},
 };
 use swiftide_macros::{tool, Tool};
