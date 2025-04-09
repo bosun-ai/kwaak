@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::config::Config;
-use agent::session::available_tools;
+use agent::session::available_builtin_tools;
 use anyhow::{Context as _, Result};
 use clap::Parser;
 use commands::CommandResponse;
@@ -14,7 +14,8 @@ use git::github::GithubSession;
 #[cfg(feature = "evaluations")]
 use kwaak::evaluations;
 use kwaak::{
-    agent, cli, commands, config, frontend, git,
+    agent::{self, session::start_mcp_toolboxes},
+    cli, commands, config, frontend, git,
     indexing::{self, index_repository, DuckdbIndex},
     onboarding, repository, storage,
 };
@@ -39,6 +40,7 @@ use uuid::Uuid;
 mod test_utils;
 
 #[tokio::main]
+#[allow(clippy::too_many_lines)] // I know, I know, it's not.
 async fn main() -> Result<()> {
     let args = cli::Args::parse();
 
@@ -86,16 +88,41 @@ async fn main() -> Result<()> {
 
         match command {
             cli::Commands::RunAgent { initial_message } => {
-                start_agent(repository, initial_message, &args).await
+                start_agent(repository, &initial_message, &args).await
             }
             cli::Commands::Tui => start_tui(&repository, &args).await,
+            cli::Commands::ListTools => {
+                let github_session = Arc::new(GithubSession::from_repository(&repository)?);
+                let index = DuckdbIndex::default();
+                let tools =
+                    available_builtin_tools(&repository, Some(&github_session), None, &index)?;
+
+                println!("**Enabled built-in tools:**");
+                for tool in tools {
+                    println!(" - {}", tool.name());
+                }
+
+                let mcp_toolboxes = start_mcp_toolboxes(&repository).await?;
+
+                println!("\n**MCP tools:**");
+                for toolbox in mcp_toolboxes {
+                    println!("::{}", toolbox.name());
+
+                    for tool in toolbox.available_tools().await? {
+                        println!(" - {}", tool.name());
+                        println!("{:?}", tool.tool_spec());
+                    }
+                }
+
+                Ok(())
+            }
             cli::Commands::Index => {
                 index_repository(&repository, &storage::get_duckdb(&repository), None).await
             }
             cli::Commands::TestTool {
                 tool_name,
                 tool_args,
-            } => test_tool(&repository, tool_name, tool_args.as_deref()).await,
+            } => test_tool(&repository, &tool_name, tool_args.as_deref()).await,
             cli::Commands::Query { query: query_param } => {
                 let result =
                     indexing::query(&repository, &storage::get_duckdb(&repository), query_param)
@@ -159,7 +186,7 @@ async fn test_tool(
 ) -> Result<()> {
     let github_session = Arc::new(GithubSession::from_repository(&repository)?);
     let index = DuckdbIndex::default();
-    let tool = available_tools(repository, Some(&github_session), None, &index)?
+    let tool = available_builtin_tools(repository, Some(&github_session), None, &index)?
         .into_iter()
         .find(|tool| tool.name() == tool_name)
         .context("Tool not found")?;

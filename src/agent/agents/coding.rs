@@ -5,7 +5,7 @@ use swiftide::{
     agents::{system_prompt::SystemPrompt, Agent, DefaultContext},
     chat_completion::{self, ChatCompletion, Tool},
     prompt::Prompt,
-    traits::{AgentContext, Command, SimplePrompt, ToolExecutor},
+    traits::{AgentContext, Command, SimplePrompt, ToolBox, ToolExecutor},
 };
 
 use crate::{
@@ -23,6 +23,7 @@ pub async fn start(
     session: &Session,
     executor: &Arc<dyn ToolExecutor>,
     tools: &[Box<dyn Tool>],
+    tool_boxes: &[Box<dyn ToolBox>],
     agent_env: &AgentEnvironment,
     initial_context: String,
 ) -> Result<RunningAgent> {
@@ -79,7 +80,7 @@ pub async fn start(
     let maybe_lint_fix_command = session.repository.config().commands.lint_and_fix.clone();
 
     let context = Arc::new(context);
-    let agent = Agent::builder()
+    let mut builder = Agent::builder()
         .context(Arc::clone(&context) as Arc<dyn AgentContext>)
         .system_prompt(system_prompt)
         .tools(tools.to_vec())
@@ -151,8 +152,13 @@ pub async fn start(
         })
         .after_each(commit_and_push.hook())
         .after_each(conversation_summarizer.summarize_hook())
-        .llm(&query_provider)
-        .build()?;
+        .llm(&query_provider).to_owned();
+
+    for tool_box in tool_boxes {
+        builder.add_toolbox(tool_box.clone());
+    }
+
+    let agent = builder.build()?;
 
     RunningAgent::builder()
         .agent(agent)

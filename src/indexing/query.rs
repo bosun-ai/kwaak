@@ -9,7 +9,7 @@ use swiftide::{
     traits::{EmbeddingModel, Persist, Retrieve, SimplePrompt},
 };
 
-use crate::{repository::Repository, storage, templates::Templates, util::strip_markdown_tags};
+use crate::{repository::Repository, templates::Templates, util::strip_markdown_tags};
 
 #[tracing::instrument(skip_all, err)]
 pub async fn query<S>(

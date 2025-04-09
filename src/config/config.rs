@@ -9,11 +9,14 @@ use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
 use swiftide::integrations::treesitter::SupportedLanguages;
 
-use super::defaults::{
-    default_auto_push_remote, default_cache_dir, default_docker_context, default_dockerfile,
-    default_log_dir, default_main_branch, default_project_name,
-};
 use super::{api_key::ApiKey, tools::Tools};
+use super::{
+    defaults::{
+        default_auto_push_remote, default_cache_dir, default_docker_context, default_dockerfile,
+        default_log_dir, default_main_branch, default_project_name,
+    },
+    mcp::McpServer,
+};
 use super::{CommandConfiguration, LLMConfiguration, LLMConfigurations};
 
 #[allow(clippy::struct_excessive_bools)]
@@ -146,6 +149,10 @@ pub struct Config {
     /// Defaults to 10.
     #[serde(default = "default_num_completions_for_summary")]
     pub num_completions_for_summary: usize,
+
+    /// Add tools from MCP servers to the agents
+    #[serde(default)]
+    pub mcp: Option<Vec<McpServer>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

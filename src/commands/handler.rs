@@ -1,8 +1,6 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use anyhow::Result;
-use swiftide::query::search_strategies::SimilaritySingleEmbedding;
-use swiftide::traits::{NodeCache, Persist, Retrieve};
 use tokio::{
     sync::mpsc,
     task::{self},
@@ -14,9 +12,8 @@ use crate::indexing::Index;
 use crate::{
     agent::{self, session::RunningSession},
     frontend::App,
-    git, indexing,
+    git,
     repository::Repository,
-    storage,
     util::accept_non_zero_exit,
 };
 
