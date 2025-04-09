@@ -209,7 +209,7 @@ pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
         "You are already operating on a git branch specific to this task. You do not need to create a new branch",
         "If you are stuck, consider using reset_file to undo your changes",
         "Focus on completing the task fully as requested by the user",
-        "Do not repeat your answers, if they are exactly the same you should probably stop",
+        "Do not repeat your answers, if your message is nearly identical to previous one, consider if your task is complete",
     ].into_iter().map(Into::into).collect();
 
     if repository.config().agent_edit_mode.is_line() {
@@ -235,6 +235,9 @@ pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
         constraints.push(
             "Try to solve the problem yourself first, only if you cannot solve it, ask for help"
                 .into(),
+        );
+        constraints.push(
+            "If the problem is solved or the question is answered, call the stop tool".into(),
         );
     }
 
