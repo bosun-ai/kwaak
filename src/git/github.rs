@@ -1,6 +1,7 @@
 //! This module provides a github session wrapping octocrab
 //!
 //! It is responsible for providing tooling and interaction with github
+use std::fmt::Write as _;
 use std::sync::Mutex;
 
 use anyhow::{Context, Result};
@@ -185,9 +186,9 @@ impl GithubIssueWithComments {
 
         let mut summary = format!("# Issue #{}: {}\n\n", issue.number, issue.title);
 
-        summary.push_str(&format!("**State**: {:?}\n", issue.state)); // (open/closed)
-        summary.push_str(&format!("**Author**: {}\n", issue.user.login));
-        summary.push_str(&format!("**Created**: {}\n", issue.created_at));
+        let _ = writeln!(&mut summary, "**State**: {:?}", issue.state); // (open/closed)
+        let _ = writeln!(&mut summary, "**Author**: {}", issue.user.login);
+        let _ = writeln!(&mut summary, "**Created**: {}", issue.created_at);
 
         // add labels if any
         if !issue.labels.is_empty() {
@@ -214,11 +215,12 @@ impl GithubIssueWithComments {
         if !comments.is_empty() {
             summary.push_str("## Comments\n\n");
             for (i, comment) in comments.iter().enumerate() {
-                summary.push_str(&format!(
+                let _ = writeln!(
+                    &mut summary,
                     "### Comment #{} by {}\n",
                     i + 1,
                     comment.user.login
-                ));
+                );
 
                 if let Some(body) = &comment.body {
                     summary.push_str(body);
