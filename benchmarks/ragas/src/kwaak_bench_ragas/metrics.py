@@ -57,21 +57,21 @@ def calculate_ragas_metrics(
     """Calculate RAGAS metrics for a single instance.
     
     Args:
-        query: The question or query
+        query: The question (using query parameter for backward compatibility)
         contexts: List of context documents
-        response: The generated response
+        response: The generated answer
         ground_truth: Optional ground truth answer
         
     Returns:
         Dictionary of metric names and scores
     """
-    logger.info(f"Calculating RAGAS metrics for query: {query[:50]}...")
+    logger.info(f"Calculating RAGAS metrics for question: {query[:50]}...")
     
     metrics = {}
     
-    # Create a SingleTurnSample for evaluation using the correct field names
+    # Create a SingleTurnSample for evaluation using the field names that RAGAS expects
     sample = SingleTurnSample(
-        user_input=query,
+        user_input=query,  # RAGAS still expects user_input internally
         retrieved_contexts=contexts,
         response=response,
         reference=ground_truth if ground_truth else None

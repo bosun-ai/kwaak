@@ -89,24 +89,24 @@ def _create_default_dataset() -> List[Dict[str, Any]]:
         {
             "id": "sample-1",
             "dataset_name": "default",
-            "query": "What are the main features of Python?",
-            "context": [
+            "question": "What are the main features of Python?",
+            "contexts": [
                 "Python is an interpreted, high-level, general-purpose programming language.",
                 "Python features a dynamic type system and automatic memory management.",
                 "Python supports multiple programming paradigms, including object-oriented, imperative, functional and procedural."
             ],
-            "ground_truth": "Python is an interpreted, high-level language with features including dynamic typing, automatic memory management, and support for multiple programming paradigms such as object-oriented, imperative, functional, and procedural."
+            "ground_truths": ["Python is an interpreted, high-level language with features including dynamic typing, automatic memory management, and support for multiple programming paradigms such as object-oriented, imperative, functional, and procedural."]
         },
         {
             "id": "sample-2",
             "dataset_name": "default",
-            "query": "How does garbage collection work in Python?",
-            "context": [
+            "question": "How does garbage collection work in Python?",
+            "contexts": [
                 "Python uses reference counting for memory management.",
                 "When the reference count of an object drops to zero, it is garbage collected.",
                 "Python also has a cyclic garbage collector that can detect and collect circular references."
             ],
-            "ground_truth": "Python uses reference counting for memory management, where objects are garbage collected when their reference count drops to zero. It also has a cyclic garbage collector to handle circular references."
+            "ground_truths": ["Python uses reference counting for memory management, where objects are garbage collected when their reference count drops to zero. It also has a cyclic garbage collector to handle circular references."]
         }
     ]
 

@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 class EvaluationResult:
     """Results of a RAGAS evaluation run."""
     instance_id: str
-    query: str
-    context: List[str]
-    response: Optional[str] = None
-    ground_truth: Optional[str] = None
+    question: str
+    contexts: List[str]
+    answer: Optional[str] = None
+    ground_truths: Optional[List[str]] = None
     start_time: float = field(default_factory=time.time)
     end_time: Optional[float] = None
     duration: Optional[float] = None
@@ -28,10 +28,10 @@ class EvaluationResult:
         """Convert to dictionary for JSON serialization."""
         return {
             "instance_id": self.instance_id,
-            "query": self.query,
-            "context": self.context,
-            "response": self.response,
-            "ground_truth": self.ground_truth,
+            "question": self.question,
+            "contexts": self.contexts,
+            "answer": self.answer,
+            "ground_truths": self.ground_truths,
             "start_time": self.start_time,
             "end_time": self.end_time,
             "duration": self.duration,
@@ -52,28 +52,31 @@ class RagasEvaluation:
     def run(self) -> EvaluationResult:
         """Run the evaluation for a single instance."""
         instance_id = self.instance.get("id", str(hash(json.dumps(self.instance, sort_keys=True))))
-        query = self.instance.get("query", "")
-        context = self.instance.get("context", [])
-        ground_truth = self.instance.get("ground_truth")
+        question = self.instance.get("question", self.instance.get("query", ""))
+        contexts = self.instance.get("contexts", self.instance.get("context", []))
+        ground_truths = self.instance.get("ground_truths", [])
+        if not ground_truths and "ground_truth" in self.instance:
+            ground_truths = [self.instance.get("ground_truth")]
         
         result = EvaluationResult(
             instance_id=instance_id,
-            query=query,
-            context=context,
-            ground_truth=ground_truth,
+            question=question,
+            contexts=contexts,
+            ground_truths=ground_truths,
         )
         
         try:
             # Run the Kwaak agent to get a response
-            response = self._run_kwaak_agent()
-            result.response = response
+            answer = self._run_kwaak_agent()
+            result.answer = answer
             
             # Calculate RAGAS metrics
-            if response:
+            if answer:
+                ground_truth = ground_truths[0] if ground_truths else None
                 metrics = calculate_ragas_metrics(
-                    query=query,
-                    contexts=context,
-                    response=response,
+                    query=question,
+                    contexts=contexts,
+                    response=answer,
                     ground_truth=ground_truth
                 )
                 result.metrics = metrics
@@ -89,10 +92,10 @@ class RagasEvaluation:
             result.duration = result.end_time - result.start_time
         
         # Save agent output
-        if result.response:
+        if result.answer:
             agent_output_path = self.output_dir / "agent_result.txt"
             with open(agent_output_path, "w") as f:
-                f.write(result.response)
+                f.write(result.answer)
         
         return result
     
@@ -100,24 +103,27 @@ class RagasEvaluation:
         """Run the Kwaak agent and return its response."""
         # For now, we'll use the ground truth as the response if available
         # This allows us to evaluate the baseline system's output against itself
-        ground_truth = self.instance.get('ground_truth')
-        if ground_truth:
-            logger.info(f"Using ground truth as response for query: {self.instance.get('query', '')}")
-            return ground_truth
+        ground_truths = self.instance.get('ground_truths', [])
+        if not ground_truths and 'ground_truth' in self.instance:
+            ground_truths = [self.instance.get('ground_truth')]
+            
+        if ground_truths:
+            logger.info(f"Using ground truth as answer for question: {self.instance.get('question', self.instance.get('query', ''))}")
+            return ground_truths[0]
         
         # If no ground truth is available, we could run the baseline system
         # This would require importing and calling the baseline system
         try:
             from kwaak_bench_ragas.baseline.main import read_directory_into_string, get_relevant_information, answer_question
             
-            query = self.instance.get('query', '')
-            context_string = '\n'.join(self.instance.get('context', []))
+            question = self.instance.get('question', self.instance.get('query', ''))
+            context_string = '\n'.join(self.instance.get('contexts', self.instance.get('context', [])))
             
-            logger.info(f"Running baseline system for query: {query}")
-            relevant_info = get_relevant_information(context_string, query)
-            response = answer_question(relevant_info, query)
+            logger.info(f"Running baseline system for question: {question}")
+            relevant_info = get_relevant_information(context_string, question)
+            answer = answer_question(relevant_info, question)
             
-            return response
+            return answer
         except Exception as e:
             logger.error(f"Error running baseline system: {e}")
             return f"Error generating response: {str(e)}"
@@ -126,7 +132,7 @@ class RagasEvaluation:
         """Generate a comprehensive evaluation report."""
         report = {
             "instance_id": result.instance_id,
-            "query": result.query,
+            "question": result.question,
             "metrics": result.metrics,
             "duration": result.duration,
             "summary": self._generate_summary(result),
