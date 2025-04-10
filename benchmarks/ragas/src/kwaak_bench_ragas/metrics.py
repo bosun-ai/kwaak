@@ -24,12 +24,13 @@ try:
     )
     from ragas import SingleTurnSample
     
-    # Import LLM wrapper for RAGAS
+    # Import LLM wrapper and embeddings for RAGAS
     try:
-        from langchain_openai import ChatOpenAI
+        from langchain_openai import ChatOpenAI, OpenAIEmbeddings
         from ragas.llms import LangchainLLMWrapper
+        from ragas.embeddings import LangchainEmbeddingsWrapper
         
-        # Initialize LLM if API key is available
+        # Initialize LLM and embeddings if API key is available
         if openai_api_key:
             # Create LLM instance for RAGAS
             llm = ChatOpenAI(
@@ -38,7 +39,14 @@ try:
                 temperature=0
             )
             ragas_llm = LangchainLLMWrapper(llm)
-            logging.info("Successfully initialized LLM for RAGAS")
+            
+            # Create embeddings instance for RAGAS
+            embeddings = OpenAIEmbeddings(
+                api_key=openai_api_key,
+                model="text-embedding-ada-002"
+            )
+            ragas_embeddings = LangchainEmbeddingsWrapper(embeddings)
+            logging.info("Successfully initialized LLM and embeddings for RAGAS")
             
             # Flag to indicate we're using the real RAGAS metrics
             using_real_metrics = True
@@ -103,9 +111,9 @@ def calculate_ragas_metrics(
                 reference=ground_truth if ground_truth else None
             )
             
-            # Initialize metrics with LLM
+            # Initialize metrics with LLM and embeddings as needed
             faithfulness_metric = Faithfulness(llm=ragas_llm)
-            answer_relevancy_metric = AnswerRelevancy(llm=ragas_llm)
+            answer_relevancy_metric = AnswerRelevancy(llm=ragas_llm, embeddings=ragas_embeddings)
             context_precision_metric = ContextPrecision(llm=ragas_llm)
             context_recall_metric = ContextRecall(llm=ragas_llm)
             
