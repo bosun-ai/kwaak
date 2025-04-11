@@ -47,3 +47,12 @@ build-in-docker PROFILE="release": docker-build
 [working-directory: 'benchmarks/swe']
 benchmark-swe INSTANCE="":
   uv run kwaak-bench-swe {{ if INSTANCE != "" {"--instance " + INSTANCE } else { ""} }}
+
+[working-directory: 'benchmarks/ragas']
+ragas:
+  # Step 1: Run kwaak with RAGAS evaluation to generate answers
+  cd ../../ && RUST_LOG=debug cargo run --features evaluations -- --allow-dirty eval ragas -i benchmarks/ragas/datasets/kwaak.json --output=benchmarks/ragas/results/kwaak_ragas_answers.json
+  # Step 2: Copy the results file to the datasets directory
+  cp results/kwaak_ragas_answers.json datasets/kwaak_answers.json
+  # Step 3: Run RAGAS benchmark on the generated answers
+  uv run kwaak-bench-ragas --dataset kwaak_answers

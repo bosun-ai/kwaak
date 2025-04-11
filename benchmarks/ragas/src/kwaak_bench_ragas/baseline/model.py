@@ -51,6 +51,7 @@ class OpenRouterClient(BaseModelClient):
             Generated text response
         """
         try:
+            logger.info(f"Sending request to model: {self.model}")
             completion = self.client.chat.completions.create(
                 extra_headers={
                     "HTTP-Referer": "https://github.com/bosun-ai/kwaak",  # Site URL for rankings
@@ -65,10 +66,33 @@ class OpenRouterClient(BaseModelClient):
                 ]
             )
             
+            # Debug the response
+            logger.info(f"Received response from model: {self.model}")
+            logger.debug(f"Full response: {completion}")
+            
+            if not hasattr(completion, 'choices') or not completion.choices:
+                error_msg = f"Invalid response format: no choices found in response"
+                logger.error(error_msg)
+                logger.debug(f"Response content: {completion}")
+                raise ValueError(error_msg)
+                
+            if not hasattr(completion.choices[0], 'message') or not completion.choices[0].message:
+                error_msg = f"Invalid response format: no message found in first choice"
+                logger.error(error_msg)
+                logger.debug(f"First choice content: {completion.choices[0]}")
+                raise ValueError(error_msg)
+                
+            if not hasattr(completion.choices[0].message, 'content'):
+                error_msg = f"Invalid response format: no content found in message"
+                logger.error(error_msg)
+                logger.debug(f"Message content: {completion.choices[0].message}")
+                raise ValueError(error_msg)
+            
             response = completion.choices[0].message.content
             return response
         except Exception as e:
             logger.error(f"Error generating text: {e}")
+            # Re-raise the exception to fail immediately
             raise
 
 
