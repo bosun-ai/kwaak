@@ -6,6 +6,7 @@ use anyhow::Result;
 use ratatui::{backend::TestBackend, Terminal};
 use swiftide::agents::tools::local_executor::LocalExecutor;
 use swiftide::agents::{Agent, DefaultContext};
+use swiftide::chat_completion::errors::LanguageModelError;
 use swiftide::chat_completion::{ChatCompletion, ChatCompletionResponse};
 use swiftide::traits::{EmbeddingModel, Persist as _, SimplePrompt, ToolExecutor};
 use tokio_util::task::AbortOnDropHandle;
@@ -200,14 +201,17 @@ impl NoopLLM {
 
 #[async_trait::async_trait]
 impl SimplePrompt for NoopLLM {
-    async fn prompt(&self, _prompt: swiftide::prompt::Prompt) -> anyhow::Result<String> {
+    async fn prompt(
+        &self,
+        _prompt: swiftide::prompt::Prompt,
+    ) -> Result<String, LanguageModelError> {
         Ok(self.response.clone())
     }
 }
 
 #[async_trait::async_trait]
 impl EmbeddingModel for NoopLLM {
-    async fn embed(&self, input: Vec<String>) -> anyhow::Result<swiftide::Embeddings> {
+    async fn embed(&self, input: Vec<String>) -> Result<swiftide::Embeddings, LanguageModelError> {
         Ok(vec![vec![0.0; input.len()]])
     }
 }
@@ -217,10 +221,7 @@ impl ChatCompletion for NoopLLM {
     async fn complete(
         &self,
         _request: &swiftide::chat_completion::ChatCompletionRequest,
-    ) -> Result<
-        swiftide::chat_completion::ChatCompletionResponse,
-        swiftide::chat_completion::errors::ChatCompletionError,
-    > {
+    ) -> Result<swiftide::chat_completion::ChatCompletionResponse, LanguageModelError> {
         ChatCompletionResponse::builder()
             .message(&self.response)
             .build()
