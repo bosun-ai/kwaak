@@ -3,10 +3,12 @@ from typing import Dict, List, Optional
 import os
 
 # Set OpenAI API key for RAGAS if available
-openai_api_key = os.environ.get('OPENAI_API_KEY') or os.environ.get('OPENROUTER_API_KEY')
+openai_api_key = os.environ.get('OPENAI_API_KEY')
 if openai_api_key:
     os.environ['OPENAI_API_KEY'] = openai_api_key
-    logging.info("Using API key from environment for RAGAS")
+    logging.info("Using OpenAI API key from environment for RAGAS")
+else:
+    logging.warning("OPENAI_API_KEY not found in environment. RAGAS metrics require a valid OpenAI API key.")
 
 # Import the class-based metrics from the current RAGAS version
 from ragas.metrics import (
@@ -28,7 +30,7 @@ if openai_api_key:
     # Create LLM instance for RAGAS
     llm = ChatOpenAI(
         api_key=openai_api_key,
-        model="gpt-3.5-turbo",
+        model="gpt-4o",
         temperature=0
     )
     ragas_llm = LangchainLLMWrapper(llm)
@@ -36,7 +38,7 @@ if openai_api_key:
     # Create embeddings instance for RAGAS
     embeddings = OpenAIEmbeddings(
         api_key=openai_api_key,
-        model="text-embedding-ada-002"
+        model="text-embedding-3-large"
     )
     ragas_embeddings = LangchainEmbeddingsWrapper(embeddings)
     logging.info("Successfully initialized LLM and embeddings for RAGAS")

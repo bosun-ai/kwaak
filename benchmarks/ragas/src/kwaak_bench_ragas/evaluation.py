@@ -1,5 +1,7 @@
 import json
 import logging
+import random
+import string
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -51,7 +53,14 @@ class RagasEvaluation:
     
     def run(self) -> EvaluationResult:
         """Run the evaluation for a single instance."""
-        instance_id = self.instance.get("id", str(hash(json.dumps(self.instance, sort_keys=True))))
+        # Generate a short, readable ID if not provided
+        if "id" in self.instance:
+            instance_id = self.instance["id"]
+        else:
+            # Generate an 8-character random string
+            chars = string.ascii_letters + string.digits
+            instance_id = ''.join(random.choice(chars) for _ in range(8))
+            
         question = self.instance.get("question", self.instance.get("query", ""))
         contexts = self.instance.get("contexts", self.instance.get("context", []))
         ground_truths = self.instance.get("ground_truths", [])

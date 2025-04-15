@@ -1,5 +1,7 @@
 import json
 import logging
+import random
+import string
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -54,7 +56,14 @@ class RagasBenchmark:
         logger.info(f"Starting benchmark with {len(dataset)} instances")
         
         for instance in dataset:
-            instance_id = instance.get("id", str(hash(json.dumps(instance, sort_keys=True))))
+            # Generate a short, readable ID if not provided
+            if "id" in instance:
+                instance_id = instance["id"]
+            else:
+                # Generate an 8-character random string
+                chars = string.ascii_letters + string.digits
+                instance_id = ''.join(random.choice(chars) for _ in range(8))
+                
             logger.info(f"Running evaluation for instance: {instance_id}")
             
             trial_dir = benchmark_dir / instance_id
