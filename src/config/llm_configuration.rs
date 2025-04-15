@@ -255,6 +255,15 @@ pub enum OpenAIPromptModel {
     #[strum(serialize = "o3-mini")]
     #[serde(rename = "o3-mini")]
     O3Mini,
+    #[strum(serialize = "gpt-4.1")]
+    #[serde(rename = "gpt-4.1")]
+    GPT41,
+    #[strum(serialize = "gpt-4.1-mini")]
+    #[serde(rename = "gpt-4.1-mini")]
+    GPT41Mini,
+    #[strum(serialize = "gpt-4.1-nano")]
+    #[serde(rename = "gpt-4.1-nano")]
+    GPT41Nano,
 }
 
 #[derive(
