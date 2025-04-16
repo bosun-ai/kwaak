@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::{path::PathBuf, time::Duration};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 use strum::IntoEnumIterator as _;
 use tui_logger::TuiWidgetState;
 use tui_textarea::TextArea;
@@ -234,34 +234,47 @@ impl App<'_> {
         self.mode.on_key(self, key);
     }
 
+    /// Dispatch a `Command` to the backend
+    ///
+    /// The command is wrapped in a `CommandEvent` with default values from the current chat
     #[tracing::instrument(skip(self))]
     pub fn dispatch_command(&mut self, uuid: Uuid, cmd: Command) {
-        if let Some(chat) = self.current_chat_mut() {
+        if let Some(chat) = self.find_chat_mut(uuid) {
             chat.transition(ChatState::Loading);
         }
-
-        let repository = self
-            .current_chat()
-            .and_then(|chat| chat.repository.as_ref())
-            .cloned();
 
         let event = CommandEvent::builder()
             .command(cmd)
             .uuid(uuid)
             .responder(self.command_responder.for_chat_id(uuid))
-            .repository(repository)
             .build()
             .expect("Infallible; Failed to build command event");
 
         self.dispatch_command_event(event);
     }
 
-    /// Dispatch a command event to the backend
+    /// Dispatch a `CommandEvent` to the backend
+    ///
+    /// Sets the repository to either the chat matching the events uuid, or defaults to the
+    /// repository from the current chat.
     ///
     /// # Panics
     ///
     /// If the command dispatcher is not set or the handler is disconnected
     pub fn dispatch_command_event(&mut self, event: CommandEvent) {
+        let mut event = event;
+
+        if let Some(repository) = self
+            .find_chat(event.uuid())
+            .and_then(|chat| chat.repository.as_ref())
+            .or_else(|| {
+                self.current_chat()
+                    .and_then(|chat| chat.repository.as_ref())
+            })
+        {
+            event.with_repository(Arc::clone(repository));
+        }
+
         self.command_tx
             .as_ref()
             .expect("Command tx not set")

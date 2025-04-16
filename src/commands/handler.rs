@@ -91,7 +91,7 @@ impl<'command, I: Index + Clone + 'static> CommandHandler<I> {
 
                 joinset.spawn(async move {
                     let event = event.clone();
-                    let result = Box::pin(this_handler.handle_command_event(event.repository(), &storage, &event, &event.command())).await;
+                    let result = Box::pin(this_handler.handle_command_event(&storage, &event)).await;
                     event.responder().send(CommandResponse::Completed).await;
 
                     if let Err(error) = result {
@@ -108,16 +108,14 @@ impl<'command, I: Index + Clone + 'static> CommandHandler<I> {
         }))
     }
 
-    #[tracing::instrument(skip_all, fields(otel.name = %cmd.to_string(), uuid = %event.uuid()), err)]
-    async fn handle_command_event(
-        &self,
-        repository: Option<&Repository>,
-        index: &I,
-        event: &CommandEvent,
-        cmd: &Command,
-    ) -> Result<()> {
+    #[tracing::instrument(skip_all, fields(otel.name = %event.command().to_string(), uuid = %event.uuid()), err)]
+    async fn handle_command_event(&self, index: &I, event: &CommandEvent) -> Result<()> {
         let now = std::time::Instant::now();
-        tracing::warn!("Handling command {cmd}");
+
+        let repository = event.repository();
+        let cmd = event.command();
+
+        tracing::info!("Handling command {cmd}");
 
         #[allow(clippy::match_wildcard_for_single_variants)]
         match cmd {
@@ -127,7 +125,7 @@ impl<'command, I: Index + Clone + 'static> CommandHandler<I> {
             }
             Command::IndexRepository => {
                 let Some(repository) = repository else {
-                    bail!("Expected a repository")
+                    bail!("`IndexRepository` expects a repository")
                 };
                 index
                     .index_repository(repository, Some(event.clone_responder()))
@@ -135,7 +133,7 @@ impl<'command, I: Index + Clone + 'static> CommandHandler<I> {
             }
             Command::ShowConfig => {
                 let Some(repository) = repository else {
-                    bail!("Expected a repository")
+                    bail!("`ShowConfig` expects a repository")
                 };
                 event
                     .responder()
@@ -144,7 +142,7 @@ impl<'command, I: Index + Clone + 'static> CommandHandler<I> {
             }
             Command::Chat { message } => {
                 let Some(repository) = repository else {
-                    bail!("Expected a repository")
+                    bail!("`Chat` expects a repository")
                 };
                 let message = message.clone();
                 let session = self
