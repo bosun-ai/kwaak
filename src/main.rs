@@ -15,6 +15,7 @@ use git::github::GithubSession;
 use kwaak::evaluations;
 use kwaak::{
     agent::{self, session::start_mcp_toolboxes},
+    chat::Chat,
     cli, commands, config, frontend, git,
     indexing::{self, index_repository, DuckdbIndex},
     onboarding, repository, storage,
@@ -281,11 +282,13 @@ async fn start_tui(repository: repository::Repository, args: &cli::Args) -> Resu
 
     // Start the application
     let repository = Arc::new(repository);
-    let mut app = App::default();
+    let mut app = App::default_from_repository(repository.clone());
     app.ui_config = repository.config().ui.clone();
-    app.current_chat_mut()
-        .expect("app created with no chat")
-        .repository = Some(repository.clone());
+
+    debug_assert!(
+        app.chats.len() == 1,
+        "App should only have one chat at startup"
+    );
 
     if args.skip_indexing {
         app.skip_indexing = true;

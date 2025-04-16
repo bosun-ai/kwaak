@@ -255,7 +255,7 @@ macro_rules! assert_agent_responded {
 pub struct IntegrationContext {
     pub app: App<'static>,
     pub uuid: Uuid,
-    pub repository: Repository,
+    pub repository: Arc<Repository>,
     pub terminal: Terminal<TestBackend>,
     pub workdir: std::path::PathBuf,
 
@@ -279,7 +279,8 @@ impl IntegrationContext {
 pub async fn setup_integration() -> Result<IntegrationContext> {
     let (repository, repository_guard) = test_repository();
     let workdir = repository.path().clone();
-    let mut app = App::default().with_workdir(repository.path());
+    let repository = Arc::new(repository);
+    let mut app = App::default_from_repository(repository.clone()).with_workdir(repository.path());
     let duckdb = storage::get_duckdb(&repository);
     duckdb.setup().await.unwrap();
     let terminal = Terminal::new(TestBackend::new(160, 40)).unwrap();
@@ -290,9 +291,7 @@ pub async fn setup_integration() -> Result<IntegrationContext> {
     let handler_guard = handler.start();
 
     let uuid = Uuid::parse_str("a1a2a3a4b1b2c1c2d1d2d3d4d5d6d7d8").unwrap();
-    let Some(current_chat) = app.current_chat_mut() else {
-        panic!("No current chat");
-    };
+    let current_chat = app.current_chat_mut();
 
     // Force to fixed uuid so that snapshots are stable
     current_chat.uuid = uuid;

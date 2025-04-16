@@ -12,11 +12,7 @@ pub async fn github_issue(app: &mut App<'_>, number: u64, uuid: Uuid) {
         return;
     };
 
-    let Some(ref repository) = chat.repository else {
-        app.add_chat_message(uuid, ChatMessage::new_system("No repository found in UI"));
-        return;
-    };
-    let github_session = match git::github::GithubSession::from_repository(repository) {
+    let github_session = match git::github::GithubSession::from_repository(&chat.repository) {
         Ok(session) => session,
         Err(e) => {
             app.add_chat_message(

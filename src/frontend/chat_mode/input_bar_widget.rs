@@ -20,8 +20,8 @@ impl InputBarWidget {
             .padding(Padding::horizontal(1))
             .borders(Borders::ALL);
 
-        if app.current_chat().is_some_and(Chat::is_loading) {
-            let loading_msg = match &app.current_chat().expect("infallible").state {
+        if app.current_chat().is_loading() {
+            let loading_msg = match &app.current_chat().state {
                 ChatState::Loading => "Kwaaking ...".to_string(),
                 ChatState::LoadingWithMessage(msg) => format!("Kwaaking ({msg}) ..."),
                 ChatState::Ready => unreachable!(),

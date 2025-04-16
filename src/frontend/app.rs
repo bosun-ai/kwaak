@@ -22,6 +22,7 @@ use crate::{
     commands::{Command, CommandEvent},
     config::UIConfig,
     frontend::actions,
+    repository::Repository,
 };
 
 use super::{
@@ -138,16 +139,24 @@ impl AppMode {
     }
 }
 
-impl Default for App<'_> {
-    fn default() -> Self {
+fn new_text_area() -> TextArea<'static> {
+    let mut text_area = TextArea::default();
+
+    text_area.set_placeholder_text("Send a message to an agent ...");
+    text_area.set_placeholder_style(Style::default().fg(Color::Gray));
+    text_area.set_cursor_line_style(Style::reset());
+
+    text_area
+}
+
+impl App<'_> {
+    pub fn default_from_repository(repository: Arc<Repository>) -> Self {
         let (ui_tx, ui_rx) = mpsc::unbounded_channel();
 
-        let chat = Chat {
-            name: "Chat #1".to_string(),
-            ..Chat::default()
-        };
-
         let command_responder = AppCommandResponder::spawn_for(ui_tx.clone());
+        let chat = Chat::from_repository(repository)
+            .with_name("Chat #1")
+            .to_owned();
 
         // Actual api checks are done only once every 24 hours, with the first happening after 24
         let update_available = update_informer::new(registry::Crates, "kwaak", VERSION)
@@ -183,19 +192,7 @@ impl Default for App<'_> {
             update_available,
         }
     }
-}
 
-fn new_text_area() -> TextArea<'static> {
-    let mut text_area = TextArea::default();
-
-    text_area.set_placeholder_text("Send a message to an agent ...");
-    text_area.set_placeholder_style(Style::default().fg(Color::Gray));
-    text_area.set_cursor_line_style(Style::reset());
-
-    text_area
-}
-
-impl App<'_> {
     pub async fn recv_messages(&mut self) -> Option<UIEvent> {
         self.ui_rx.recv().await
     }
@@ -266,11 +263,8 @@ impl App<'_> {
 
         if let Some(repository) = self
             .find_chat(event.uuid())
-            .and_then(|chat| chat.repository.as_ref())
-            .or_else(|| {
-                self.current_chat()
-                    .and_then(|chat| chat.repository.as_ref())
-            })
+            .map(|chat| &chat.repository)
+            .or_else(|| Some(&self.current_chat().repository))
         {
             event.with_repository(Arc::clone(repository));
         }
@@ -373,9 +367,7 @@ impl App<'_> {
             UIEvent::CommandDone(uuid) => {
                 if *uuid == self.boot_uuid {
                     self.has_indexed_on_boot = true;
-                    self.current_chat_mut()
-                        .expect("Boot uuid should always be present")
-                        .transition(ChatState::Ready);
+                    self.current_chat_mut().transition(ChatState::Ready);
                 } else if let Some(chat) = self.find_chat_mut(*uuid) {
                     chat.transition(ChatState::Ready);
                 }
@@ -397,15 +389,8 @@ impl App<'_> {
                 }
             }
             UIEvent::NewChat => {
-                let chat = Chat {
-                    // add the repo from the current chat to the new chat
-                    // TODO eventually this should be updated for more complex multi-repo setups
-                    repository: self
-                        .current_chat()
-                        .map(|c| c.repository.clone())
-                        .unwrap_or_default(),
-                    ..Default::default()
-                };
+                let repository = &self.current_chat().repository;
+                let chat = Chat::from_repository(Arc::clone(repository));
                 self.add_chat(chat);
             }
             UIEvent::RenameChat(uuid, name) => {
@@ -483,12 +468,14 @@ impl App<'_> {
         self.chats.iter().find(|chat| chat.uuid == uuid)
     }
 
-    pub fn current_chat(&self) -> Option<&Chat> {
+    pub fn current_chat(&self) -> &Chat {
         self.find_chat(self.current_chat_uuid)
+            .expect("Current chat should always be present")
     }
 
-    pub fn current_chat_mut(&mut self) -> Option<&mut Chat> {
+    pub fn current_chat_mut(&mut self) -> &mut Chat {
         self.find_chat_mut(self.current_chat_uuid)
+            .expect("Current chat should always be present")
     }
 
     pub fn add_chat(&mut self, mut new_chat: Chat) {
@@ -507,18 +494,7 @@ impl App<'_> {
             .position(|chat| chat.uuid == self.current_chat_uuid)
             .map(|idx| idx + 1)
         else {
-            let Some(chat) = self.chats.first() else {
-                debug_assert!(
-                    false,
-                    "No chats in app found when selecting next app, this should never happen"
-                );
-                tracing::error!(
-                    "No chats in app found when selecting next app, this should never happen"
-                );
-
-                self.add_chat(Chat::default());
-                return;
-            };
+            let chat = self.chats.first().expect("Chats should never be empty");
 
             let uuid = chat.uuid;
             self.current_chat_uuid = uuid;
@@ -600,12 +576,18 @@ async fn poll_ui_events(ui_tx: mpsc::UnboundedSender<UIEvent>) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use crate::test_utils::test_repository;
+
     use super::*;
 
     #[tokio::test]
     async fn test_last_or_first_chat() {
-        let mut app = App::default();
-        let chat = Chat::default();
+        let (repository, _guard) = test_repository();
+        let repository = Arc::new(repository);
+        let mut app = App::default_from_repository(repository.clone());
+
+        let chat = Chat::from_repository(repository.clone());
+
         let first_uuid = app.current_chat_uuid;
         let second_uuid = chat.uuid;
 
@@ -639,7 +621,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_change_mode() {
-        let mut app = App::default();
+        let (repository, _guard) = test_repository();
+        let repository = Arc::new(repository);
+        let mut app = App::default_from_repository(repository.clone());
+
         assert_eq!(app.mode, AppMode::Chat);
         assert_eq!(app.selected_tab, 0);
 
@@ -654,10 +639,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_add_chat() {
-        let mut app = App::default();
+        let (repository, _guard) = test_repository();
+        let repository = Arc::new(repository);
+        let mut app = App::default_from_repository(repository.clone());
         let initial_chat_count = app.chats.len();
 
-        app.add_chat(Chat::default());
+        let (repository, _guard) = test_repository();
+        let chat = Chat::from_repository(repository.into());
+        app.add_chat(chat);
 
         assert_eq!(app.chats.len(), initial_chat_count + 1);
         assert_eq!(
@@ -668,10 +657,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_next_chat() {
-        let mut app = App::default();
+        let (repository, _guard) = test_repository();
+        let repository = Arc::new(repository);
+        let mut app = App::default_from_repository(repository.clone());
         let first_uuid = app.current_chat_uuid;
 
-        app.add_chat(Chat::default());
+        let (repository, _guard) = test_repository();
+        let chat = Chat::from_repository(repository.into());
+        app.add_chat(chat);
+
         let second_uuid = app.current_chat_uuid;
 
         app.next_chat();
@@ -683,8 +677,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_find_chat() {
-        let mut app = App::default();
-        let chat = Chat::default();
+        let (repository, _guard) = test_repository();
+        let repository = Arc::new(repository);
+        let mut app = App::default_from_repository(repository.clone());
+
+        let (repository, _guard) = test_repository();
+        let chat = Chat::from_repository(repository.into());
         let uuid = chat.uuid;
 
         app.add_chat(chat);
@@ -695,8 +693,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_find_chat_mut() {
-        let mut app = App::default();
-        let chat = Chat::default();
+        let (repository, _guard) = test_repository();
+        let repository = Arc::new(repository);
+        let mut app = App::default_from_repository(repository.clone());
+        let (repository, _guard) = test_repository();
+        let chat = Chat::from_repository(repository.into());
         let uuid = chat.uuid;
 
         app.add_chat(chat);
@@ -707,24 +708,35 @@ mod tests {
 
     #[tokio::test]
     async fn test_current_chat() {
-        let app = App::default();
-        assert!(app.current_chat().is_some());
+        let (repository, _guard) = test_repository();
+        let repository = Arc::new(repository);
+        let mut app = App::default_from_repository(repository.clone());
+        assert_eq!(app.current_chat().uuid, app.current_chat_uuid);
     }
 
     #[tokio::test]
     async fn test_current_chat_mut() {
-        let mut app = App::default();
-        assert!(app.current_chat_mut().is_some());
+        let (repository, _guard) = test_repository();
+        let repository = Arc::new(repository);
+        let mut app = App::default_from_repository(repository.clone());
+
+        assert_eq!(
+            app.current_chat_mut().uuid.clone(),
+            app.current_chat_uuid.clone()
+        );
     }
 
     #[tokio::test]
     async fn test_add_chat_message() {
-        let mut app = App::default();
+        let (repository, _guard) = test_repository();
+        let repository = Arc::new(repository);
+        let mut app = App::default_from_repository(repository.clone());
+
         let message = ChatMessage::new_system("Test message");
 
         app.add_chat_message(app.current_chat_uuid, message.clone());
 
-        let chat = app.current_chat().unwrap();
+        let chat = app.current_chat();
         assert!(chat.messages.contains(&message));
     }
 }
