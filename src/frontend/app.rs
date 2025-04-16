@@ -739,4 +739,16 @@ mod tests {
         let chat = app.current_chat();
         assert!(chat.messages.contains(&message));
     }
+
+    #[tokio::test]
+    async fn test_cannot_delete_last_chat() {
+        let (repository, _guard) = test_repository();
+        let repository = Arc::new(repository);
+        let mut app = App::default_from_repository(repository.clone());
+
+        actions::delete_chat(&mut app);
+
+        assert_eq!(app.chats.len(), 1);
+        assert_eq!(app.current_chat().messages.len(), 1);
+    }
 }

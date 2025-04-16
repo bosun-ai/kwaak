@@ -20,7 +20,6 @@ pub use scroll::{scroll_down, scroll_end, scroll_up};
 
 pub fn delete_chat(app: &mut App) {
     let uuid = app.current_chat_uuid;
-    app.dispatch_command(uuid, Command::StopAgent);
     // Remove the chat with the given UUID
     if app.chats.len() == 1 {
         app.add_chat_message(
@@ -29,6 +28,8 @@ pub fn delete_chat(app: &mut App) {
         );
         return;
     }
+
+    app.dispatch_command(uuid, Command::StopAgent);
 
     app.chats.retain(|chat| chat.uuid != uuid);
 
