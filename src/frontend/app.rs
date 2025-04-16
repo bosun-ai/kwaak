@@ -150,6 +150,7 @@ fn new_text_area() -> TextArea<'static> {
 }
 
 impl App<'_> {
+    #[must_use]
     pub fn default_from_repository(repository: Arc<Repository>) -> Self {
         let (ui_tx, ui_rx) = mpsc::unbounded_channel();
 
@@ -710,7 +711,7 @@ mod tests {
     async fn test_current_chat() {
         let (repository, _guard) = test_repository();
         let repository = Arc::new(repository);
-        let mut app = App::default_from_repository(repository.clone());
+        let app = App::default_from_repository(repository.clone());
         assert_eq!(app.current_chat().uuid, app.current_chat_uuid);
     }
 

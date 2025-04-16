@@ -1,7 +1,7 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Padding};
 
-use crate::chat::{Chat, ChatState};
+use crate::chat::ChatState;
 use crate::frontend::App;
 
 pub struct InputBarWidget;

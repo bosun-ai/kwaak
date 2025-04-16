@@ -15,7 +15,6 @@ use git::github::GithubSession;
 use kwaak::evaluations;
 use kwaak::{
     agent::{self, session::start_mcp_toolboxes},
-    chat::Chat,
     cli, commands, config, frontend, git,
     indexing::{self, index_repository, DuckdbIndex},
     onboarding, repository, storage,

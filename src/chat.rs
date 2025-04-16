@@ -29,6 +29,7 @@ pub struct Chat {
 }
 
 impl Chat {
+    #[must_use]
     pub fn from_repository(repository: Arc<Repository>) -> Self {
         Self {
             name: "Chat".to_string(),
