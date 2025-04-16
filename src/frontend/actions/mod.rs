@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use copypasta::{ClipboardContext, ClipboardProvider as _};
 use strum::{EnumMessage, IntoEnumIterator};
 
-use crate::{chat::Chat, chat_message::ChatMessage, commands::Command, templates::Templates};
+use crate::{chat_message::ChatMessage, commands::Command, templates::Templates};
 
 use super::{ui_input_command::UserInputCommand, App};
 
@@ -20,33 +20,29 @@ pub use scroll::{scroll_down, scroll_end, scroll_up};
 
 pub fn delete_chat(app: &mut App) {
     let uuid = app.current_chat_uuid;
-    app.dispatch_command(uuid, Command::StopAgent);
     // Remove the chat with the given UUID
-    app.chats.retain(|chat| chat.uuid != uuid);
-
-    if app.chats.is_empty() {
-        app.add_chat(Chat::default());
-        app.chats_state.select(Some(0));
+    if app.chats.len() == 1 {
         app.add_chat_message(
             app.current_chat_uuid,
-            ChatMessage::new_system("Nice, you managed to delete the last chat!"),
+            ChatMessage::new_system("You cannot delete the last chat"),
         );
-    } else {
-        app.next_chat();
+        return;
     }
+
+    app.dispatch_command(uuid, Command::StopAgent);
+
+    app.chats.retain(|chat| chat.uuid != uuid);
+
+    app.next_chat();
 }
 
 pub fn copy_last_message(app: &mut App) {
     let Some(last_message) = app
         .current_chat()
-        .and_then(|c| {
-            c.messages
-                .iter()
-                .filter(|m| {
-                    (m.role().is_assistant() || m.role().is_user()) && !m.content().is_empty()
-                })
-                .next_back()
-        })
+        .messages
+        .iter()
+        .filter(|m| (m.role().is_assistant() || m.role().is_user()) && !m.content().is_empty())
+        .next_back()
         .map(ChatMessage::content)
     else {
         app.add_chat_message(

@@ -90,7 +90,7 @@ async fn main() -> Result<()> {
             cli::Commands::RunAgent { initial_message } => {
                 start_agent(repository, &initial_message, &args).await
             }
-            cli::Commands::Tui => start_tui(&repository, &args).await,
+            cli::Commands::Tui => start_tui(repository, &args).await,
             cli::Commands::ListTools => {
                 let github_session = Arc::new(GithubSession::from_repository(&repository)?);
                 let index = DuckdbIndex::default();
@@ -263,7 +263,7 @@ async fn start_agent(
 
 #[instrument(skip_all)]
 #[allow(clippy::field_reassign_with_default)]
-async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Result<()> {
+async fn start_tui(repository: repository::Repository, args: &cli::Args) -> Result<()> {
     ::tracing::info!("Loaded configuration: {:?}", repository.config());
 
     // Before starting the TUI, check if there is already a kwaak running on the project
@@ -280,11 +280,14 @@ async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Res
     let mut terminal = init_tui()?;
 
     // Start the application
-    let mut app = App::default();
+    let repository = Arc::new(repository);
+    let mut app = App::default_from_repository(repository.clone());
     app.ui_config = repository.config().ui.clone();
-    app.current_chat_mut()
-        .expect("app created with no chat")
-        .repository = Some(repository.clone());
+
+    debug_assert!(
+        app.chats.len() == 1,
+        "App should only have one chat at startup"
+    );
 
     if args.skip_indexing {
         app.skip_indexing = true;
@@ -292,8 +295,7 @@ async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Res
 
     let app_result = {
         let kwaak_index = DuckdbIndex::default();
-        let mut handler =
-            commands::CommandHandler::from_repository_and_index(repository, kwaak_index);
+        let mut handler = commands::CommandHandler::from_index(kwaak_index);
         handler.register_ui(&mut app);
 
         let _guard = handler.start();

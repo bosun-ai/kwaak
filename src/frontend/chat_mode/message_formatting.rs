@@ -221,7 +221,7 @@ fn get_value<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chat_message::ChatRole;
+    use crate::{chat_message::ChatRole, test_utils::test_repository};
     use ratatui::text::Span;
 
     #[test]
@@ -246,7 +246,8 @@ mod tests {
 
     #[test]
     fn test_format_chat_message() {
-        let chat = Chat::default();
+        let (repository, _guard) = test_repository();
+        let chat = Chat::from_repository(repository.into());
         let message = ChatMessage::new_user("Hello, world!");
 
         let formatted_message = format_chat_message(&chat, &message);
