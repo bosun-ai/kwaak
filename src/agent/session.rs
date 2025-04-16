@@ -2,10 +2,15 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::{Context as _, Result};
 use derive_builder::Builder;
+use rmcp::{
+    model::{ClientInfo, Implementation},
+    transport::TokioChildProcess,
+    ServiceExt as _,
+};
 use swiftide::{
-    agents::tools::local_executor::LocalExecutor,
+    agents::tools::{local_executor::LocalExecutor, mcp::McpToolbox},
     chat_completion::{ParamSpec, Tool, ToolSpec},
-    traits::{SimplePrompt, ToolExecutor},
+    traits::{SimplePrompt, ToolBox, ToolExecutor},
 };
 use swiftide_docker_executor::DockerExecutor;
 use tavily::Tavily;
@@ -16,9 +21,9 @@ use uuid::Uuid;
 use crate::{
     agent::{tools::DelegateAgent, util},
     commands::Responder,
-    config::{self, AgentEditMode, SupportedToolExecutors},
+    config::{self, mcp::McpServer, AgentEditMode, SupportedToolExecutors},
     git::github::GithubSession,
-    indexing,
+    indexing::Index,
     repository::Repository,
 };
 
@@ -32,6 +37,9 @@ use super::{
 /// Session represents the abstract state of an ongoing agent interaction (i.e. in a chat)
 ///
 /// Consider the implementation 'emergent architecture' (an excuse for an isolated mess)
+///
+/// NOTE: Seriously though, this file is a mess on purpose so we can figure out the best way to
+/// to architect this.
 ///
 /// Some future ideas:
 ///     - Session configuration from a file
@@ -79,7 +87,7 @@ impl Session {
 impl SessionBuilder {
     /// Starts a session
     #[tracing::instrument(skip_all)]
-    pub async fn start(&mut self) -> Result<RunningSession> {
+    pub async fn start(&mut self, index: &impl Index) -> Result<RunningSession> {
         let (running_session_tx, running_session_rx) = tokio::sync::mpsc::unbounded_channel();
 
         let session = Arc::new(
@@ -116,24 +124,28 @@ impl SessionBuilder {
                 &fast_query_provider,
                 &session.default_responder
             ),
-            generate_initial_context(&session.repository, &session.initial_query)
+            generate_initial_context(&session.repository, &session.initial_query, index)
         )?;
 
         let env_setup = EnvSetup::new(&session.repository, github_session.as_deref(), &*executor);
         let agent_environment = env_setup.exec_setup_commands(branch_name).await?;
 
-        let available_tools = available_tools(
+        let builtin_tools = available_builtin_tools(
             &session.repository,
             github_session.as_ref(),
             Some(&agent_environment),
+            index,
         )?;
+
+        let mcp_toolboxes = start_mcp_toolboxes(&session.repository).await?;
 
         let active_agent = match session.repository.config().agent {
             config::SupportedAgentConfigurations::Coding => {
                 agents::coding::start(
                     &session,
                     &executor,
-                    &available_tools,
+                    &builtin_tools,
+                    &mcp_toolboxes,
                     &agent_environment,
                     initial_context,
                 )
@@ -144,7 +156,8 @@ impl SessionBuilder {
                 start_plan_and_act(
                     &session,
                     &executor,
-                    &available_tools,
+                    &builtin_tools,
+                    &mcp_toolboxes,
                     &agent_environment,
                     &initial_context,
                 )
@@ -158,7 +171,6 @@ impl SessionBuilder {
             github_session,
             executor,
             agent_environment,
-            available_tools: available_tools.into(),
             cancel_token: Arc::new(Mutex::new(CancellationToken::new())),
             message_task_handle: None,
         };
@@ -202,6 +214,7 @@ async fn start_plan_and_act(
     session: &Arc<Session>,
     executor: &Arc<dyn ToolExecutor>,
     available_tools: &[Box<dyn Tool>],
+    tool_boxes: &[Box<dyn ToolBox>],
     agent_environment: &AgentEnvironment,
     initial_context: &str,
 ) -> Result<RunningAgent> {
@@ -209,6 +222,7 @@ async fn start_plan_and_act(
         &session,
         &executor,
         &available_tools,
+        &tool_boxes,
         &agent_environment,
         String::new(),
     )
@@ -242,6 +256,7 @@ async fn start_plan_and_act(
         &session,
         &executor,
         &delegate_tools,
+        &tool_boxes,
         &agent_environment,
         initial_context,
     )
@@ -261,7 +276,6 @@ pub struct RunningSession {
     github_session: Option<Arc<GithubSession>>,
     executor: Arc<dyn ToolExecutor>,
     agent_environment: AgentEnvironment,
-    available_tools: Arc<Vec<Box<dyn Tool>>>,
 
     cancel_token: Arc<Mutex<CancellationToken>>,
 }
@@ -369,18 +383,23 @@ async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Arc<
 }
 
 #[tracing::instrument(skip_all)]
-async fn generate_initial_context(repository: &Repository, query: &str) -> Result<String> {
-    let retrieved_context = indexing::query(repository, &query).await?;
+async fn generate_initial_context(
+    repository: &Repository,
+    query: &str,
+    index: &impl Index,
+) -> Result<String> {
+    let retrieved_context = index.query_repository(repository, query).await?;
     let formatted_context = format!("Additional information:\n\n{retrieved_context}");
     Ok(formatted_context)
 }
 
-pub fn available_tools(
+pub fn available_builtin_tools(
     repository: &Repository,
     github_session: Option<&Arc<GithubSession>>,
     agent_env: Option<&env_setup::AgentEnvironment>,
+    index: &impl Index,
 ) -> Result<Vec<Box<dyn Tool>>> {
-    let query_pipeline = indexing::build_query_pipeline(repository, None)?;
+    let query_pipeline = index.build_query_pipeline(repository)?;
     let mut tools = vec![
         tools::write_file(),
         tools::search_file(),
@@ -443,4 +462,55 @@ pub fn available_tools(
     });
 
     Ok(tools)
+}
+
+pub async fn start_mcp_toolboxes(repository: &Repository) -> Result<Vec<Box<dyn ToolBox>>> {
+    let mut services = Vec::new();
+    if let Some(mcp_services) = &repository.config().mcp {
+        for service in mcp_services {
+            match service {
+                McpServer::SubProcess {
+                    name,
+                    command,
+                    args,
+                    filter,
+                    env,
+                } => {
+                    if command.is_empty() {
+                        anyhow::bail!("Empty command for mcp tool");
+                    }
+                    let client_info = ClientInfo {
+                        client_info: Implementation {
+                            name: "kwaak".into(),
+                            version: env!("CARGO_PKG_VERSION").into(),
+                        },
+                        ..Default::default()
+                    };
+
+                    let mut cmd = tokio::process::Command::new(command);
+
+                    cmd.args(args);
+
+                    if let Some(env) = env {
+                        for (key, value) in env {
+                            cmd.env(key, value.expose_secret());
+                        }
+                    }
+
+                    let service = client_info.serve(TokioChildProcess::new(&mut cmd)?).await?;
+
+                    let mut toolbox = McpToolbox::from_running_service(service)
+                        .with_name(name)
+                        .to_owned();
+
+                    if let Some(filter) = filter {
+                        toolbox.with_filter(filter.clone());
+                    }
+
+                    services.push(toolbox.boxed());
+                }
+            }
+        }
+    }
+    Ok(services)
 }

@@ -9,7 +9,7 @@ use swiftide::{
     agents::{system_prompt::SystemPrompt, Agent, DefaultContext},
     chat_completion::{self, ChatCompletion, Tool},
     prompt::Prompt,
-    traits::{AgentContext, Command, SimplePrompt, ToolExecutor},
+    traits::{AgentContext, Command, SimplePrompt, ToolBox, ToolExecutor},
 };
 
 use crate::{
@@ -25,6 +25,7 @@ pub async fn start(
     session: &Session,
     executor: &Arc<dyn ToolExecutor>,
     tools: &[Box<dyn Tool>],
+    tool_boxes: &[Box<dyn ToolBox>],
     agent_env: &AgentEnvironment,
     initial_context: &str,
 ) -> Result<RunningAgent> {
@@ -75,7 +76,7 @@ pub async fn start(
 
     let initial_context = initial_context.to_string();
     let context = Arc::new(context);
-    let agent = Agent::builder()
+    let mut builder = Agent::builder()
         .context(Arc::clone(&context) as Arc<dyn AgentContext>)
         .system_prompt(system_prompt)
         .tools(tools.to_vec())
@@ -120,8 +121,13 @@ pub async fn start(
         })
         .after_tool(tool_summarizer.summarize_hook())
         .after_each(conversation_summarizer.summarize_hook())
-        .llm(&query_provider)
-        .build()?;
+        .llm(&query_provider).to_owned();
+
+    for tool_box in tool_boxes {
+        builder.add_toolbox(tool_box.clone());
+    }
+
+    let agent = builder.build()?;
 
     RunningAgent::builder()
         .agent(agent)
@@ -200,7 +206,6 @@ mod tests {
 
         assert!(prompt
             .render()
-            .await
             .unwrap()
             .contains("You cannot ask for feedback and have to try to complete the given task"));
     }
@@ -215,11 +220,7 @@ mod tests {
         let (mut repository, _guard) = test_repository();
         repository.config_mut().agent_custom_constraints = Some(custom_constraints);
 
-        let prompt = build_system_prompt(&repository)
-            .unwrap()
-            .render()
-            .await
-            .unwrap();
+        let prompt = build_system_prompt(&repository).unwrap().render().unwrap();
         assert!(prompt.contains("Custom constraint 1"));
         assert!(prompt.contains("Custom constraint 2"));
     }

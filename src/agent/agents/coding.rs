@@ -5,7 +5,7 @@ use swiftide::{
     agents::{system_prompt::SystemPrompt, Agent, DefaultContext},
     chat_completion::{self, ChatCompletion, Tool},
     prompt::Prompt,
-    traits::{AgentContext, Command, SimplePrompt, ToolExecutor},
+    traits::{AgentContext, Command, SimplePrompt, ToolBox, ToolExecutor},
 };
 
 use crate::{
@@ -23,6 +23,7 @@ pub async fn start(
     session: &Session,
     executor: &Arc<dyn ToolExecutor>,
     tools: &[Box<dyn Tool>],
+    tool_boxes: &[Box<dyn ToolBox>],
     agent_env: &AgentEnvironment,
     initial_context: String,
 ) -> Result<RunningAgent> {
@@ -79,7 +80,7 @@ pub async fn start(
     let maybe_lint_fix_command = session.repository.config().commands.lint_and_fix.clone();
 
     let context = Arc::new(context);
-    let agent = Agent::builder()
+    let mut builder = Agent::builder()
         .context(Arc::clone(&context) as Arc<dyn AgentContext>)
         .system_prompt(system_prompt)
         .tools(tools.to_vec())
@@ -151,8 +152,13 @@ pub async fn start(
         })
         .after_each(commit_and_push.hook())
         .after_each(conversation_summarizer.summarize_hook())
-        .llm(&query_provider)
-        .build()?;
+        .llm(&query_provider).to_owned();
+
+    for tool_box in tool_boxes {
+        builder.add_toolbox(tool_box.clone());
+    }
+
+    let agent = builder.build()?;
 
     RunningAgent::builder()
         .agent(agent)
@@ -203,7 +209,6 @@ pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
         "You are already operating on a git branch specific to this task. You do not need to create a new branch",
         "If you are stuck, consider using reset_file to undo your changes",
         "Focus on completing the task fully as requested by the user",
-        "Do not repeat your answers, if they are exactly the same you should probably stop",
     ].into_iter().map(Into::into).collect();
 
     if repository.config().agent_edit_mode.is_line() {
@@ -229,6 +234,13 @@ pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
         constraints.push(
             "Try to solve the problem yourself first, only if you cannot solve it, ask for help"
                 .into(),
+        );
+        constraints.push(
+            "If the problem is solved or the question is answered, you must call the stop tool"
+                .into(),
+        );
+        constraints.push(
+            "Do NOT repeat your answers, call the stop tool instead and ask for feedback".into(),
         );
     }
 
@@ -256,7 +268,6 @@ mod tests {
 
         assert!(prompt
             .render()
-            .await
             .unwrap()
             .contains("You cannot ask for feedback and have to try to complete the given task"));
     }
@@ -271,11 +282,7 @@ mod tests {
         let (mut repository, _guard) = test_repository();
         repository.config_mut().agent_custom_constraints = Some(custom_constraints);
 
-        let prompt = build_system_prompt(&repository)
-            .unwrap()
-            .render()
-            .await
-            .unwrap();
+        let prompt = build_system_prompt(&repository).unwrap().render().unwrap();
         assert!(prompt.contains("Custom constraint 1"));
         assert!(prompt.contains("Custom constraint 2"));
     }

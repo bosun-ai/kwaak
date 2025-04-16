@@ -116,7 +116,6 @@ fn prompt(
         Templates::load("tool_summarizer.md").expect("Infallible; failed to find template");
 
     template
-        .to_prompt()
         .with_context_value("formatted_tools", formatted_tools)
         .with_context_value("tool_name", tool.name())
         .with_context_value("tool_description", tool.tool_spec().description)
@@ -165,7 +164,7 @@ mod test {
         )
         .with_context_value("diff", diff);
 
-        insta::assert_snapshot!(rendered_prompt.render().await.unwrap());
+        insta::assert_snapshot!(rendered_prompt.render().unwrap());
     }
 
     #[tokio::test]
@@ -197,6 +196,6 @@ mod test {
         .with_context_value("diff", None::<String>);
 
         // Verify the output to ensure Jinja is escaped
-        insta::assert_snapshot!(rendered_prompt.render().await.unwrap());
+        insta::assert_snapshot!(rendered_prompt.render().unwrap());
     }
 }

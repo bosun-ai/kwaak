@@ -747,14 +747,40 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "edca88bc138befd0323b20752846e6587272d3b03b0343c8ea28a6f819e6e71f"
 dependencies = [
  "async-trait",
- "axum-core",
+ "axum-core 0.4.5",
  "bytes",
  "futures-util",
  "http 1.3.1",
  "http-body 1.0.1",
  "http-body-util",
  "itoa",
- "matchit",
+ "matchit 0.7.3",
+ "memchr",
+ "mime",
+ "percent-encoding",
+ "pin-project-lite",
+ "rustversion",
+ "serde",
+ "sync_wrapper 1.0.2",
+ "tower 0.5.2",
+ "tower-layer",
+ "tower-service",
+]
+
+[[package]]
+name = "axum"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de45108900e1f9b9242f7f2e254aa3e2c029c921c258fe9e6b4217eeebd54288"
+dependencies = [
+ "axum-core 0.5.2",
+ "bytes",
+ "futures-util",
+ "http 1.3.1",
+ "http-body 1.0.1",
+ "http-body-util",
+ "itoa",
+ "matchit 0.8.4",
  "memchr",
  "mime",
  "percent-encoding",
@@ -776,6 +802,25 @@ dependencies = [
  "async-trait",
  "bytes",
  "futures-util",
+ "http 1.3.1",
+ "http-body 1.0.1",
+ "http-body-util",
+ "mime",
+ "pin-project-lite",
+ "rustversion",
+ "sync_wrapper 1.0.2",
+ "tower-layer",
+ "tower-service",
+]
+
+[[package]]
+name = "axum-core"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68464cd0412f486726fb3373129ef5d2993f90c34bc2bc1c1e9943b2f4fc7ca6"
+dependencies = [
+ "bytes",
+ "futures-core",
  "http 1.3.1",
  "http-body 1.0.1",
  "http-body-util",
@@ -953,7 +998,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
- "tonic",
+ "tonic 0.12.3",
  "tower-service",
  "url",
  "winapi",
@@ -967,7 +1012,7 @@ checksum = "4565dfbe8ac1deb443211d55a1985cc33fd9d3606cf86377edbb538682993f30"
 dependencies = [
  "prost",
  "prost-types",
- "tonic",
+ "tonic 0.12.3",
  "ureq",
 ]
 
@@ -1991,9 +2036,9 @@ dependencies = [
 
 [[package]]
 name = "fastembed"
-version = "4.6.0"
+version = "4.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "843b4be0866cde6b1e5f0f2b4233c0f1d92785a7e436df0ac8cc65739abe1920"
+checksum = "f92a714566b1be188375bc598b3cb8c0e2f60f323d9982ef5f8c3cc82ac49074"
 dependencies = [
  "anyhow",
  "hf-hub",
@@ -3231,7 +3276,7 @@ dependencies = [
 
 [[package]]
 name = "kwaak"
-version = "0.16.0"
+version = "0.16.2"
 dependencies = [
  "ansi-to-tui",
  "anyhow",
@@ -3272,6 +3317,7 @@ dependencies = [
  "regex",
  "reqwest 0.12.15",
  "rexpect",
+ "rmcp",
  "rust-embed",
  "secrecy",
  "serde",
@@ -3581,6 +3627,12 @@ name = "matchit"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e7465ac9959cc2b1404e8e2367b43684a6d13790fe23056cc8c6c5a6b7bcb94"
+
+[[package]]
+name = "matchit"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 
 [[package]]
 name = "matrixmultiply"
@@ -4158,7 +4210,7 @@ dependencies = [
  "opentelemetry",
  "opentelemetry_sdk",
  "prost",
- "tonic",
+ "tonic 0.12.3",
 ]
 
 [[package]]
@@ -5253,6 +5305,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "rmcp"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33a0110d28bd076f39e14bfd5b0340216dd18effeb5d02b43215944cc3e5c751"
+dependencies = [
+ "base64 0.21.7",
+ "chrono",
+ "futures",
+ "paste",
+ "pin-project-lite",
+ "rmcp-macros",
+ "schemars",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.12",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
+name = "rmcp-macros"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a6e2b2fd7497540489fa2db285edd43b7ed14c49157157438664278da6e42a7a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.100",
+]
+
+[[package]]
 name = "ron"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5538,6 +5622,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "schemars"
+version = "0.8.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3fbf2ae1b8bc8e02df939598064d22402220cd5bbcca1c76f7d6a310974d5615"
+dependencies = [
+ "dyn-clone",
+ "schemars_derive",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "schemars_derive"
+version = "0.8.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32e265784ad618884abaea0600a9adf15393368d840e0222d101a072f3f7534d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde_derive_internals",
+ "syn 2.0.100",
+]
+
+[[package]]
 name = "scoped-tls"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5631,6 +5739,17 @@ name = "serde_derive"
 version = "1.0.219"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b0276cf7f2c73365f7157c8123c21cd9a50fbbd844757af28ca1f5925fc2a00"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.100",
+]
+
+[[package]]
+name = "serde_derive_internals"
+version = "0.29.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18d26a20a969b9e3fdf2fc2d9f21eda6c40e2de84c9408bb5d3b05d499aae711"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6082,9 +6201,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "swiftide"
-version = "0.22.7"
+version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cda57adb4d38ccccd539100ebe4ea3d0f25786f47467c27a40d5d545b76d7a73"
+checksum = "5232d365d9ac329e65e06541f3d2e88811fb30bab67015169e090ef0b8ea44e4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6100,9 +6219,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-agents"
-version = "0.22.6"
+version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61006a8660218d2ed98f3ff069ba132c585d46ce01bb0710d54ecddfd3bad5dc"
+checksum = "f7b8995b336743d1b74023005c82e5b3215b2ec1f7fd37535c695ef1667f2f66"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6110,23 +6229,26 @@ dependencies = [
  "dyn-clone",
  "fs-err",
  "indoc",
+ "rmcp",
  "serde",
  "serde_json",
  "strum 0.27.1",
  "strum_macros 0.27.1",
  "swiftide-core",
+ "thiserror 2.0.12",
  "tokio",
  "tracing",
 ]
 
 [[package]]
 name = "swiftide-core"
-version = "0.22.7"
+version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "790fc4f741c511ae210bcb62f108f9982ea80882c849c63e7034b8fbff904db9"
+checksum = "39af4210deb85c9e4fa581d6eef4bf4304119ee02e46a8d6f737e60be2f3991c"
 dependencies = [
  "anyhow",
  "async-trait",
+ "backoff",
  "derive_builder 0.20.2",
  "dyn-clone",
  "futures-util",
@@ -6149,9 +6271,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-docker-executor"
-version = "0.7.0"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f36912a4af5f69ef7bba290e8cfd169ec064bd87f1f1f2ecb6febfbd5c8a72eb"
+checksum = "0a196a511009233c321505791dfa1d3ecfecd0c0c612500fd506ad6f99dfc3ef"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6168,7 +6290,7 @@ dependencies = [
  "thiserror 2.0.12",
  "tokio",
  "tokio-tar",
- "tonic",
+ "tonic 0.13.0",
  "tonic-build",
  "tracing",
  "uuid",
@@ -6177,9 +6299,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-indexing"
-version = "0.22.6"
+version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "559f71be9050ef156abbf2680017df5a1bd017af27cc199a75d9c3aac881ba2a"
+checksum = "92335faae1124c58adfa5292ef8e67154de67694656dabc166c551a2a6821d88"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6204,9 +6326,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-integrations"
-version = "0.22.7"
+version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23e6d8bf901218d47e247b6a738e57098e589b13824501fa9f9d999c98d2fec5"
+checksum = "1f8560a4e0aca4efeffc5db7cf77898838642d48f80f697285661bc9e56cb625"
 dependencies = [
  "anyhow",
  "async-anthropic",
@@ -6249,9 +6371,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-macros"
-version = "0.22.7"
+version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46334386ba042461124528354fd9245235236b857e3bd7d67b8eeb181d64275d"
+checksum = "db1c7d28f14e38ffd93a21c1091d280939227da00e97a11913ef424dff374cb4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6267,9 +6389,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-query"
-version = "0.22.6"
+version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eda3198042b1b698e9fc91d1cb97f89c60948dd4706f95456f90d22f374c5c7b"
+checksum = "7065255b4f6d995fbff3db822d47df5302b7beee9f133fbafdb4cf7a2d1bb6c9"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6861,7 +6983,7 @@ checksum = "877c5b330756d856ffcc4553ab34a5684481ade925ecc54bcd1bf02b1d0d4d52"
 dependencies = [
  "async-stream",
  "async-trait",
- "axum",
+ "axum 0.7.9",
  "base64 0.22.1",
  "bytes",
  "h2 0.4.8",
@@ -6884,10 +7006,39 @@ dependencies = [
 ]
 
 [[package]]
-name = "tonic-build"
-version = "0.12.3"
+name = "tonic"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9557ce109ea773b399c9b9e5dca39294110b74f1f342cb347a80d1fce8c26a11"
+checksum = "85839f0b32fd242bb3209262371d07feda6d780d16ee9d2bc88581b89da1549b"
+dependencies = [
+ "async-trait",
+ "axum 0.8.3",
+ "base64 0.22.1",
+ "bytes",
+ "h2 0.4.8",
+ "http 1.3.1",
+ "http-body 1.0.1",
+ "http-body-util",
+ "hyper 1.6.0",
+ "hyper-timeout",
+ "hyper-util",
+ "percent-encoding",
+ "pin-project",
+ "prost",
+ "socket2",
+ "tokio",
+ "tokio-stream",
+ "tower 0.5.2",
+ "tower-layer",
+ "tower-service",
+ "tracing",
+]
+
+[[package]]
+name = "tonic-build"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d85f0383fadd15609306383a90e85eaed44169f931a5d2be1b42c76ceff1825e"
 dependencies = [
  "prettyplease",
  "proc-macro2",
@@ -6925,7 +7076,9 @@ checksum = "d039ad9159c98b70ecfd540b2573b97f7f52c3e8d9f8ad57a24b916a536975f9"
 dependencies = [
  "futures-core",
  "futures-util",
+ "indexmap 2.8.0",
  "pin-project-lite",
+ "slab",
  "sync_wrapper 1.0.2",
  "tokio",
  "tokio-util",

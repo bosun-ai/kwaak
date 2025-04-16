@@ -12,7 +12,7 @@ use swiftide::traits::CommandError;
 use anyhow::{Context as _, Result};
 use swiftide::{
     chat_completion::{errors::ToolError, ToolOutput},
-    query::{search_strategies, states},
+    query::{states, SearchStrategy},
     traits::{AgentContext, Command},
 };
 use swiftide_macros::{tool, Tool};
@@ -190,27 +190,13 @@ pub async fn search_code(context: &dyn AgentContext, query: &str) -> Result<Tool
         description = "A description, question, or literal code you want to know more about. Uses a semantic similarly search."
     )
 )]
-pub struct ExplainCode<'a> {
-    query_pipeline: Arc<
-        Mutex<
-            swiftide::query::Pipeline<
-                'a,
-                search_strategies::SimilaritySingleEmbedding,
-                states::Answered,
-            >,
-        >,
-    >,
+pub struct ExplainCode<'a, S: SearchStrategy> {
+    query_pipeline: Arc<Mutex<swiftide::query::Pipeline<'a, S, states::Answered>>>,
 }
 
-impl<'a> ExplainCode<'a> {
+impl<'a, S: SearchStrategy> ExplainCode<'a, S> {
     #[must_use]
-    pub fn new(
-        query_pipeline: swiftide::query::Pipeline<
-            'a,
-            search_strategies::SimilaritySingleEmbedding,
-            states::Answered,
-        >,
-    ) -> Self {
+    pub fn new(query_pipeline: swiftide::query::Pipeline<'a, S, states::Answered>) -> Self {
         Self {
             query_pipeline: Arc::new(Mutex::new(query_pipeline)),
         }

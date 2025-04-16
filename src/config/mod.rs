@@ -4,6 +4,7 @@ mod command_configuration;
 mod config;
 pub mod defaults;
 mod llm_configuration;
+pub mod mcp;
 pub mod tools;
 
 pub use api_key::ApiKey;

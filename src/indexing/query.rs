@@ -6,18 +6,24 @@ use swiftide::{
         self, answers, query_transformers, search_strategies::SimilaritySingleEmbedding, states,
         Query,
     },
-    traits::{EmbeddingModel, Persist, SimplePrompt},
+    traits::{EmbeddingModel, Persist, Retrieve, SimplePrompt},
 };
 
-use crate::{repository::Repository, storage, templates::Templates, util::strip_markdown_tags};
+use crate::{repository::Repository, templates::Templates, util::strip_markdown_tags};
 
 #[tracing::instrument(skip_all, err)]
-pub async fn query(repository: &Repository, query: impl AsRef<str>) -> Result<String> {
+pub async fn query<S>(
+    repository: &Repository,
+    storage: &S,
+    query: impl AsRef<str>,
+) -> Result<String>
+where
+    S: Retrieve<SimilaritySingleEmbedding> + Persist + Clone + 'static,
+{
     // Ensure the table exists to avoid dumb errors
-    let duckdb = storage::get_duckdb(repository);
-    let _ = duckdb.setup().await;
+    let _ = storage.setup().await;
 
-    let answer = build_query_pipeline(repository, None)?
+    let answer = build_query_pipeline(repository, storage, None)?
         .query(query.as_ref())
         .await?
         .answer()
@@ -30,10 +36,14 @@ pub async fn query(repository: &Repository, query: impl AsRef<str>) -> Result<St
 /// # Panics
 ///
 /// Should be infallible
-pub fn build_query_pipeline<'b>(
+pub fn build_query_pipeline<'b, S>(
     repository: &Repository,
+    storage: &S,
     evaluator: Option<Box<dyn EvaluateQuery>>,
-) -> Result<query::Pipeline<'b, SimilaritySingleEmbedding, states::Answered>> {
+) -> Result<query::Pipeline<'b, SimilaritySingleEmbedding, states::Answered>>
+where
+    S: Retrieve<SimilaritySingleEmbedding> + Clone + 'static,
+{
     let backoff = repository.config().backoff;
     let query_provider: Box<dyn SimplePrompt> = repository
         .config()
@@ -44,7 +54,6 @@ pub fn build_query_pipeline<'b>(
         .embedding_provider()
         .get_embedding_model(backoff)?;
 
-    let duckdb = storage::get_duckdb(repository);
     let search_strategy: SimilaritySingleEmbedding<()> = SimilaritySingleEmbedding::default()
         .with_top_k(30)
         .to_owned();
@@ -90,7 +99,7 @@ pub fn build_query_pipeline<'b>(
         .then_transform_query(query_transformers::Embed::from_client(
             embedding_provider.clone(),
         ))
-        .then_retrieve(duckdb)
+        .then_retrieve(storage.clone())
         // .then_transform_response(response_transformers::Summary::from_client(
         //     query_provider.clone(),
         // ))
