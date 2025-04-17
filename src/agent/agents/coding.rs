@@ -182,7 +182,7 @@ pub async fn build(
 
     let agent = builder.build()?;
 
-    Ok(agent.into())
+    Ok(agent)
 }
 
 pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
