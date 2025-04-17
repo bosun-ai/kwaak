@@ -7,12 +7,10 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use dyn_clone::DynClone;
 pub use query::build_query_pipeline;
 pub use query::query;
 pub use repository::index_repository;
 use swiftide::integrations::duckdb::Duckdb;
-use swiftide::query::{states, Pipeline};
 
 use crate::commands::Responder;
 use crate::repository::Repository;
