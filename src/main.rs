@@ -93,9 +93,14 @@ async fn main() -> Result<()> {
             cli::Commands::Tui => start_tui(repository, &args).await,
             cli::Commands::ListTools => {
                 let github_session = Arc::new(GithubSession::from_repository(&repository)?);
+                let repository = Arc::new(repository);
                 let index = DuckdbIndex::default();
-                let tools =
-                    available_builtin_tools(&repository, Some(&github_session), None, &index)?;
+                let tools = available_builtin_tools(
+                    repository.clone(),
+                    Some(&github_session),
+                    None,
+                    &index,
+                )?;
 
                 println!("**Enabled built-in tools:**");
                 for tool in tools {
@@ -122,7 +127,7 @@ async fn main() -> Result<()> {
             cli::Commands::TestTool {
                 tool_name,
                 tool_args,
-            } => test_tool(&repository, &tool_name, tool_args.as_deref()).await,
+            } => test_tool(repository.into(), &tool_name, tool_args.as_deref()).await,
             cli::Commands::Query { query: query_param } => {
                 let result =
                     indexing::query(&repository, &storage::get_duckdb(&repository), query_param)
@@ -180,13 +185,13 @@ async fn main() -> Result<()> {
 }
 
 async fn test_tool(
-    repository: &repository::Repository,
+    repository: Arc<repository::Repository>,
     tool_name: &str,
     tool_args: Option<&str>,
 ) -> Result<()> {
     let github_session = Arc::new(GithubSession::from_repository(&repository)?);
     let index = DuckdbIndex::default();
-    let tool = available_builtin_tools(repository, Some(&github_session), None, &index)?
+    let tool = available_builtin_tools(repository.clone(), Some(&github_session), None, &index)?
         .into_iter()
         .find(|tool| tool.name() == tool_name)
         .context("Tool not found")?;

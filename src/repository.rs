@@ -53,10 +53,3 @@ impl Repository {
         RuntimeSettings::from_repository(self)
     }
 }
-
-#[allow(clippy::from_over_into)]
-impl Into<Repository> for &Repository {
-    fn into(self) -> Repository {
-        self.clone()
-    }
-}

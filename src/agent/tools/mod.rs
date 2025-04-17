@@ -22,6 +22,8 @@ use tokio::sync::Mutex;
 use crate::{
     config::ApiKey,
     git::github::GithubSession,
+    indexing::Index,
+    repository::Repository,
     templates::Templates,
     util::{self, accept_non_zero_exit},
 };
@@ -190,16 +192,18 @@ pub async fn search_code(context: &dyn AgentContext, query: &str) -> Result<Tool
         description = "A description, question, or literal code you want to know more about. Uses a semantic similarly search."
     )
 )]
-pub struct ExplainCode<'a, S: SearchStrategy> {
-    query_pipeline: Arc<Mutex<swiftide::query::Pipeline<'a, S, states::Answered>>>,
+pub struct ExplainCode<I: Index + Clone> {
+    index: I,
+    // note to future self, with some restructoring we should be able to borrow this properly
+    // Also, Repository currently needs mutability for its config in some places. Perhaps we should
+    // clean that up and use an inner arc instead
+    repository: Arc<Repository>,
 }
 
-impl<'a, S: SearchStrategy> ExplainCode<'a, S> {
+impl<I: Index + Clone> ExplainCode<I> {
     #[must_use]
-    pub fn new(query_pipeline: swiftide::query::Pipeline<'a, S, states::Answered>) -> Self {
-        Self {
-            query_pipeline: Arc::new(Mutex::new(query_pipeline)),
-        }
+    pub fn new(index: I, repository: Arc<Repository>) -> Self {
+        Self { index, repository }
     }
     async fn explain_code(
         &self,
@@ -207,13 +211,10 @@ impl<'a, S: SearchStrategy> ExplainCode<'a, S> {
         query: &str,
     ) -> Result<ToolOutput, ToolError> {
         let results = self
-            .query_pipeline
-            .lock()
+            .index
+            .query_repository(&self.repository, query)
             .await
-            .query_mut(query)
-            .await?
-            .answer()
-            .to_string();
+            .map_err(ToolError::Unknown)?;
         Ok(results.into())
     }
 }

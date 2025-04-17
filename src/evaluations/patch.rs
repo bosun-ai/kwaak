@@ -222,10 +222,10 @@ async fn run_single_evaluation(iteration: u32) -> Result<(bool, EvalMetrics)> {
         config.tools.insert(blacklisted_tool.to_string(), false);
     }
 
-    let repository = Repository::from_config(config);
+    let repository = Arc::new(Repository::from_config(config));
 
     let kwaak_index = DuckdbIndex::default();
-    let tools = available_builtin_tools(&repository, None, None, &kwaak_index)?;
+    let tools = available_builtin_tools(repository.clone(), None, None, &kwaak_index)?;
 
     let agent =
         start_tool_evaluation_agent(&repository, responder.clone(), tools, &prompt()).await?;

@@ -87,7 +87,7 @@ impl Session {
 impl SessionBuilder {
     /// Starts a session
     #[tracing::instrument(skip_all)]
-    pub async fn start(&mut self, index: &impl Index) -> Result<RunningSession> {
+    pub async fn start(&mut self, index: &(impl Index + 'static)) -> Result<RunningSession> {
         let (running_session_tx, running_session_rx) = tokio::sync::mpsc::unbounded_channel();
 
         let session = Arc::new(
@@ -131,7 +131,7 @@ impl SessionBuilder {
         let agent_environment = env_setup.exec_setup_commands(branch_name).await?;
 
         let builtin_tools = available_builtin_tools(
-            &session.repository,
+            Arc::clone(&session.repository),
             github_session.as_ref(),
             Some(&agent_environment),
             index,
@@ -394,12 +394,12 @@ async fn generate_initial_context(
 }
 
 pub fn available_builtin_tools(
-    repository: &Repository,
+    repository: Arc<Repository>,
     github_session: Option<&Arc<GithubSession>>,
     agent_env: Option<&env_setup::AgentEnvironment>,
-    index: &impl Index,
+    index: &(impl Index + 'static),
 ) -> Result<Vec<Box<dyn Tool>>> {
-    let query_pipeline = index.build_query_pipeline(repository)?;
+    let index = index.clone();
     let mut tools = vec![
         tools::write_file(),
         tools::search_file(),
@@ -407,7 +407,7 @@ pub fn available_builtin_tools(
         tools::shell_command(),
         tools::search_code(),
         tools::fetch_url(),
-        tools::ExplainCode::new(query_pipeline).boxed(),
+        Box::new(tools::ExplainCode::new(index, repository.clone())),
     ];
 
     // agent edit mode specific tools
