@@ -129,10 +129,7 @@ pub async fn start(
 
     let agent = builder.build()?;
 
-    RunningAgent::builder()
-        .agent(agent)
-        .agent_context(context as Arc<dyn AgentContext>)
-        .build()
+    Ok(agent.into())
 }
 
 pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {

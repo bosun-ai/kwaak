@@ -27,6 +27,26 @@ pub async fn start(
     agent_env: &AgentEnvironment,
     initial_context: String,
 ) -> Result<RunningAgent> {
+    build(
+        session,
+        executor,
+        tools,
+        tool_boxes,
+        agent_env,
+        initial_context,
+    )
+    .await
+    .map(Into::into)
+}
+
+pub async fn build(
+    session: &Session,
+    executor: &Arc<dyn ToolExecutor>,
+    tools: &[Box<dyn Tool>],
+    tool_boxes: &[Box<dyn ToolBox>],
+    agent_env: &AgentEnvironment,
+    initial_context: String,
+) -> Result<Agent> {
     let backoff = session.repository.config().backoff;
     let query_provider: Box<dyn ChatCompletion> = session
         .repository
@@ -80,6 +100,8 @@ pub async fn start(
     let maybe_lint_fix_command = session.repository.config().commands.lint_and_fix.clone();
 
     let context = Arc::new(context);
+    let initial_context = initial_context.to_string();
+
     let mut builder = Agent::builder()
         .context(Arc::clone(&context) as Arc<dyn AgentContext>)
         .system_prompt(system_prompt)
@@ -160,10 +182,7 @@ pub async fn start(
 
     let agent = builder.build()?;
 
-    RunningAgent::builder()
-        .agent(agent)
-        .agent_context(context as Arc<dyn AgentContext>)
-        .build()
+    Ok(agent.into())
 }
 
 pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
