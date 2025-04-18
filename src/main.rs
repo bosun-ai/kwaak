@@ -248,9 +248,7 @@ async fn start_agent(
                 CommandResponse::BackendMessage(message) => {
                     println!("Backend: {message}");
                 }
-                CommandResponse::RenameChat(..)
-                | CommandResponse::RenameBranch(..)
-                | CommandResponse::Completed => {}
+                _ => {}
             }
         }
     });

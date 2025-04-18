@@ -389,6 +389,7 @@ impl App<'_> {
                     }
                 }
             }
+
             UIEvent::NewChat => {
                 let repository = &self.current_chat().repository;
                 let chat = Chat::from_repository(Arc::clone(repository));

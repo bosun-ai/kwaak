@@ -78,6 +78,7 @@ pub async fn build(
     }
 
     let responder = Arc::clone(&responder);
+    let tx_1 = responder.clone();
     let tx_2 = responder.clone();
     let tx_3 = responder.clone();
     let tx_4 = responder.clone();
@@ -105,6 +106,16 @@ pub async fn build(
         .context(Arc::clone(&context) as Arc<dyn AgentContext>)
         .system_prompt(system_prompt)
         .tools(tools.to_vec())
+        .on_stream( move |_agent, chunk| {
+                let command_responder = tx_1.clone();
+                let chunk = chunk.clone();
+
+            Box::pin(async move {
+                command_responder.completion_chunk(chunk).await;
+
+                Ok(())
+            })
+        })
         .before_all(move |agent| {
             let initial_context = initial_context.clone();
 

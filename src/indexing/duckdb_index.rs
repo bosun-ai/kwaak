@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use swiftide_integrations::duckdb::Duckdb;
+use swiftide::integrations::duckdb::Duckdb;
 
 use crate::{commands::Responder, repository::Repository};
 
