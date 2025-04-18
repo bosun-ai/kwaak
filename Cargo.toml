@@ -70,7 +70,7 @@ octocrab = "0.44.0"
 indoc = "2.0.5"
 tavily = "2.0.3"
 regex = "1.11.1"
-clap = { version = "4.5.36", features = ["derive"] }
+clap = { version = "4.5.37", features = ["derive"] }
 tera = "1.20.0"
 rust-embed = { version = "8.7.0", features = ["debug-embed"] }
 ratatui-splash-screen = "0.1.4"
