@@ -3309,6 +3309,7 @@ dependencies = [
  "mockall",
  "num_cpus",
  "octocrab",
+ "openssl",
  "openssl-sys",
  "opentelemetry",
  "opentelemetry-otlp",

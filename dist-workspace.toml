@@ -13,6 +13,7 @@ installers = ["shell", "homebrew"]
 # Target platforms to build apps for (Rust target-triple syntax)
 targets = [
   "aarch64-apple-darwin",
+  "aarch64-unknown-linux-gnu",
   "x86_64-apple-darwin",
   "x86_64-unknown-linux-gnu",
 ]
@@ -25,12 +26,21 @@ install-updater = true
 # A GitHub repo to push Homebrew formulas to
 tap = "bosun-ai/homebrew-tap"
 # Which actions to run on pull requests
-# pr-run-mode = "upload"
+#pr-run-mode = "upload"
 # Skip checking whether the specified configuration files are up to date
 allow-dirty = ["ci"]
 
 [dist.github-custom-runners]
-x86_64-unknown-linux-gnu = "ubuntu-24.04"
+aarch64-apple-darwin = "macos-latest"
+aarch64-unknown-linux-gnu = "ubuntu-24.04-arm"
+aarch64-unknown-linux-musl = "ubuntu-24.04-arm"
+armv7-unknown-linux-gnueabihf = "ubuntu-latest"
+i686-unknown-linux-gnu = "ubuntu-latest"
+x86_64-apple-darwin = "macos-13"
+x86_64-pc-windows-gnu = "windows-latest"
+x86_64-pc-windows-msvc = "windows-latest"
+x86_64-unknown-linux-gnu = "ubuntu-latest"
+x86_64-unknown-linux-musl = "ubuntu-latest"
 
 [dist.dependencies.apt]
 protobuf-compiler = "*"
@@ -48,3 +58,26 @@ libxcb1 = "*"
 libxcb-xfixes0 = "*"
 libxcb-shape0 = "*"
 libxcb-render0 = "*"
+clang = "*"
+lld = "*"
+"libc++-dev" = "*"
+"libc++abi-dev" = "*"
+gcc-aarch64-linux-gnu = { version = '*', targets = [
+  "aarch64-unknown-linux-gnu",
+  "aarch64-unknown-linux-musl",
+] }
+gcc-arm-linux-gnueabihf = { version = '*', targets = [
+  "armv7-unknown-linux-gnueabihf",
+] }
+gcc-i686-linux-gnu = { version = '*', targets = ["i686-unknown-linux-gnu"] }
+gcc-multilib-i686-linux-gnu = { version = '*', targets = [
+  "i686-unknown-linux-gnu",
+] }
+musl-tools = { version = '*', targets = [
+  "aarch64-unknown-linux-musl",
+  "x86_64-unknown-linux-musl",
+] }
+musl-dev = { version = '*', targets = [
+  "aarch64-unknown-linux-musl",
+  "x86_64-unknown-linux-musl",
+] }
