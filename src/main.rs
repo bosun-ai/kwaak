@@ -15,9 +15,11 @@ use git::github::GithubSession;
 use kwaak::evaluations;
 use kwaak::{
     agent::{self, session::start_mcp_toolboxes},
-    cli, commands, config, frontend, git,
-    indexing::{self, index_repository, DuckdbIndex},
-    onboarding, repository, storage,
+    cli, commands, config,
+    duckdb::get_duckdb,
+    frontend, git,
+    indexing::{self, duckdb_index::DuckdbIndex, index_repository},
+    onboarding, repository,
 };
 
 use ratatui::{
@@ -118,7 +120,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             cli::Commands::Index => {
-                index_repository(&repository, &storage::get_duckdb(&repository), None).await
+                index_repository(&repository, &get_duckdb(&repository), None).await
             }
             cli::Commands::TestTool {
                 tool_name,
@@ -126,8 +128,7 @@ async fn main() -> Result<()> {
             } => test_tool(repository.into(), &tool_name, tool_args.as_deref()).await,
             cli::Commands::Query { query: query_param } => {
                 let result =
-                    indexing::query(&repository, &storage::get_duckdb(&repository), query_param)
-                        .await;
+                    indexing::query(&repository, &get_duckdb(&repository), query_param).await;
 
                 if let Ok(result) = result.as_deref() {
                     println!("{result}");
@@ -228,7 +229,7 @@ async fn start_agent(
     repository.config_mut().endless_mode = true;
 
     if !args.skip_indexing {
-        indexing::index_repository(&repository, &storage::get_duckdb(&repository), None).await?;
+        indexing::index_repository(&repository, &get_duckdb(&repository), None).await?;
     }
 
     let (tx, mut rx) = mpsc::unbounded_channel();
@@ -269,7 +270,7 @@ async fn start_tui(repository: repository::Repository, args: &cli::Args) -> Resu
 
     // Before starting the TUI, check if there is already a kwaak running on the project
     if panic::catch_unwind(|| {
-        storage::get_duckdb(&repository);
+        get_duckdb(&repository);
     })
     .is_err()
     {

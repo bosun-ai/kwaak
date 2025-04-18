@@ -9,6 +9,7 @@ use swiftide::indexing::Node;
 use swiftide::traits::EmbeddingModel;
 use swiftide::traits::{NodeCache, Persist, SimplePrompt};
 
+#[cfg(feature = "duckdb")]
 use super::garbage_collection::GarbageCollector;
 use super::progress_updater::ProgressUpdater;
 
@@ -31,11 +32,7 @@ where
     // The updater forwards formatted progress updates to the connected frontend
     let _handle = updater.spawn();
 
-    if repository.config().indexing_garbage_collection_enabled {
-        updater.send_update("Cleaning up the index ...");
-        let garbage_collector = GarbageCollector::from_repository(repository);
-        garbage_collector.clean_up().await?;
-    }
+    garbage_collect(&updater, &repository).await?;
 
     updater.send_update("Starting to index your code ...");
     let mut extensions = repository.config().language.file_extensions().to_vec();
@@ -96,5 +93,17 @@ where
         .run()
         .await?;
 
+    Ok(())
+}
+
+#[cfg(feature = "duckdb")]
+async fn garbage_collect(updater: &ProgressUpdater, repository: &Repository) -> Result<()> {
+    updater.send_update("Cleaning up the index ...");
+    let garbage_collector = GarbageCollector::from_repository(repository);
+    garbage_collector.clean_up().await
+}
+
+#[cfg(not(feature = "duckdb"))]
+async fn garbage_collect(_updater: &ProgressUpdater, _repository: &Repository) -> Result<()> {
     Ok(())
 }

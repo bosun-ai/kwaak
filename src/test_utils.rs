@@ -12,11 +12,12 @@ use swiftide::traits::{EmbeddingModel, Persist as _, SimplePrompt, ToolExecutor}
 use tokio_util::task::AbortOnDropHandle;
 use uuid::Uuid;
 
+#[cfg(feature = "duckdb")]
+use crate::duckdb;
 use crate::frontend;
-use crate::indexing::DuckdbIndex;
-use crate::{
-    commands::CommandHandler, config::Config, frontend::App, git, repository::Repository, storage,
-};
+#[cfg(feature = "duckdb")]
+use crate::indexing::duckdb_index::DuckdbIndex;
+use crate::{commands::CommandHandler, config::Config, frontend::App, git, repository::Repository};
 
 pub struct TestGuard {
     pub tempdir: tempfile::TempDir,
@@ -276,12 +277,13 @@ impl IntegrationContext {
 }
 
 /// Sets up an app
+#[cfg(feature = "duckdb")]
 pub async fn setup_integration() -> Result<IntegrationContext> {
     let (repository, repository_guard) = test_repository();
     let workdir = repository.path().clone();
     let repository = Arc::new(repository);
     let mut app = App::default_from_repository(repository.clone()).with_workdir(repository.path());
-    let duckdb = storage::get_duckdb(&repository);
+    let duckdb = duckdb::get_duckdb(&repository);
     duckdb.setup().await.unwrap();
     let terminal = Terminal::new(TestBackend::new(160, 40)).unwrap();
 
