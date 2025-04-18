@@ -1,15 +1,22 @@
 use crate::repository::Repository;
 use anyhow::Result;
-use opentelemetry_otlp::{Protocol, WithExportConfig as _};
 use tracing::level_filters::LevelFilter;
-use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::prelude::*;
+use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::{fmt, EnvFilter};
 
+#[cfg(feature = "otel")]
 pub struct Guard {
-    otel: Option<SdkTracerProvider>,
+    otel: Option<opentelemetry_sdk::trace::SdkTracerProvider>,
 }
 
+#[cfg(not(feature = "otel"))]
+pub struct Guard {
+    #[allow(dead_code)]
+    otel: Option<()>,
+}
+
+#[cfg(feature = "otel")]
 impl Drop for Guard {
     fn drop(&mut self) {
         tracing::debug!("shutting down tracing");
@@ -70,15 +77,12 @@ pub fn init(repository: &Repository, tui_logger_enabled: bool) -> Result<Guard> 
     let mut provider_for_guard = None;
     if repository.config().otel_enabled {
         println!("OpenTelemetry tracing enabled");
-        let provider = init_otel();
-        let tracer = provider.tracer("kwaak");
-        opentelemetry::global::set_tracer_provider(provider.clone());
-        provider_for_guard = Some(provider);
-
-        // Create a tracing layer with the configured tracer
-        let layer = OpenTelemetryLayer::new(tracer);
-
-        layers.push(layer.boxed());
+        if cfg!(feature = "otel") {
+            let guard = init_otel(&mut layers)?;
+            provider_for_guard = Some(guard);
+        } else {
+            eprintln!("OpenTelemetry tracing is enabled but the `otel` feature is not enabled");
+        }
     }
 
     let registry = tracing_subscriber::registry()
@@ -91,19 +95,34 @@ pub fn init(repository: &Repository, tui_logger_enabled: bool) -> Result<Guard> 
     })
 }
 
-use opentelemetry::trace::TracerProvider as _;
-use opentelemetry_sdk::trace::SdkTracerProvider;
+#[cfg(not(feature = "otel"))]
+fn init_otel<S>(
+    _layers: &mut Vec<Box<dyn tracing_subscriber::Layer<S> + Send + Sync>>,
+) -> Result<()>
+where
+    S: tracing::Subscriber + for<'span> LookupSpan<'span> + Send + Sync,
+{
+    Ok(())
+}
 
-fn init_otel() -> SdkTracerProvider {
+#[cfg(feature = "otel")]
+fn init_otel<S>(
+    layers: &mut Vec<Box<dyn tracing_subscriber::Layer<S> + Send + Sync>>,
+) -> Result<opentelemetry_sdk::trace::SdkTracerProvider>
+where
+    S: tracing::Subscriber + for<'span> LookupSpan<'span> + Send + Sync,
+{
     use std::collections::HashMap;
 
+    use anyhow::Context as _;
+    use opentelemetry::trace::TracerProvider as _;
+    use opentelemetry_otlp::WithExportConfig as _;
     use opentelemetry_sdk::trace::SdkTracerProvider;
 
     let exporter = opentelemetry_otlp::SpanExporter::builder()
         .with_http()
-        .with_protocol(Protocol::HttpBinary)
-        .build()
-        .expect("failed to create otlp exporter");
+        .with_protocol(opentelemetry_otlp::Protocol::HttpBinary)
+        .build()?;
 
     let service_name = if let Ok(service_name) = std::env::var("OTEL_SERVICE_NAME") {
         service_name
@@ -112,9 +131,12 @@ fn init_otel() -> SdkTracerProvider {
             .unwrap_or_default()
             .split(',')
             .filter(|s| !s.is_empty())
-            .map(|s| s.split_once('=').expect("invalid OTEL_RESOURCE_ATTRIBUTES"))
-            .map(|(key, value)| (key.to_string(), value.to_string()))
-            .collect::<HashMap<String, String>>();
+            .map(|s| {
+                s.split_once('=')
+                    .context("invalid OTEL_RESOURCE_ATTRIBUTES")
+            })
+            .map(|val| val.map(|(key, value)| (key.to_string(), value.to_string())))
+            .collect::<Result<HashMap<String, String>>>()?;
         if let Some(service_name) = resource_attributes.get("service.name") {
             service_name.to_string()
         } else {
@@ -122,12 +144,21 @@ fn init_otel() -> SdkTracerProvider {
         }
     };
 
-    SdkTracerProvider::builder()
+    let provider = SdkTracerProvider::builder()
         .with_batch_exporter(exporter)
         .with_resource(
             opentelemetry_sdk::Resource::builder()
                 .with_service_name(service_name)
                 .build(),
         )
-        .build()
+        .build();
+
+    let tracer = provider.tracer("kwaak");
+    opentelemetry::global::set_tracer_provider(provider.clone());
+
+    // Create a tracing layer with the configured tracer
+    let layer = tracing_opentelemetry::OpenTelemetryLayer::new(tracer);
+    layers.push(layer.boxed());
+
+    Ok(provider)
 }
