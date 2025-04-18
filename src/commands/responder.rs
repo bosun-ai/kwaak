@@ -5,7 +5,7 @@ use dyn_clone::DynClone;
 #[cfg(test)]
 use mockall::mock;
 use serde::{Deserialize, Serialize};
-use swiftide::chat_completion;
+use swiftide::chat_completion::{self, ChatCompletionResponse};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum CommandResponse {
@@ -21,6 +21,8 @@ pub enum CommandResponse {
     BackendMessage(String),
     /// A command has been completed
     Completed,
+    /// A streamed chunk of a chat message. Keeps it simple now to just return the updated string
+    ChatChunk(ChatCompletionResponse),
 }
 
 /// A responder reacts to updates from commands
@@ -63,6 +65,11 @@ pub trait Responder: std::fmt::Debug + Send + Sync + DynClone {
     async fn rename_branch(&self, branch_name: &str) {
         self.send(CommandResponse::RenameBranch(branch_name.to_string()))
             .await;
+    }
+
+    /// Streamed chunks from completions
+    async fn completion_chunk(&self, completion: ChatCompletionResponse) {
+        self.send(CommandResponse::ChatChunk(completion)).await;
     }
 }
 

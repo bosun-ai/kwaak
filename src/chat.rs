@@ -53,6 +53,7 @@ impl Chat {
     }
 
     pub fn add_message(&mut self, message: ChatMessage) {
+        if let Some(id) = message.original().map(|m| m.id) {}
         if !message.role().is_user() {
             self.new_message_count += 1;
         }

@@ -289,6 +289,18 @@ impl App<'_> {
         }
     }
 
+    pub fn update_chat_message(&mut self, chat_id: Uuid, message: impl Into<ChatMessage>) {
+        let message = message.into();
+        if chat_id == self.boot_uuid {
+            return;
+        }
+        if let Some(chat) = self.find_chat_mut(chat_id) {
+            chat.update_last_message(&message);
+        } else {
+            tracing::error!("Could not find chat with id {chat_id}");
+        }
+    }
+
     #[must_use]
     /// Overrides the working directory
     ///
@@ -382,6 +394,16 @@ impl App<'_> {
             }
             UIEvent::ChatMessage(uuid, message) => {
                 self.add_chat_message(*uuid, message.clone());
+
+                if let Some(chat) = self.find_chat_mut(*uuid) {
+                    if chat.auto_tail {
+                        self.send_ui_event(UIEvent::ScrollEnd);
+                    }
+                }
+            }
+
+            UIEvent::ChatMessageChunk(uuid, message) => {
+                self.update_chat_message(*uuid, message.clone());
 
                 if let Some(chat) = self.find_chat_mut(*uuid) {
                     if chat.auto_tail {

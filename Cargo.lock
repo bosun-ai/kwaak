@@ -8487,3 +8487,19 @@ checksum = "99a5bab8d7dedf81405c4bb1f2b83ea057643d9cb28778cea9eecddeedd2e028"
 dependencies = [
  "zune-core",
 ]
+
+[[patch.unused]]
+name = "swiftide"
+version = "0.24.0"
+
+[[patch.unused]]
+name = "swiftide-agents"
+version = "0.24.0"
+
+[[patch.unused]]
+name = "swiftide-core"
+version = "0.24.0"
+
+[[patch.unused]]
+name = "swiftide-macros"
+version = "0.24.0"

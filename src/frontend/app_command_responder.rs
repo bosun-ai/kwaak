@@ -44,6 +44,9 @@ impl AppCommandResponder {
                 tracing::debug!("[RESPONDER] Received response: {:?}", response);
                 let chat_id = response.0;
                 let ui_event = match response.1 {
+                    CommandResponse::ChatChunk(msg) => {
+                        UIEvent::ChatMessageChunk(chat_id, msg.into())
+                    }
                     CommandResponse::Chat(msg) => UIEvent::ChatMessage(chat_id, msg.into()),
                     CommandResponse::Activity(state) => UIEvent::ActivityUpdate(chat_id, state),
                     CommandResponse::RenameChat(name) => UIEvent::RenameChat(chat_id, name),
