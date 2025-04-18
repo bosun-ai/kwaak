@@ -1,7 +1,5 @@
 use anyhow::{Context as _, Result};
-use derive_builder::Builder;
 use std::sync::Arc;
-use swiftide::traits::AgentContext;
 
 use swiftide::agents::Agent;
 use tokio::sync::Mutex;

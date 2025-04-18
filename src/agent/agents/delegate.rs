@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use swiftide::{
-    agents::{system_prompt::SystemPrompt, Agent, DefaultContext},
+    agents::{system_prompt::SystemPrompt, Agent, AgentBuilder, DefaultContext},
     chat_completion::{self, ChatCompletion, Tool},
     prompt::Prompt,
     traits::{AgentContext, Command, SimplePrompt, ToolBox, ToolExecutor},
@@ -29,6 +29,28 @@ pub async fn start(
     agent_env: &AgentEnvironment,
     initial_context: &str,
 ) -> Result<RunningAgent> {
+    let agent = build(
+        session,
+        executor,
+        tools,
+        tool_boxes,
+        agent_env,
+        initial_context,
+    )
+    .await?
+    .build()?;
+
+    Ok(agent.into())
+}
+
+pub async fn build(
+    session: &Session,
+    executor: &Arc<dyn ToolExecutor>,
+    tools: &[Box<dyn Tool>],
+    tool_boxes: &[Box<dyn ToolBox>],
+    agent_env: &AgentEnvironment,
+    initial_context: &str,
+) -> Result<AgentBuilder> {
     let backoff = session.repository.config().backoff;
     let query_provider: Box<dyn ChatCompletion> = session
         .repository
@@ -127,9 +149,7 @@ pub async fn start(
         builder.add_toolbox(tool_box.clone());
     }
 
-    let agent = builder.build()?;
-
-    Ok(agent.into())
+    Ok(builder)
 }
 
 pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
