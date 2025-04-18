@@ -10,9 +10,7 @@ pub struct ChatMessagesWidget;
 impl ChatMessagesWidget {
     pub fn render(f: &mut ratatui::Frame, app: &mut App, area: Rect) {
         let num_chats = app.chats.len();
-        let Some(current_chat) = app.current_chat_mut() else {
-            return;
-        };
+        let current_chat = app.current_chat_mut();
         let mut messages = current_chat.messages.clone();
 
         if messages.is_empty() && num_chats == 1 {

@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 use ratatui::widgets::ScrollbarState;
 
@@ -25,10 +25,33 @@ pub struct Chat {
     // Whether to auto-tail the chat on new messages
     pub auto_tail: bool,
 
-    pub repository: Option<Repository>,
+    pub repository: Arc<Repository>,
 }
 
 impl Chat {
+    #[must_use]
+    pub fn from_repository(repository: Arc<Repository>) -> Self {
+        Self {
+            name: "Chat".to_string(),
+            uuid: uuid::Uuid::new_v4(),
+            branch_name: None,
+            messages: Vec::new(),
+            state: ChatState::default(),
+            new_message_count: 0,
+            completed_tool_call_ids: HashSet::new(),
+            vertical_scroll_state: ScrollbarState::default(),
+            vertical_scroll: 0,
+            num_lines: 0,
+            auto_tail: true,
+            repository,
+        }
+    }
+
+    pub fn with_name(&mut self, name: impl Into<String>) -> &mut Self {
+        self.name = name.into();
+        self
+    }
+
     pub fn add_message(&mut self, message: ChatMessage) {
         if !message.role().is_user() {
             self.new_message_count += 1;
@@ -79,35 +102,17 @@ pub enum ChatState {
     Ready,
 }
 
-impl Default for Chat {
-    fn default() -> Self {
-        Self {
-            name: "Chat".to_string(),
-            uuid: uuid::Uuid::new_v4(),
-            branch_name: None,
-            messages: Vec::new(),
-            state: ChatState::default(),
-            new_message_count: 0,
-            completed_tool_call_ids: HashSet::new(),
-            vertical_scroll_state: ScrollbarState::default(),
-            vertical_scroll: 0,
-            num_lines: 0,
-            auto_tail: true,
-            repository: None,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use swiftide::chat_completion;
 
     use super::*;
-    use crate::chat_message::ChatMessage;
+    use crate::{chat_message::ChatMessage, test_utils::test_repository};
 
     #[test]
     fn test_add_message_increases_new_message_count() {
-        let mut chat = Chat::default();
+        let (repository, _guard) = test_repository();
+        let mut chat = Chat::from_repository(repository.into());
         let message = ChatMessage::new_system("Test message");
 
         chat.add_message(message);
@@ -118,7 +123,8 @@ mod tests {
 
     #[test]
     fn test_add_message_does_not_increase_new_message_count_for_user() {
-        let mut chat = Chat::default();
+        let (repository, _guard) = test_repository();
+        let mut chat = Chat::from_repository(repository.into());
         let message = ChatMessage::new_user("Test message");
 
         chat.add_message(message);
@@ -129,7 +135,8 @@ mod tests {
 
     #[test]
     fn test_add_message_tool_call() {
-        let mut chat = Chat::default();
+        let (repository, _guard) = test_repository();
+        let mut chat = Chat::from_repository(repository.into());
         let tool_call = chat_completion::ToolCall::builder()
             .id("tool_call_id")
             .name("some_tool")
@@ -146,7 +153,8 @@ mod tests {
 
     #[test]
     fn test_transition() {
-        let mut chat = Chat::default();
+        let (repository, _guard) = test_repository();
+        let mut chat = Chat::from_repository(repository.into());
         chat.transition(ChatState::Loading);
 
         assert!(chat.is_loading());
@@ -154,17 +162,18 @@ mod tests {
 
     #[test]
     fn test_is_loading() {
-        let chat = Chat {
-            state: ChatState::Loading,
-            ..Default::default()
-        };
+        let (repository, _guard) = test_repository();
+        let mut chat = Chat::from_repository(repository.into());
+        chat.transition(ChatState::Loading);
 
         assert!(chat.is_loading());
     }
 
     #[test]
     fn test_is_tool_call_completed() {
-        let mut chat = Chat::default();
+        let (repository, _guard) = test_repository();
+        let mut chat = Chat::from_repository(repository.into());
+
         chat.completed_tool_call_ids
             .insert("tool_call_id".to_string());
 

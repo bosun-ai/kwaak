@@ -6,6 +6,7 @@ use anyhow::Result;
 use ratatui::{backend::TestBackend, Terminal};
 use swiftide::agents::tools::local_executor::LocalExecutor;
 use swiftide::agents::{Agent, DefaultContext};
+use swiftide::chat_completion::errors::LanguageModelError;
 use swiftide::chat_completion::{ChatCompletion, ChatCompletionResponse};
 use swiftide::traits::{EmbeddingModel, Persist as _, SimplePrompt, ToolExecutor};
 use tokio_util::task::AbortOnDropHandle;
@@ -200,14 +201,17 @@ impl NoopLLM {
 
 #[async_trait::async_trait]
 impl SimplePrompt for NoopLLM {
-    async fn prompt(&self, _prompt: swiftide::prompt::Prompt) -> anyhow::Result<String> {
+    async fn prompt(
+        &self,
+        _prompt: swiftide::prompt::Prompt,
+    ) -> Result<String, LanguageModelError> {
         Ok(self.response.clone())
     }
 }
 
 #[async_trait::async_trait]
 impl EmbeddingModel for NoopLLM {
-    async fn embed(&self, input: Vec<String>) -> anyhow::Result<swiftide::Embeddings> {
+    async fn embed(&self, input: Vec<String>) -> Result<swiftide::Embeddings, LanguageModelError> {
         Ok(vec![vec![0.0; input.len()]])
     }
 }
@@ -217,10 +221,7 @@ impl ChatCompletion for NoopLLM {
     async fn complete(
         &self,
         _request: &swiftide::chat_completion::ChatCompletionRequest,
-    ) -> Result<
-        swiftide::chat_completion::ChatCompletionResponse,
-        swiftide::chat_completion::errors::ChatCompletionError,
-    > {
+    ) -> Result<swiftide::chat_completion::ChatCompletionResponse, LanguageModelError> {
         ChatCompletionResponse::builder()
             .message(&self.response)
             .build()
@@ -254,7 +255,7 @@ macro_rules! assert_agent_responded {
 pub struct IntegrationContext {
     pub app: App<'static>,
     pub uuid: Uuid,
-    pub repository: Repository,
+    pub repository: Arc<Repository>,
     pub terminal: Terminal<TestBackend>,
     pub workdir: std::path::PathBuf,
 
@@ -278,20 +279,19 @@ impl IntegrationContext {
 pub async fn setup_integration() -> Result<IntegrationContext> {
     let (repository, repository_guard) = test_repository();
     let workdir = repository.path().clone();
-    let mut app = App::default().with_workdir(repository.path());
+    let repository = Arc::new(repository);
+    let mut app = App::default_from_repository(repository.clone()).with_workdir(repository.path());
     let duckdb = storage::get_duckdb(&repository);
     duckdb.setup().await.unwrap();
     let terminal = Terminal::new(TestBackend::new(160, 40)).unwrap();
 
     let index = DuckdbIndex::default();
-    let mut handler = CommandHandler::from_repository_and_index(repository.clone(), index);
+    let mut handler = CommandHandler::from_index(index);
     handler.register_ui(&mut app);
     let handler_guard = handler.start();
 
     let uuid = Uuid::parse_str("a1a2a3a4b1b2c1c2d1d2d3d4d5d6d7d8").unwrap();
-    let Some(current_chat) = app.current_chat_mut() else {
-        panic!("No current chat");
-    };
+    let current_chat = app.current_chat_mut();
 
     // Force to fixed uuid so that snapshots are stable
     current_chat.uuid = uuid;

@@ -3,6 +3,8 @@ use std::sync::Arc;
 use derive_builder::Builder;
 use uuid::Uuid;
 
+use crate::repository::Repository;
+
 use super::Responder;
 
 /// Commands are the main way to interact with the backend
@@ -16,7 +18,7 @@ pub enum Command {
     /// Cleanly stop the backend
     Quit,
 
-    /// Print the config the backend is using
+    /// Print the config the config for a repository
     ShowConfig,
 
     /// Re-index a repository
@@ -43,22 +45,21 @@ pub enum Command {
 #[derive(Debug, Clone, Builder)]
 pub struct CommandEvent {
     command: Command,
+    #[builder(default)]
+    repository: Option<Arc<Repository>>,
     uuid: Uuid,
     responder: Arc<dyn Responder>,
 }
 
 impl CommandEvent {
     #[must_use]
-    pub fn quit() -> Self {
-        CommandEvent {
-            command: Command::Quit,
-            responder: Arc::new(()),
-            uuid: Uuid::new_v4(),
-        }
-    }
-    #[must_use]
     pub fn builder() -> CommandEventBuilder {
         CommandEventBuilder::default()
+    }
+
+    #[must_use]
+    pub fn repository(&self) -> Option<&Repository> {
+        self.repository.as_deref()
     }
 
     #[must_use]
@@ -81,9 +82,18 @@ impl CommandEvent {
         Arc::clone(&self.responder)
     }
 
-    #[must_use]
-    pub fn with_uuid(mut self, uuid: Uuid) -> Self {
+    pub fn with_uuid(&mut self, uuid: Uuid) -> &mut Self {
         self.uuid = uuid;
+        self
+    }
+
+    pub fn with_repository(&mut self, repository: Arc<Repository>) -> &mut Self {
+        self.repository = Some(repository);
+        self
+    }
+
+    pub fn with_maybe_repository(&mut self, repository: Option<Arc<Repository>>) -> &mut Self {
+        self.repository = repository;
         self
     }
 }
@@ -128,7 +138,8 @@ mod tests {
             .responder(responder.clone())
             .build()
             .unwrap()
-            .with_uuid(new_uuid);
+            .with_uuid(new_uuid)
+            .to_owned();
 
         assert_eq!(event.uuid(), new_uuid);
     }

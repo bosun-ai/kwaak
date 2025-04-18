@@ -90,9 +90,10 @@ async fn main() -> Result<()> {
             cli::Commands::RunAgent { initial_message } => {
                 start_agent(repository, &initial_message, &args).await
             }
-            cli::Commands::Tui => start_tui(&repository, &args).await,
+            cli::Commands::Tui => start_tui(repository, &args).await,
             cli::Commands::ListTools => {
                 let github_session = Arc::new(GithubSession::from_repository(&repository)?);
+                let repository = Arc::new(repository);
                 let index = DuckdbIndex::default();
                 let tools =
                     available_builtin_tools(&repository, Some(&github_session), None, &index)?;
@@ -122,7 +123,7 @@ async fn main() -> Result<()> {
             cli::Commands::TestTool {
                 tool_name,
                 tool_args,
-            } => test_tool(&repository, &tool_name, tool_args.as_deref()).await,
+            } => test_tool(repository.into(), &tool_name, tool_args.as_deref()).await,
             cli::Commands::Query { query: query_param } => {
                 let result =
                     indexing::query(&repository, &storage::get_duckdb(&repository), query_param)
@@ -180,13 +181,13 @@ async fn main() -> Result<()> {
 }
 
 async fn test_tool(
-    repository: &repository::Repository,
+    repository: Arc<repository::Repository>,
     tool_name: &str,
     tool_args: Option<&str>,
 ) -> Result<()> {
     let github_session = Arc::new(GithubSession::from_repository(&repository)?);
     let index = DuckdbIndex::default();
-    let tool = available_builtin_tools(repository, Some(&github_session), None, &index)?
+    let tool = available_builtin_tools(&repository, Some(&github_session), None, &index)?
         .into_iter()
         .find(|tool| tool.name() == tool_name)
         .context("Tool not found")?;
@@ -263,7 +264,7 @@ async fn start_agent(
 
 #[instrument(skip_all)]
 #[allow(clippy::field_reassign_with_default)]
-async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Result<()> {
+async fn start_tui(repository: repository::Repository, args: &cli::Args) -> Result<()> {
     ::tracing::info!("Loaded configuration: {:?}", repository.config());
 
     // Before starting the TUI, check if there is already a kwaak running on the project
@@ -280,11 +281,14 @@ async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Res
     let mut terminal = init_tui()?;
 
     // Start the application
-    let mut app = App::default();
+    let repository = Arc::new(repository);
+    let mut app = App::default_from_repository(repository.clone());
     app.ui_config = repository.config().ui.clone();
-    app.current_chat_mut()
-        .expect("app created with no chat")
-        .repository = Some(repository.clone());
+
+    debug_assert!(
+        app.chats.len() == 1,
+        "App should only have one chat at startup"
+    );
 
     if args.skip_indexing {
         app.skip_indexing = true;
@@ -292,8 +296,7 @@ async fn start_tui(repository: &repository::Repository, args: &cli::Args) -> Res
 
     let app_result = {
         let kwaak_index = DuckdbIndex::default();
-        let mut handler =
-            commands::CommandHandler::from_repository_and_index(repository, kwaak_index);
+        let mut handler = commands::CommandHandler::from_index(kwaak_index);
         handler.register_ui(&mut app);
 
         let _guard = handler.start();
