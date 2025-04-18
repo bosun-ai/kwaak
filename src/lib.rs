@@ -4,8 +4,6 @@ pub mod chat_message;
 pub mod cli;
 pub mod commands;
 pub mod config;
-#[cfg(feature = "duckdb")]
-pub mod duckdb;
 #[cfg(all(feature = "evaluations", feature = "duckdb"))]
 pub mod evaluations;
 pub mod frontend;

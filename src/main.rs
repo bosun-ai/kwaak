@@ -15,10 +15,12 @@ use git::github::GithubSession;
 use kwaak::evaluations;
 use kwaak::{
     agent::{self, session::start_mcp_toolboxes},
-    cli, commands, config,
-    duckdb::get_duckdb,
-    frontend, git,
-    indexing::{self, duckdb_index::DuckdbIndex, index_repository},
+    cli, commands, config, frontend, git,
+    indexing::{
+        self,
+        duckdb_index::{get_duckdb, DuckdbIndex},
+        index_repository,
+    },
     onboarding, repository,
 };
 
