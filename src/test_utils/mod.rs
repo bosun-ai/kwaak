@@ -11,6 +11,7 @@ use swiftide::{
 
 use crate::{config::Config, git, repository::Repository};
 
+#[cfg(feature = "duckdb")]
 pub mod integration;
 
 pub struct TestGuard {

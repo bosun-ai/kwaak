@@ -288,6 +288,7 @@ pub enum OpenAIEmbeddingModel {
 }
 
 impl LLMConfiguration {
+    #[allow(dead_code, reason = "Not used if duckdb is not enabled")]
     pub(crate) fn vector_size(&self) -> i32 {
         match self {
             LLMConfiguration::OpenAI {
