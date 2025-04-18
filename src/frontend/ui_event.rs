@@ -1,4 +1,5 @@
 use crossterm::event::KeyEvent;
+use swiftide::chat_completion::ChatCompletionResponse;
 use uuid::Uuid;
 
 use crate::chat_message::ChatMessage;
@@ -51,8 +52,6 @@ pub enum UIEvent {
     Help,
     /// Fetch a GitHub issue and its comments and have the agent analyze and fix it
     GithubFixIssue(Uuid, u64),
-    /// A partial message from an agent (streamed)
-    ChatMessageChunk(Uuid, ChatMessage),
 }
 
 impl From<KeyEvent> for UIEvent {

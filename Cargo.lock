@@ -3332,7 +3332,7 @@ dependencies = [
  "swiftide",
  "swiftide-core",
  "swiftide-docker-executor",
- "swiftide-integrations",
+ "swiftide-integrations 0.25.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "swiftide-macros",
  "tavily",
  "tempfile",
@@ -6202,8 +6202,6 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "swiftide"
 version = "0.25.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96eb0ccb700e4b65e90a20f39017386c3be607a9163e4cd285da15d139554798"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6213,21 +6211,20 @@ dependencies = [
  "swiftide-agents",
  "swiftide-core",
  "swiftide-indexing",
- "swiftide-integrations",
+ "swiftide-integrations 0.25.1",
  "swiftide-query",
 ]
 
 [[package]]
 name = "swiftide-agents"
 version = "0.25.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7792b380601fc39cafa1ffee88117497d29131129ecd168d16c7fc116cd68a02"
 dependencies = [
  "anyhow",
  "async-trait",
  "derive_builder 0.20.2",
  "dyn-clone",
  "fs-err",
+ "futures-util",
  "indoc",
  "rmcp",
  "serde",
@@ -6237,14 +6234,13 @@ dependencies = [
  "swiftide-core",
  "thiserror 2.0.12",
  "tokio",
+ "tokio-stream",
  "tracing",
 ]
 
 [[package]]
 name = "swiftide-core"
 version = "0.25.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a766e17fc22a9b32f22f98d416fddd507fd5eda3c55b7277025103e3aea8b3d3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6300,8 +6296,6 @@ dependencies = [
 [[package]]
 name = "swiftide-indexing"
 version = "0.25.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c97635db41e890c2217aeb641242306723f6b82aed15378436a558ea8e7962b1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6327,8 +6321,6 @@ dependencies = [
 [[package]]
 name = "swiftide-integrations"
 version = "0.25.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba368d7ccf6bc49f0b1f31f288312c802a51024defd674127d4e2e7e726cc874"
 dependencies = [
  "anyhow",
  "async-anthropic",
@@ -6370,10 +6362,36 @@ dependencies = [
 ]
 
 [[package]]
-name = "swiftide-macros"
+name = "swiftide-integrations"
 version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9933c40967646f880d4f4b01de57e1e54639851ae3bc29ce75711ffded16d3a9"
+checksum = "ba368d7ccf6bc49f0b1f31f288312c802a51024defd674127d4e2e7e726cc874"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "derive_builder 0.20.2",
+ "fastembed",
+ "fs-err",
+ "futures-util",
+ "itertools 0.14.0",
+ "regex",
+ "reqwest 0.12.15",
+ "serde",
+ "serde_json",
+ "strum 0.27.1",
+ "strum_macros 0.27.1",
+ "swiftide-core",
+ "swiftide-macros",
+ "tera",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "swiftide-macros"
+version = "0.25.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6390,8 +6408,6 @@ dependencies = [
 [[package]]
 name = "swiftide-query"
 version = "0.25.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49ba940804cf97b6c1a48f2a3d49edcb2fca4a6c65bf161e220f200861fb62a4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -8487,19 +8503,3 @@ checksum = "99a5bab8d7dedf81405c4bb1f2b83ea057643d9cb28778cea9eecddeedd2e028"
 dependencies = [
  "zune-core",
 ]
-
-[[patch.unused]]
-name = "swiftide"
-version = "0.24.0"
-
-[[patch.unused]]
-name = "swiftide-agents"
-version = "0.24.0"
-
-[[patch.unused]]
-name = "swiftide-core"
-version = "0.24.0"
-
-[[patch.unused]]
-name = "swiftide-macros"
-version = "0.24.0"
