@@ -79,7 +79,7 @@ impl ConversationSummarizer {
                         .iter()
                         .enumerate()
                         .find(|(idx, m)| {
-                            m.is_user() && history.get(idx + 1).map_or(true, |m| m.is_assistant())
+                            m.is_user() && history.get(idx + 1).is_none_or(swiftide::chat_completion::ChatMessage::is_assistant)
                         })
                         .and_then(|(_, m)| match m {
                             ChatMessage::User(message) => Some(message),
@@ -452,7 +452,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_no_summary_if_treshold_not_reached() {
+    async fn test_no_summary_if_threshold_not_reached() {
         let (repository, _guard) = test_repository();
         let agent = test_agent_for_repository(&repository);
 

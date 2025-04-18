@@ -93,7 +93,7 @@ pub async fn build(
         config.num_completions_for_summary,
     );
 
-    let initial_context = initial_context.map(|s| s.to_string());
+    let initial_context = initial_context.map(std::string::ToString::to_string);
     let context = Arc::new(context);
     let mut builder = Agent::builder()
         .context(Arc::clone(&context) as Arc<dyn AgentContext>)

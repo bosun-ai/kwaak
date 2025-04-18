@@ -99,7 +99,7 @@ pub async fn build(
     let maybe_lint_fix_command = repository.config().commands.lint_and_fix.clone();
 
     let context = Arc::new(context);
-    let initial_context = initial_context.map(|s| s.to_string());
+    let initial_context = initial_context.map(std::string::ToString::to_string);
 
     let mut builder = Agent::builder()
         .context(Arc::clone(&context) as Arc<dyn AgentContext>)
