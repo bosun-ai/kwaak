@@ -3,7 +3,9 @@ use std::{path::PathBuf, str::FromStr as _};
 
 use tokio::fs;
 
-use crate::{config::Config, runtime_settings::RuntimeSettings};
+use crate::config::Config;
+#[cfg(feature = "duckdb")]
+use crate::runtime_settings::RuntimeSettings;
 
 #[derive(Debug, Clone)]
 pub struct Repository {
@@ -48,6 +50,8 @@ impl Repository {
         Ok(())
     }
 
+    // TODO: Properly handle this
+    #[cfg(feature = "duckdb")]
     #[must_use]
     pub fn runtime_settings(&self) -> RuntimeSettings {
         RuntimeSettings::from_repository(self)

@@ -8,7 +8,7 @@ use crate::evaluations::{
     output::{EvalMetrics, EvalOutput},
     start_tool_evaluation_agent,
 };
-use crate::indexing::DuckdbIndex;
+use crate::indexing::duckdb_index::DuckdbIndex;
 use crate::repository::Repository;
 use anyhow::Result;
 use std::fmt::Write as _;

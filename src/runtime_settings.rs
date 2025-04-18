@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use swiftide::integrations::duckdb::Duckdb;
 use tokio::sync::RwLock;
 
-use crate::{repository::Repository, storage};
+use crate::{indexing::duckdb_index::get_duckdb, repository::Repository};
 
 pub struct RuntimeSettings {
     db: Duckdb,
@@ -18,7 +18,7 @@ pub struct RuntimeSettings {
 impl RuntimeSettings {
     #[must_use]
     pub fn from_repository(repository: &Repository) -> Self {
-        let db = storage::get_duckdb(repository);
+        let db = get_duckdb(repository);
 
         Self {
             db,

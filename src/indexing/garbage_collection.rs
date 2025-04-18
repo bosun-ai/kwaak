@@ -7,7 +7,9 @@ use anyhow::{Context as _, Result};
 use std::{borrow::Cow, path::PathBuf, time::SystemTime};
 use swiftide::{integrations::duckdb::Duckdb, traits::Persist};
 
-use crate::{repository::Repository, runtime_settings::RuntimeSettings, storage};
+use crate::{repository::Repository, runtime_settings::RuntimeSettings};
+
+use super::duckdb_index;
 
 const LAST_CLEANED_UP_AT: &str = "last_cleaned_up_at";
 
@@ -27,7 +29,7 @@ impl<'repository> GarbageCollector<'repository> {
 
         Self {
             repository: Cow::Borrowed(repository),
-            duckdb: storage::get_duckdb(repository),
+            duckdb: duckdb_index::get_duckdb(repository),
             file_extensions,
         }
     }
@@ -318,7 +320,7 @@ mod tests {
         node.metadata
             .insert(metadata_qa_code::NAME, "test".to_string());
 
-        let duckdb = storage::build_duckdb(&repository).unwrap();
+        let duckdb = duckdb_index::build_duckdb(&repository).unwrap();
 
         {
             duckdb.set(&node).await;

@@ -1,4 +1,3 @@
-mod garbage_collection;
 mod progress_updater;
 mod query;
 mod repository;
@@ -10,11 +9,16 @@ use async_trait::async_trait;
 pub use query::build_query_pipeline;
 pub use query::query;
 pub use repository::index_repository;
-use swiftide::integrations::duckdb::Duckdb;
 
 use crate::commands::Responder;
 use crate::repository::Repository;
-use crate::storage::get_duckdb;
+
+#[cfg(feature = "duckdb")]
+pub mod duckdb_index;
+
+/// Garbage collection is specific for duckdb
+#[cfg(feature = "duckdb")]
+mod garbage_collection;
 
 /// Interface that wraps storage providers
 ///
@@ -32,35 +36,4 @@ pub trait Index: Send + Sync + std::fmt::Debug + Clone + 'static {
         repository: &Repository,
         responder: Option<Arc<dyn Responder>>,
     ) -> Result<()>;
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct DuckdbIndex {}
-
-impl DuckdbIndex {
-    #[allow(clippy::unused_self)]
-    fn get_duckdb(&self, repository: &Repository) -> Duckdb {
-        get_duckdb(repository)
-    }
-}
-
-#[async_trait]
-impl Index for DuckdbIndex {
-    async fn query_repository(
-        &self,
-        repository: &Repository,
-        query: impl AsRef<str> + Send,
-    ) -> Result<String> {
-        let storage = self.get_duckdb(repository);
-        query::query(repository, &storage, query).await
-    }
-
-    async fn index_repository(
-        &self,
-        repository: &Repository,
-        responder: Option<Arc<dyn Responder>>,
-    ) -> Result<()> {
-        let storage = self.get_duckdb(repository);
-        index_repository(repository, &storage, responder).await
-    }
 }

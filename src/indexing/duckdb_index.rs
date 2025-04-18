@@ -1,22 +1,17 @@
-//! Builds various storage providers for kwaak
-//!
-//! Handled as statics to avoid multiple instances of the same storage provider
-//!
-//!
-//! Currently there are 3 tables:
-//! - project itself (indexing/retrieval) (uuid, path, chunk, embeddings)
-//! - cache (for caching in indexing/retrieval) (uuid, path)
-//! - runtime settings (for storing runtime settings) (key, value)
-//!
-//! Right now, these are relatively simple. Friendly reminder for future me and others to consider
-//! a decent migration strategy if these tables change.
+use std::sync::Arc;
+
+use anyhow::Result;
+use async_trait::async_trait;
+use swiftide_integrations::duckdb::Duckdb;
+
+use crate::{commands::Responder, repository::Repository};
+
+use super::{index_repository, query, Index};
 
 use std::sync::OnceLock;
 
-use anyhow::{Context, Result};
-use swiftide::{indexing::EmbeddedField, integrations::duckdb::Duckdb};
-
-use crate::repository::Repository;
+use anyhow::Context;
+use swiftide::indexing::EmbeddedField;
 
 static DUCK_DB: OnceLock<Duckdb> = OnceLock::new();
 
@@ -61,4 +56,34 @@ pub(crate) fn build_duckdb(repository: &Repository) -> Result<Duckdb> {
 // Is this enough?
 fn normalize_table_name(name: &str) -> String {
     name.replace('-', "_")
+}
+#[derive(Clone, Debug, Default)]
+pub struct DuckdbIndex {}
+
+impl DuckdbIndex {
+    #[allow(clippy::unused_self)]
+    fn get_duckdb(&self, repository: &Repository) -> Duckdb {
+        get_duckdb(repository)
+    }
+}
+
+#[async_trait]
+impl Index for DuckdbIndex {
+    async fn query_repository(
+        &self,
+        repository: &Repository,
+        query: impl AsRef<str> + Send,
+    ) -> Result<String> {
+        let storage = self.get_duckdb(repository);
+        query::query(repository, &storage, query).await
+    }
+
+    async fn index_repository(
+        &self,
+        repository: &Repository,
+        responder: Option<Arc<dyn Responder>>,
+    ) -> Result<()> {
+        let storage = self.get_duckdb(repository);
+        index_repository(repository, &storage, responder).await
+    }
 }

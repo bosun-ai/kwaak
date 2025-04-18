@@ -10,11 +10,11 @@ keywords = ["terminal", "swiftide", "tui", "ai", "llm"]
 description = "Run a team of autonomous agents on your code, right from your terminal"
 license = "MIT"
 
-[dependencies]
-arrow = { version = "=54.2.1" }
-# chrono = "=0.4.38"
-arrow-arith = { version = "=54.2.1" }
+[[bin]]
+name = "kwaak"
+required-features = ["duckdb"]
 
+[dependencies]
 swiftide-docker-executor = "0.7.3"
 anyhow = "1.0.98"
 crossterm = "0.28.1"
@@ -32,7 +32,6 @@ swiftide = { version = "=0.25.1", features = [
   "open-router",
   "fastembed",
   "anthropic",
-  "duckdb",
   "mcp",
 
 ] }
@@ -81,8 +80,6 @@ reqwest = { version = "0.12.12", features = [
   "http2",
   "macos-system-configuration",
 ], default-features = false }
-duckdb = { version = "=1.1.1", features = ["bundled"] }
-libduckdb-sys = { version = "=1.1.1", features = ["bundled"] }
 num_cpus = "1.16.0"
 htmd = "0.1.6"
 ansi-to-tui = "7.0.0"
@@ -100,6 +97,13 @@ update-informer = { version = "1.2.0", features = [
   "rustls-tls",
 ], default-features = false }
 diffy = "0.4.2"
+
+# Duckdb
+arrow = { version = "=54.2.1", optional = true }
+arrow-arith = { version = "=54.2.1", optional = true }
+duckdb = { version = "=1.1.1", features = ["bundled"], optional = true }
+libduckdb-sys = { version = "=1.1.1", features = ["bundled"], optional = true }
+
 
 # Something is still pulling in libssl, this is a quickfix and should be investigated
 [target.'cfg(linux)'.dependencies]
@@ -139,7 +143,7 @@ missing_errors_doc = "allow"
 missing_panics_doc = "allow"
 
 [features]
-default = ["otel"]
+default = ["otel", "duckdb"]
 "otel" = [
   "dep:tracing-opentelemetry",
   "dep:opentelemetry_sdk",
@@ -149,6 +153,13 @@ default = ["otel"]
 # Compile kwaak with evaluation capacity
 # See `EVALUATIONS.md` for more information
 evaluations = []
+duckdb = [
+  "dep:duckdb",
+  "dep:libduckdb-sys",
+  "dep:arrow-arith",
+  "dep:arrow",
+  "swiftide/duckdb",
+]
 
 
 [patch.crates-io]
