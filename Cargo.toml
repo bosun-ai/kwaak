@@ -36,7 +36,6 @@ swiftide = { version = "=0.25.1", features = [
 
 ] }
 swiftide-macros = { version = "=0.25.1" }
-swiftide-integrations = { version = "=0.25.1" }
 rmcp = { version = "0.1.0", features = ["transport-child-process", "client"] }
 fastembed = "4.6.0"
 toml = "0.8.20"

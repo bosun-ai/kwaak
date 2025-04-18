@@ -3332,7 +3332,6 @@ dependencies = [
  "swiftide",
  "swiftide-core",
  "swiftide-docker-executor",
- "swiftide-integrations 0.25.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "swiftide-macros",
  "tavily",
  "tempfile",
@@ -6211,7 +6210,7 @@ dependencies = [
  "swiftide-agents",
  "swiftide-core",
  "swiftide-indexing",
- "swiftide-integrations 0.25.1",
+ "swiftide-integrations",
  "swiftide-query",
 ]
 
@@ -6358,34 +6357,6 @@ dependencies = [
  "tree-sitter-rust",
  "tree-sitter-solidity",
  "tree-sitter-typescript",
- "uuid",
-]
-
-[[package]]
-name = "swiftide-integrations"
-version = "0.25.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba368d7ccf6bc49f0b1f31f288312c802a51024defd674127d4e2e7e726cc874"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "derive_builder 0.20.2",
- "fastembed",
- "fs-err",
- "futures-util",
- "itertools 0.14.0",
- "regex",
- "reqwest 0.12.15",
- "serde",
- "serde_json",
- "strum 0.27.1",
- "strum_macros 0.27.1",
- "swiftide-core",
- "swiftide-macros",
- "tera",
- "tokio",
- "tracing",
  "uuid",
 ]
 
