@@ -28,12 +28,13 @@ pub async fn start(
     initial_context: String,
 ) -> Result<RunningAgent> {
     let agent = build(
-        session,
+        &session.repository,
+        &session.default_responder,
         executor,
         tools,
         tool_boxes,
         agent_env,
-        initial_context,
+        Some(&initial_context),
     )
     .await?
     .build()?;
@@ -42,28 +43,27 @@ pub async fn start(
 }
 
 pub async fn build(
-    session: &Session,
+    repository: &Repository,
+    responder: &Arc<dyn Responder>,
     executor: &Arc<dyn ToolExecutor>,
     tools: &[Box<dyn Tool>],
     tool_boxes: &[Box<dyn ToolBox>],
     agent_env: &AgentEnvironment,
-    initial_context: String,
+    initial_context: Option<&str>,
 ) -> Result<AgentBuilder> {
-    let backoff = session.repository.config().backoff;
-    let query_provider: Box<dyn ChatCompletion> = session
-        .repository
+    let backoff = repository.config().backoff;
+    let query_provider: Box<dyn ChatCompletion> = repository
         .config()
         .query_provider()
         .get_chat_completion_model(backoff)?;
-    let fast_query_provider: Box<dyn SimplePrompt> = session
-        .repository
+    let fast_query_provider: Box<dyn SimplePrompt> = repository
         .config()
         .indexing_provider()
         .get_simple_prompt_model(backoff)?;
 
     // TODO: Feels a bit off to have EnvSetup return an Env, just to pass it to tool creation to
     // get the ref/branch name
-    let system_prompt = build_system_prompt(&session.repository)?;
+    let system_prompt = build_system_prompt(&repository)?;
 
     let mut context = DefaultContext::from_executor(Arc::clone(&executor));
 
@@ -73,16 +73,14 @@ pub async fn build(
         .output;
     tracing::debug!(top_level_project_overview = ?top_level_project_overview, "Top level project overview");
 
-    if session.repository.config().endless_mode
-        || !session.repository.config().stop_on_empty_messages
-    {
+    if repository.config().endless_mode || !repository.config().stop_on_empty_messages {
         context.with_stop_on_assistant(false);
     }
 
-    let command_responder = Arc::new(session.default_responder.clone());
-    let tx_2 = command_responder.clone();
-    let tx_3 = command_responder.clone();
-    let tx_4 = command_responder.clone();
+    let responder = Arc::clone(&responder);
+    let tx_2 = responder.clone();
+    let tx_3 = responder.clone();
+    let tx_4 = responder.clone();
 
     let tool_summarizer = ToolSummarizer::new(
         fast_query_provider,
@@ -94,15 +92,14 @@ pub async fn build(
         query_provider.clone(),
         &tools,
         &agent_env.start_ref,
-        session.repository.config().num_completions_for_summary,
-        &session.initial_query,
+        repository.config().num_completions_for_summary,
     );
-    let commit_and_push = CommitAndPush::try_new(&session.repository, &agent_env)?;
+    let commit_and_push = CommitAndPush::try_new(&repository, &agent_env)?;
 
-    let maybe_lint_fix_command = session.repository.config().commands.lint_and_fix.clone();
+    let maybe_lint_fix_command = repository.config().commands.lint_and_fix.clone();
 
     let context = Arc::new(context);
-    let initial_context = initial_context.to_string();
+    let initial_context = initial_context.map(|s| s.to_string());
 
     let mut builder = Agent::builder()
         .context(Arc::clone(&context) as Arc<dyn AgentContext>)
@@ -112,9 +109,9 @@ pub async fn build(
             let initial_context = initial_context.clone();
 
             Box::pin(async move {
-                agent.context()
-                    .add_message(chat_completion::ChatMessage::new_user(initial_context))
-                    .await;
+                if let Some(initial_context) = initial_context {
+                    agent.context().add_message(chat_completion::ChatMessage::new_user(initial_context)).await;
+                }
 
                 let top_level_project_overview = agent.context().exec_cmd(&Command::shell("fd -iH -d2 -E '.git/*'")).await?.output;
                 agent.context().add_message(chat_completion::ChatMessage::new_user(format!("The following is a max depth 2, high level overview of the directory structure of the project: \n ```{top_level_project_overview}```"))).await;
@@ -150,7 +147,7 @@ pub async fn build(
         .after_tool(tool_summarizer.summarize_hook())
         .after_each(move |agent| {
             let maybe_lint_fix_command = maybe_lint_fix_command.clone();
-            let command_responder = command_responder.clone();
+            let command_responder = responder.clone();
             Box::pin(async move {
                 if accept_non_zero_exit(
                     agent.context()

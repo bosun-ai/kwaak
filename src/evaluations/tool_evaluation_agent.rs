@@ -15,7 +15,6 @@ pub async fn start_tool_evaluation_agent(
     repository: &Repository,
     responder: Arc<dyn Responder>,
     tools: Vec<Box<dyn Tool>>,
-    initial_query: &str,
 ) -> Result<RunningAgent> {
     // Create agent with simplified tools
     let system_prompt = agents::coding::build_system_prompt(repository)?;
@@ -37,7 +36,6 @@ pub async fn start_tool_evaluation_agent(
         &tools,
         "HEAD",
         repository.config().num_completions_for_summary,
-        initial_query,
     );
 
     let responder_for_messages = responder.clone();

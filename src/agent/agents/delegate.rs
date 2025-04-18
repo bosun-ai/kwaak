@@ -30,12 +30,13 @@ pub async fn start(
     initial_context: &str,
 ) -> Result<RunningAgent> {
     let agent = build(
-        session,
+        &session.repository,
+        &session.default_responder,
         executor,
         tools,
         tool_boxes,
         agent_env,
-        initial_context,
+        Some(&initial_context),
     )
     .await?
     .build()?;
@@ -44,26 +45,23 @@ pub async fn start(
 }
 
 pub async fn build(
-    session: &Session,
+    repository: &Repository,
+    responder: &Arc<dyn Responder>,
     executor: &Arc<dyn ToolExecutor>,
     tools: &[Box<dyn Tool>],
     tool_boxes: &[Box<dyn ToolBox>],
     agent_env: &AgentEnvironment,
-    initial_context: &str,
+    initial_context: Option<&str>,
 ) -> Result<AgentBuilder> {
-    let backoff = session.repository.config().backoff;
-    let query_provider: Box<dyn ChatCompletion> = session
-        .repository
-        .config()
-        .query_provider()
-        .get_chat_completion_model(backoff)?;
-    let fast_query_provider: Box<dyn SimplePrompt> = session
-        .repository
-        .config()
+    let config = repository.config();
+    let backoff = config.backoff;
+    let query_provider: Box<dyn ChatCompletion> =
+        config.query_provider().get_chat_completion_model(backoff)?;
+    let fast_query_provider: Box<dyn SimplePrompt> = config
         .indexing_provider()
         .get_simple_prompt_model(backoff)?;
 
-    let system_prompt = build_system_prompt(&session.repository)?;
+    let system_prompt = build_system_prompt(&repository)?;
 
     let mut context = DefaultContext::from_executor(Arc::clone(&executor));
 
@@ -73,14 +71,14 @@ pub async fn build(
         .output;
     tracing::debug!(top_level_project_overview = ?top_level_project_overview, "Top level project overview");
 
-    if session.repository.config().endless_mode {
+    if config.endless_mode {
         context.with_stop_on_assistant(false);
     }
 
-    let command_responder = Arc::new(session.default_responder.clone());
-    let tx_2 = command_responder.clone();
-    let tx_3 = command_responder.clone();
-    let tx_4 = command_responder.clone();
+    let responder = Arc::clone(&responder);
+    let tx_2 = responder.clone();
+    let tx_3 = responder.clone();
+    let tx_4 = responder.clone();
 
     let tool_summarizer = ToolSummarizer::new(
         fast_query_provider,
@@ -92,11 +90,10 @@ pub async fn build(
         query_provider.clone(),
         &tools,
         &agent_env.start_ref,
-        session.repository.config().num_completions_for_summary,
-        &session.initial_query,
+        config.num_completions_for_summary,
     );
 
-    let initial_context = initial_context.to_string();
+    let initial_context = initial_context.map(|s| s.to_string());
     let context = Arc::new(context);
     let mut builder = Agent::builder()
         .context(Arc::clone(&context) as Arc<dyn AgentContext>)
@@ -106,9 +103,9 @@ pub async fn build(
             let initial_context = initial_context.clone();
 
             Box::pin(async move {
-                agent.context()
-                    .add_message(chat_completion::ChatMessage::new_user(initial_context))
-                    .await;
+                if let Some(initial_context) = initial_context {
+                    agent.context().add_message(chat_completion::ChatMessage::new_user(initial_context)).await;
+                }
 
                 let top_level_project_overview = agent.context().exec_cmd(&Command::shell("fd -iH -d2 -E '.git/*'")).await?.output;
                 agent.context().add_message(chat_completion::ChatMessage::new_user(format!("The following is a max depth 2, high level overview of the directory structure of the project: \n ```{top_level_project_overview}```"))).await;

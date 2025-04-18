@@ -30,7 +30,6 @@ pub struct ConversationSummarizer {
     num_completions_since_summary: Arc<AtomicUsize>,
     git_start_sha: String,
     num_completions_for_summary: usize,
-    initial_query: String,
 }
 
 impl ConversationSummarizer {
@@ -39,7 +38,6 @@ impl ConversationSummarizer {
         available_tools: &[Box<dyn Tool>],
         git_start_sha: impl Into<String>,
         num_completions_for_summary: usize,
-        initial_query: impl Into<String>,
     ) -> Self {
         Self {
             llm: llm.into(),
@@ -47,7 +45,6 @@ impl ConversationSummarizer {
             num_completions_since_summary: Arc::new(0.into()),
             git_start_sha: git_start_sha.into(),
             num_completions_for_summary,
-            initial_query: initial_query.into(),
         }
     }
 
@@ -73,10 +70,22 @@ impl ConversationSummarizer {
 
             let prompt = self.prompt();
             let git_start_sha = self.git_start_sha.clone();
-            let initial_query = self.initial_query.clone();
 
             Box::pin(
                 async move {
+                    // Search for the last user message before the first agent message
+                    let history = agent.context().history().await;
+                    let initial_user_message = history
+                        .iter()
+                        .enumerate()
+                        .find(|(idx, m)| {
+                            m.is_user() && history.get(idx + 1).map_or(true, |m| m.is_assistant())
+                        })
+                        .and_then(|(_, m)| match m {
+                            ChatMessage::User(message) => Some(message),
+                            _ => None,
+                        });
+
                     let current_diff = accept_non_zero_exit(
                         agent
                             .context()
@@ -100,11 +109,14 @@ impl ConversationSummarizer {
                     // NOTE use code block (```) for the original goal as it may contain markdown
                     // itself which should be distinguished from the markdown in the rest of the
                     // summary
-                    let msg = summary.message.unwrap_or_default();
-                    let msg = format!(
-                        "# Original Goal for Reference: \n```\n{initial_query}\n```\n\n{msg}"
-                    );
-                    summary.message = Some(msg);
+                    if summary.message().is_some() {
+                        if  let Some(initial_user_message) = initial_user_message {
+                            summary.message = Some(format!(
+                                "# Original Goal for Reference: \n```\n{initial_user_message}\n```\n\n{}",
+                                summary.message.unwrap_or_default()
+                            ));
+                        }
+                    }
 
                     if let Some(summary) = summary.message() {
                         tracing::debug!(summary = %summary, "Summarized conversation");
@@ -265,6 +277,8 @@ fn filter_messages_since_summary(messages: Vec<ChatMessage>) -> Vec<ChatMessage>
 
 #[cfg(test)]
 mod tests {
+    use crate::test_utils::{test_agent_for_repository, test_repository, NoopLLM};
+
     use super::*;
     use swiftide::chat_completion::{ChatMessage, ToolCallBuilder};
 
@@ -386,6 +400,85 @@ mod tests {
                     None
                 )
             ]
+        );
+    }
+
+    #[tokio::test]
+    async fn test_summarize_hook() {
+        let (repository, _guard) = test_repository();
+        let agent = test_agent_for_repository(&repository);
+
+        // Let's add some messages to the agent
+        agent
+            .context()
+            .add_messages(vec![
+                ChatMessage::new_user("Initial user message"),
+                ChatMessage::new_assistant(Some("Assistant message 1"), None),
+                ChatMessage::new_user("User message 2"),
+            ])
+            .await;
+
+        // Create our hook
+        let summarizer =
+            ConversationSummarizer::new(Box::new(NoopLLM::default()), &[], "git_start_sha", 2);
+
+        summarizer
+            .num_completions_since_summary
+            .store(2, std::sync::atomic::Ordering::SeqCst);
+
+        // Invoke it on the agent
+        summarizer.summarize_hook()(&agent).await.unwrap();
+
+        // Assert that the summary was added
+        let history = agent.context().history().await;
+
+        assert!(
+            history.iter().any(ChatMessage::is_summary),
+            "no summary found"
+        );
+        let ChatMessage::Summary(summary) = history
+            .iter()
+            .find(|m| m.is_summary())
+            .expect("summary not found")
+        else {
+            unreachable!()
+        };
+        assert!(
+            summary.contains("Initial user message"),
+            "summary does not contain initial user message"
+        );
+
+        insta::assert_debug_snapshot!(history);
+    }
+
+    #[tokio::test]
+    async fn test_no_summary_if_treshold_not_reached() {
+        let (repository, _guard) = test_repository();
+        let agent = test_agent_for_repository(&repository);
+
+        // Let's add some messages to the agent
+        agent
+            .context()
+            .add_messages(vec![
+                ChatMessage::new_user("Initial user message"),
+                ChatMessage::new_assistant(Some("Assistant message 1"), None),
+                ChatMessage::new_user("User message 2"),
+            ])
+            .await;
+
+        // Create our hook
+        let summarizer =
+            ConversationSummarizer::new(Box::new(NoopLLM::default()), &[], "git_start_sha", 2);
+
+        // Invoke it on the agent
+        summarizer.summarize_hook()(&agent).await.unwrap();
+
+        // Assert that the summary was not
+        let history = agent.context().history().await;
+
+        assert!(
+            !history.iter().any(ChatMessage::is_summary),
+            "summary found when it should not have been"
         );
     }
 }
