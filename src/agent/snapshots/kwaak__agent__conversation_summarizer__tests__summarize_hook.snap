@@ -1,0 +1,21 @@
+---
+source: src/agent/conversation_summarizer.rs
+expression: history
+---
+[
+    User(
+        "Initial user message",
+    ),
+    Assistant(
+        Some(
+            "Assistant message 1",
+        ),
+        None,
+    ),
+    User(
+        "User message 2",
+    ),
+    Summary(
+        "# Original Goal for Reference: \n```\nInitial user message\n```\n\nKwek",
+    ),
+]
