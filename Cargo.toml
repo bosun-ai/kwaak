@@ -102,6 +102,7 @@ update-informer = { version = "1.2.0", features = [
 diffy = "0.4.2"
 
 # Something is still pulling in libssl, this is a quickfix and should be investigated
+[target.'cfg(linux)'.dependencies]
 openssl = { version = "0.10.72", features = ["vendored"] }
 openssl-sys = { version = "0.9.107", features = ["vendored"] }
 
