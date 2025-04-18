@@ -394,12 +394,12 @@ async fn generate_initial_context(
 }
 
 pub fn available_builtin_tools(
-    repository: &Repository,
+    repository: &Arc<Repository>,
     github_session: Option<&Arc<GithubSession>>,
     agent_env: Option<&env_setup::AgentEnvironment>,
     index: &impl Index,
 ) -> Result<Vec<Box<dyn Tool>>> {
-    let query_pipeline = index.build_query_pipeline(repository)?;
+    let index = index.clone();
     let mut tools = vec![
         tools::write_file(),
         tools::search_file(),
@@ -407,7 +407,7 @@ pub fn available_builtin_tools(
         tools::shell_command(),
         tools::search_code(),
         tools::fetch_url(),
-        tools::ExplainCode::new(query_pipeline).boxed(),
+        Box::new(tools::ExplainCode::new(index, Arc::clone(&repository))),
     ];
 
     // agent edit mode specific tools
