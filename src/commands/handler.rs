@@ -206,7 +206,14 @@ impl<'command, I: Index + Clone + 'static> CommandHandler<I> {
                     }
                 }
 
-                session.active_agent().agent_context.redrive().await;
+                session
+                    .active_agent()
+                    .agent
+                    .lock()
+                    .await
+                    .context()
+                    .redrive()
+                    .await;
                 tokio::select! {
                     () = token.cancelled() => Ok(()),
                     result = session.run_agent() => result,

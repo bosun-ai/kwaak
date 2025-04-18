@@ -69,10 +69,5 @@ pub async fn start_tool_evaluation_agent(
         .after_each(conversation_summarizer.summarize_hook())
         .build()?;
 
-    let agent = RunningAgent::builder()
-        .agent(agent)
-        .agent_context(agent_context)
-        .build()?;
-
-    Ok(agent)
+    Ok(agent.into())
 }
