@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ question|e }}</title>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: sans-serif; margin: 2em; }
+        .container { display: flex; flex-direction: column; }
+        .sidebyside { display: flex; gap: 2em; margin-top: 1em; }
+        .column { flex: 1; }
+        textarea { width: 100%; height: 200px; font-family: monospace; font-size: 1em; }
+        .label { font-weight: bold; margin-bottom: 0.5em; }
+        .submit-btn { margin-top: 1em; }
+        .next-link { margin-top: 2em; }
+        .answer-box { background: #f5f5f5; padding: 1em; border-radius: 6px; }
+    </style>
+</head>
+<body>
+    <h1>Question</h1>
+    <div class="container">
+        <div style="margin-bottom: 1em;">{{ question }}</div>
+        <div class="sidebyside">
+            <div class="column">
+                <div class="label">Ground Truths (editable)</div>
+                <form id="gt-form">
+                    <textarea id="ground_truths" name="ground_truths">{{ ground_truths }}</textarea>
+                    <button type="submit" class="submit-btn">Save</button>
+                </form>
+            </div>
+            <div class="column">
+                <div class="label">Answer (from input dataset)</div>
+                <div class="answer-box">{{ answer }}</div>
+            </div>
+        </div>
+        {% if next_hash %}
+        <div class="next-link">
+            <a href="/questions/{{ next_hash }}">Next Question &rarr;</a>
+        </div>
+        {% endif %}
+    </div>
+    <script>
+    document.getElementById('gt-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const gts = document.getElementById('ground_truths').value;
+        await fetch(window.location.pathname, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ground_truths: gts })
+        });
+        alert('Ground truths saved!');
+    });
+    </script>
+</body>
+</html>

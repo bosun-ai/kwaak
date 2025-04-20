@@ -1,0 +1,36 @@
+{
+  "question": "What are the main features of Python?",
+  "contexts": [
+    "Python is an interpreted, high-level, general-purpose programming language.",
+    "Python features a dynamic type system and automatic memory management.",
+    "Python supports multiple programming paradigms, including object-oriented, imperative, functional and procedural."
+  ],
+  "response": "Python is an interpreted, high-level language with dynamic typing, automatic memory management, and support for multiple programming paradigms.",
+  "verdicts": [
+    {
+      "statement": "Python is an interpreted language.",
+      "reason": "The context explicitly states that Python is an interpreted language.",
+      "verdict": 1
+    },
+    {
+      "statement": "Python is a high-level language.",
+      "reason": "The context explicitly states that Python is a high-level language.",
+      "verdict": 1
+    },
+    {
+      "statement": "Python has dynamic typing.",
+      "reason": "The context explicitly states that Python features a dynamic type system.",
+      "verdict": 1
+    },
+    {
+      "statement": "Python has automatic memory management.",
+      "reason": "The context explicitly states that Python has automatic memory management.",
+      "verdict": 1
+    },
+    {
+      "statement": "Python supports multiple programming paradigms.",
+      "reason": "The context explicitly states that Python supports multiple programming paradigms.",
+      "verdict": 1
+    }
+  ]
+}

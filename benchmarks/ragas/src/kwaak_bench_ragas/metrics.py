@@ -1,6 +1,8 @@
 import logging
 from typing import Dict, List, Optional
 import os
+import sys
+import json
 
 # Set OpenAI API key for RAGAS if available
 openai_api_key = os.environ.get('OPENAI_API_KEY')
@@ -12,12 +14,14 @@ else:
 
 # Import the class-based metrics from the current RAGAS version
 from ragas.metrics import (
-    Faithfulness,
     AnswerRelevancy,
     ContextPrecision,
     ContextRecall,
     ContextRelevance
 )
+
+# Import our custom DetailedFaithfulness metric
+from kwaak_bench_ragas.custom_metrics import DetailedFaithfulness
 from ragas import SingleTurnSample
     
 # Import LLM wrapper and embeddings for RAGAS
@@ -54,7 +58,9 @@ def calculate_ragas_metrics(
     query: str,
     contexts: List[str],
     response: str,
-    ground_truth: Optional[str] = None
+    ground_truth: Optional[str] = None,
+    instance_id: Optional[str] = None,
+    metrics_to_run: Optional[List[str]] = None
 ) -> Dict[str, float]:
     """Calculate RAGAS metrics for a single instance.
     
@@ -67,20 +73,32 @@ def calculate_ragas_metrics(
     Returns:
         Dictionary of metric names and scores
     """
-    logger.info(f"Calculating RAGAS metrics for question: {query[:50]}...")
+    if metrics_to_run:
+        logger.info(f"Calculating specific RAGAS metrics {metrics_to_run} for question: {query[:50]}...")
+    else:
+        logger.info(f"Calculating all RAGAS metrics for question: {query[:50]}...")
     
     metrics = {}
     
     # Create a SingleTurnSample for evaluation using the field names that RAGAS expects
-    sample = SingleTurnSample(
-        user_input=query,  # RAGAS still expects user_input internally
-        retrieved_contexts=contexts,
-        response=response,
-        reference=ground_truth if ground_truth else None
-    )
+    sample_data = {
+        "user_input": query,  # RAGAS still expects user_input internally
+        "retrieved_contexts": contexts,
+        "response": response,
+        "reference": ground_truth if ground_truth else None
+    }
+    
+    # Add instance_id if provided
+    if instance_id is not None:
+        sample_data["id"] = instance_id
+        logger.info(f"Using instance_id in metrics calculation: {instance_id}")
+
+    logger.info(f"Sample data: {sample_data}")
+    
+    sample = SingleTurnSample(**sample_data)
     
     # Initialize metrics with LLM and embeddings as needed
-    faithfulness_metric = Faithfulness(llm=ragas_llm)
+    faithfulness_metric = DetailedFaithfulness(llm=ragas_llm)
     answer_relevancy_metric = AnswerRelevancy(llm=ragas_llm, embeddings=ragas_embeddings)
     context_precision_metric = ContextPrecision(llm=ragas_llm)
     context_recall_metric = ContextRecall(llm=ragas_llm)
@@ -92,43 +110,47 @@ def calculate_ragas_metrics(
         context_relevancy_metric = ContextPrecision(llm=ragas_llm)
         
     # Calculate faithfulness
-    try:
-        faith_score = faithfulness_metric.single_turn_score(sample)
-        metrics["faithfulness"] = faith_score
-        logger.info(f"Faithfulness score: {metrics['faithfulness']}")
-    except Exception as e:
-        logger.error(f"Error calculating faithfulness: {e}")
-        metrics["faithfulness"] = 0.0
+    if not metrics_to_run or "faithfulness" in metrics_to_run:
+        try:
+            faith_score = faithfulness_metric.single_turn_score(sample)
+            metrics["faithfulness"] = faith_score
+            logger.info(f"Faithfulness score: {metrics['faithfulness']}")
+        except Exception as e:
+            logger.error(f"Error calculating faithfulness: {e}")
+            metrics["faithfulness"] = 0.0
         
     # Calculate answer relevancy
-    try:
-        relevancy_score = answer_relevancy_metric.single_turn_score(sample)
-        metrics["answer_relevancy"] = relevancy_score
-        logger.info(f"Answer relevancy score: {metrics['answer_relevancy']}")
-    except Exception as e:
-        logger.error(f"Error calculating answer relevancy: {e}")
-        metrics["answer_relevancy"] = 0.0
+    if not metrics_to_run or "answer_relevancy" in metrics_to_run:
+        try:
+            relevancy_score = answer_relevancy_metric.single_turn_score(sample)
+            metrics["answer_relevancy"] = relevancy_score
+            logger.info(f"Answer relevancy score: {metrics['answer_relevancy']}")
+        except Exception as e:
+            logger.error(f"Error calculating answer relevancy: {e}")
+            metrics["answer_relevancy"] = 0.0
         
     # Calculate context precision
-    try:
-        precision_score = context_precision_metric.single_turn_score(sample)
-        metrics["context_precision"] = precision_score
-        logger.info(f"Context precision score: {metrics['context_precision']}")
-    except Exception as e:
-        logger.error(f"Error calculating context precision: {e}")
-        metrics["context_precision"] = 0.0
+    if not metrics_to_run or "context_precision" in metrics_to_run:
+        try:
+            precision_score = context_precision_metric.single_turn_score(sample)
+            metrics["context_precision"] = precision_score
+            logger.info(f"Context precision score: {metrics['context_precision']}")
+        except Exception as e:
+            logger.error(f"Error calculating context precision: {e}")
+            metrics["context_precision"] = 0.0
         
     # Calculate context relevancy
-    try:
-        relevancy_score = context_relevancy_metric.single_turn_score(sample)
-        metrics["context_relevancy"] = relevancy_score
-        logger.info(f"Context relevancy score: {metrics['context_relevancy']}")
-    except Exception as e:
-        logger.error(f"Error calculating context relevancy: {e}")
-        metrics["context_relevancy"] = 0.0
+    if not metrics_to_run or "context_relevancy" in metrics_to_run:
+        try:
+            relevancy_score = context_relevancy_metric.single_turn_score(sample)
+            metrics["context_relevancy"] = relevancy_score
+            logger.info(f"Context relevancy score: {metrics['context_relevancy']}")
+        except Exception as e:
+            logger.error(f"Error calculating context relevancy: {e}")
+            metrics["context_relevancy"] = 0.0
         
     # Calculate context recall if ground truth is available
-    if ground_truth:
+    if ground_truth and (not metrics_to_run or "context_recall" in metrics_to_run):
         try:
             recall_score = context_recall_metric.single_turn_score(sample)
             metrics["context_recall"] = recall_score

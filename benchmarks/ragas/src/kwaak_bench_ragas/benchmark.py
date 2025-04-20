@@ -42,7 +42,7 @@ class RagasBenchmark:
         self.results_path = results_path
         self.results_path.mkdir(exist_ok=True)
     
-    def run(self, dataset: List[Dict[str, Any]], timeout: int = 3600) -> BenchmarkResult:
+    def run(self, dataset: List[Dict[str, Any]], timeout: int = 3600, metrics_to_run: Optional[List[str]] = None) -> BenchmarkResult:
         """Run the benchmark on the given dataset."""
         dataset_name = dataset[0].get("dataset_name", "default") if dataset else "default"
         benchmark_dir = self.results_path / dataset_name
@@ -72,7 +72,8 @@ class RagasBenchmark:
             evaluation = RagasEvaluation(
                 instance=instance,
                 output_dir=trial_dir,
-                timeout=timeout
+                timeout=timeout,
+                metrics_to_run=metrics_to_run
             )
             
             try:

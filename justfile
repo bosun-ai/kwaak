@@ -44,15 +44,25 @@ build-in-docker PROFILE="release": docker-build
       kwaak \
       bash -c "cargo build --profile {{PROFILE}}"
 
-[working-directory: 'benchmarks/swe']
 benchmark-swe INSTANCE="":
-  uv run kwaak-bench-swe {{ if INSTANCE != "" {"--instance " + INSTANCE } else { ""} }}
+  cd benchmarks/swe && uv run kwaak-bench-swe {{ if INSTANCE != "" {"--instance " + INSTANCE } else { ""} }}
 
-[working-directory: 'benchmarks/ragas']
-ragas:
-  # Step 1: Run kwaak with RAGAS evaluation to generate answers
-  cd ../../ && RUST_LOG=debug cargo run --features evaluations -- --allow-dirty eval ragas -i benchmarks/ragas/datasets/kwaak.json --output=benchmarks/ragas/results/kwaak_ragas_answers.json
-  # Step 2: Copy the results file to the datasets directory
-  cp results/kwaak_ragas_answers.json datasets/kwaak_answers.json
-  # Step 3: Run RAGAS benchmark on the generated answers
-  uv run kwaak-bench-ragas --dataset kwaak_answers
+# Generate answers using kwaak with RAGAS evaluation
+ragas-generate:
+  # Run kwaak with RAGAS evaluation to generate answers
+  RUST_LOG=debug cargo run --features evaluations -- --allow-dirty eval ragas -i benchmarks/ragas/datasets/kwaak.json --output=benchmarks/ragas/results/kwaak_ragas_answers.json
+  # Copy the results file to the datasets directory
+  cd benchmarks/ragas && cp results/kwaak_ragas_answers.json datasets/kwaak_answers.json
+
+# Run the RAGAS benchmark on the generated answers
+ragas-benchmark:
+  # Run RAGAS benchmark on the generated answers
+  cd benchmarks/ragas && uv run kwaak-bench-ragas --dataset kwaak_answers
+
+# Run only the faithfulness benchmark (for development)
+ragas-faithfulness:
+  # Run only the faithfulness metric benchmark
+  cd benchmarks/ragas && uv run kwaak-bench-ragas --dataset kwaak_answers --metrics faithfulness
+
+# Run the complete RAGAS pipeline (generate + benchmark)
+ragas: ragas-generate ragas-benchmark

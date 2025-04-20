@@ -51,6 +51,12 @@ def parse_args():
         default=3600,  # 1 hour
         help="Timeout in seconds for each evaluation"
     )
+    parser.add_argument(
+        "--metrics",
+        type=str,
+        default=None,
+        help="Comma-separated list of metrics to run (e.g., 'faithfulness,answer_relevancy')"
+    )
     return parser.parse_args()
 
 
@@ -82,7 +88,14 @@ def main():
     
     # Run benchmark
     benchmark = RagasBenchmark(results_path=results_path)
-    benchmark.run(dataset, timeout=args.timeout)
+    
+    # Parse metrics to run if specified
+    metrics_to_run = None
+    if args.metrics:
+        metrics_to_run = [m.strip() for m in args.metrics.split(',')]
+        logger.info(f"Running only these metrics: {metrics_to_run}")
+    
+    benchmark.run(dataset, timeout=args.timeout, metrics_to_run=metrics_to_run)
     
     logger.info("RAGAS evaluation completed successfully")
 

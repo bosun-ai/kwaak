@@ -45,10 +45,11 @@ class EvaluationResult:
 class RagasEvaluation:
     """RAGAS evaluation runner for a single instance."""
     
-    def __init__(self, instance: Dict[str, Any], output_dir: Path, timeout: int = 3600):
+    def __init__(self, instance: Dict[str, Any], output_dir: Path, timeout: int = 3600, metrics_to_run: Optional[List[str]] = None):
         self.instance = instance
         self.output_dir = output_dir
         self.timeout = timeout
+        self.metrics_to_run = metrics_to_run
         self.output_dir.mkdir(exist_ok=True)
     
     def run(self) -> EvaluationResult:
@@ -82,11 +83,14 @@ class RagasEvaluation:
             # Calculate RAGAS metrics
             if answer:
                 ground_truth = ground_truths[0] if ground_truths else None
+                # Include instance_id and metrics_to_run in the data passed to calculate_ragas_metrics
                 metrics = calculate_ragas_metrics(
                     query=question,
                     contexts=contexts,
                     response=answer,
-                    ground_truth=ground_truth
+                    ground_truth=ground_truth,
+                    instance_id=instance_id,
+                    metrics_to_run=self.metrics_to_run
                 )
                 result.metrics = metrics
             

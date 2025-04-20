@@ -14,11 +14,15 @@ dependencies = [
     "pytest-mock>=3.12.0",
     "openai>=1.12.0",
     "binaryornot>=0.4.4",
+    "fastapi>=0.110.0",
+    "jinja2>=3.1.3",
+    "uvicorn>=0.29.0"
 ]
 
 [project.scripts]
 kwaak-bench-ragas = "kwaak_bench_ragas.main:main"
 kwaak-bench-ragas-baseline = "kwaak_bench_ragas.baseline.main:main"
+edit-ground-truths = "edit_ground_truths:main"
 
 [build-system]
 requires = ["setuptools>=61.0"]
