@@ -1,5 +1,4 @@
 use crossterm::event::KeyEvent;
-use swiftide::chat_completion::ChatCompletionResponse;
 use uuid::Uuid;
 
 use crate::chat_message::ChatMessage;
