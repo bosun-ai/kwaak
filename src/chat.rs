@@ -66,11 +66,17 @@ impl Chat {
         }
 
         // If it was an assistant message and the last message is the same, assume it was
-        // streamed and ignore it.
-        if message.role().is_assistant()
-            && Some(message.content()) == self.messages.last().map(|m| m.content())
-        {
-            return;
+        // streamed and replace the last message
+        if message.role().is_assistant() {
+            if let Some(last_message) = self.messages.last_mut() {
+                if last_message.role().is_assistant() && last_message.content() == message.content()
+                {
+                    // replace the old message with the new one
+                    *last_message = message;
+                    self.new_message_count += 1;
+                    return;
+                }
+            }
         }
 
         if !message.role().is_user() {
