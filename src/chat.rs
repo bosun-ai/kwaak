@@ -58,7 +58,7 @@ impl Chat {
             if let Some(existing_streamed) = self
                 .messages
                 .iter_mut()
-                .find(|m| m.stream_id() == message.stream_id())
+                .rfind(|m| m.stream_id() == message.stream_id())
             {
                 existing_streamed.with_content(message.content());
                 return;
@@ -69,7 +69,7 @@ impl Chat {
         // streamed and replace the last message
         if message.role().is_assistant() {
             if let Some(last_message) = self.messages.last_mut() {
-                if last_message.role().is_assistant() && last_message.content() == message.content()
+                if !last_message.content().is_empty() && last_message.content() == message.content()
                 {
                     // replace the old message with the new one
                     *last_message = message;

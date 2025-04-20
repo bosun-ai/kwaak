@@ -1,4 +1,3 @@
-use async_openai::Chat;
 use ratatui::text::Text;
 use swiftide::chat_completion::ChatCompletionResponse;
 use uuid::Uuid;
@@ -24,6 +23,7 @@ pub struct ChatMessage {
 impl std::fmt::Debug for ChatMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ChatMessage")
+            .field("stream_id", &self.stream_id)
             .field("role", &self.role)
             .field("content", &self.content)
             .field("original", &self.original)
@@ -88,8 +88,9 @@ impl ChatMessage {
             .to_owned()
     }
 
-    pub fn stream_id(&self) -> Option<Uuid> {
-        self.stream_id
+    #[must_use]
+    pub fn stream_id(&self) -> Option<&Uuid> {
+        self.stream_id.as_ref()
     }
 
     pub fn with_role(&mut self, role: ChatRole) -> &mut Self {
