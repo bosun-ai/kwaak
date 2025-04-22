@@ -29,7 +29,7 @@ impl GithubSession {
     pub fn from_repository(repository: &Repository) -> Result<Self> {
         if !repository.config().is_github_enabled() {
             return Err(anyhow::anyhow!(
-                "Github is not enabled; make it is properly configured."
+                "Github is not enabled; make sure it is properly configured."
             ));
         }
 
