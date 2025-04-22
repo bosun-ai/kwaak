@@ -1,7 +1,6 @@
 use {
     crate::{
         chat_message::ChatMessage, commands::Command, frontend::ui_event::UIEvent, frontend::App,
-        git,
     },
     uuid::Uuid,
 };
@@ -12,15 +11,12 @@ pub async fn github_issue(app: &mut App<'_>, number: u64, uuid: Uuid) {
         return;
     };
 
-    let github_session = match git::github::GithubSession::from_repository(&chat.repository) {
-        Ok(session) => session,
-        Err(e) => {
-            app.add_chat_message(
+    let Some(github_session) = chat.repository.github_session() else {
+        app.add_chat_message(
                 uuid,
-                ChatMessage::new_system(format!("Failed to create GitHub session: {e}")),
+                ChatMessage::new_system("GitHub is not available for this repository; if that is not intended check the logs for errors".to_string()),
             );
-            return;
-        }
+        return;
     };
 
     let issue_with_comments = match github_session.fetch_issue(number).await {

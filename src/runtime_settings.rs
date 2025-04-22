@@ -18,7 +18,7 @@ pub struct RuntimeSettings {
 impl RuntimeSettings {
     #[must_use]
     pub fn from_repository(repository: &Repository) -> Self {
-        let db = get_duckdb(repository);
+        let db = get_duckdb(repository.config());
 
         Self {
             db,

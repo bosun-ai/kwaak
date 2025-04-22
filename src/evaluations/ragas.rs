@@ -63,7 +63,7 @@ pub async fn evaluate_query_pipeline(
     tracing::info!("Building query pipeline");
     let pipeline = build_query_pipeline(
         repository,
-        &get_duckdb(repository),
+        &get_duckdb(repository.config()),
         Some(Box::new(ragas.clone())),
     )?;
 

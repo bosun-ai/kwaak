@@ -19,22 +19,25 @@ use crate::{config::ApiKey, repository::Repository, templates::Templates};
 pub struct GithubSession {
     token: ApiKey,
     octocrab: Octocrab,
-    repository: Repository,
     active_pull_request: Mutex<Option<PullRequest>>,
+
+    git_main_branch: String,
+    git_owner: String,
+    git_repository: String,
 }
 impl GithubSession {
     pub fn from_repository(repository: &Repository) -> Result<Self> {
+        if !repository.config().is_github_enabled() {
+            return Err(anyhow::anyhow!(
+                "Github is not enabled; make it is properly configured."
+            ));
+        }
+
         let token = repository
             .config()
             .github_api_key
             .clone()
             .ok_or(anyhow::anyhow!("No github token found in config"))?;
-
-        if !&repository.config().is_github_enabled() {
-            return Err(anyhow::anyhow!(
-                "Github is not enabled; make it is properly configured."
-            ));
-        }
 
         let octocrab = Octocrab::builder()
             .personal_token(token.expose_secret())
@@ -43,8 +46,23 @@ impl GithubSession {
         Ok(Self {
             token,
             octocrab,
-            repository: repository.to_owned(),
             active_pull_request: Mutex::new(None),
+
+            git_main_branch: repository.config().git.main_branch.to_string(),
+            git_owner: repository
+                .config()
+                .git
+                .owner
+                .as_deref()
+                .context("Expected git owner; infallible")?
+                .to_string(),
+            git_repository: repository
+                .config()
+                .git
+                .repository
+                .as_deref()
+                .context("Expected repository; infallible")?
+                .to_string(),
         })
     }
 
@@ -71,7 +89,7 @@ impl GithubSession {
     }
 
     pub fn main_branch(&self) -> &str {
-        &self.repository.config().git.main_branch
+        &self.git_main_branch
     }
 
     #[tracing::instrument(skip(self), err)]
@@ -100,12 +118,9 @@ impl GithubSession {
         description: impl AsRef<str>,
         messages: &[ChatMessage],
     ) -> Result<PullRequest> {
-        if !self.repository.config().is_github_enabled() {
-            return Err(anyhow::anyhow!("Github is not enabled"));
-        }
         // Above checks make the unwrap infallible
-        let owner = self.repository.config().git.owner.as_deref().unwrap();
-        let repo = self.repository.config().git.repository.as_deref().unwrap();
+        let owner = &self.git_owner;
+        let repo = &self.git_repository;
 
         tracing::debug!(messages = ?messages,
             "Creating pull request for {}/{} from branch {} onto {}",
@@ -244,13 +259,9 @@ impl GithubSession {
     /// The issue and its comments
     #[tracing::instrument(skip(self), err)]
     pub async fn fetch_issue(&self, issue_number: u64) -> Result<GithubIssueWithComments> {
-        if !self.repository.config().is_github_enabled() {
-            return Err(anyhow::anyhow!("Github is not enabled"));
-        }
-
         // Above checks make the unwrap infallible
-        let owner = self.repository.config().git.owner.as_deref().unwrap();
-        let repo = self.repository.config().git.repository.as_deref().unwrap();
+        let owner = &self.git_owner;
+        let repo = &self.git_repository;
 
         let issue = self
             .octocrab
