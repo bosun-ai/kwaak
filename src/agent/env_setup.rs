@@ -6,13 +6,11 @@ use swiftide::traits::Command;
 use swiftide::traits::ToolExecutor;
 
 use crate::config::SupportedToolExecutors;
-use crate::git::github::GithubSession;
 use crate::repository::Repository;
 
 /// Configures and sets up a git (and github if enabled) environment for the agent to run in
 pub struct EnvSetup<'a> {
     repository: &'a Repository,
-    github_session: Option<&'a GithubSession>,
     executor: &'a dyn ToolExecutor,
 }
 
@@ -26,14 +24,9 @@ pub struct AgentEnvironment {
 }
 
 impl EnvSetup<'_> {
-    pub fn new<'a>(
-        repository: &'a Repository,
-        github_session: Option<&'a GithubSession>,
-        executor: &'a dyn ToolExecutor,
-    ) -> EnvSetup<'a> {
+    pub fn new<'a>(repository: &'a Repository, executor: &'a dyn ToolExecutor) -> EnvSetup<'a> {
         EnvSetup {
             repository,
-            github_session,
             executor,
         }
     }
@@ -66,7 +59,7 @@ impl EnvSetup<'_> {
     }
 
     async fn setup_github_auth(&self) -> Result<()> {
-        let Some(github_session) = self.github_session else {
+        let Some(github_session) = self.repository.github_session() else {
             anyhow::bail!("Github session is required to setup github auth");
         };
 

@@ -44,7 +44,7 @@ pub async fn setup_integration() -> Result<IntegrationContext> {
     let workdir = repository.path().clone();
     let repository = Arc::new(repository);
     let mut app = App::default_from_repository(repository.clone()).with_workdir(repository.path());
-    let duckdb = duckdb_index::get_duckdb(&repository);
+    let duckdb = duckdb_index::get_duckdb(repository.config());
     duckdb.setup().await.unwrap();
     let terminal = Terminal::new(TestBackend::new(160, 40)).unwrap();
 

@@ -21,7 +21,6 @@ use crate::{
     agent::{tools::DelegateAgent, util},
     commands::Responder,
     config::{self, mcp::McpServer, AgentEditMode},
-    git::github::GithubSession,
     indexing::Index,
     repository::Repository,
 };
@@ -95,13 +94,6 @@ impl SessionBuilder {
                 .context("Failed to build session")?,
         );
 
-        let github_session = match session.repository.config().github_api_key {
-            Some(_) => Some(Arc::new(GithubSession::from_repository(
-                &session.repository,
-            )?)),
-            None => None,
-        };
-
         let backoff = session.repository.config().backoff;
         let fast_query_provider: Box<dyn SimplePrompt> = session
             .repository
@@ -128,15 +120,11 @@ impl SessionBuilder {
             generate_initial_context(&session.repository, &session.initial_query, index)
         )?;
 
-        let env_setup = EnvSetup::new(&session.repository, github_session.as_deref(), &*executor);
+        let env_setup = EnvSetup::new(&session.repository, &*executor);
         let agent_environment = env_setup.exec_setup_commands(branch_name).await?;
 
-        let builtin_tools = available_builtin_tools(
-            &session.repository,
-            github_session.as_ref(),
-            Some(&agent_environment),
-            index,
-        )?;
+        let builtin_tools =
+            available_builtin_tools(&session.repository, Some(&agent_environment), index)?;
 
         let mcp_toolboxes = start_mcp_toolboxes(&session.repository).await?;
 
@@ -169,7 +157,6 @@ impl SessionBuilder {
         let mut running_session = RunningSession {
             active_agent: Arc::new(Mutex::new(active_agent)),
             session,
-            github_session,
             executor,
             agent_environment,
             cancel_token: Arc::new(Mutex::new(CancellationToken::new())),
@@ -274,7 +261,6 @@ pub struct RunningSession {
     active_agent: Arc<Mutex<RunningAgent>>,
     message_task_handle: Option<Arc<AbortOnDropHandle<()>>>,
 
-    github_session: Option<Arc<GithubSession>>,
     executor: Arc<dyn ToolExecutor>,
     agent_environment: AgentEnvironment,
 
@@ -368,7 +354,6 @@ async fn generate_initial_context(
 
 pub fn available_builtin_tools(
     repository: &Arc<Repository>,
-    github_session: Option<&Arc<GithubSession>>,
     agent_env: Option<&env_setup::AgentEnvironment>,
     index: &impl Index,
 ) -> Result<Vec<Box<dyn Tool>>> {
@@ -401,7 +386,7 @@ pub fn available_builtin_tools(
     }
 
     // gitHub-related tools
-    if let Some(github_session) = github_session {
+    if let Some(github_session) = repository.github_session() {
         tools.push(tools::CreateOrUpdatePullRequest::new(github_session).boxed());
         tools.push(tools::GithubSearchCode::new(github_session).boxed());
     }

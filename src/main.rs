@@ -10,7 +10,6 @@ use anyhow::{Context as _, Result};
 use clap::Parser;
 use commands::CommandResponse;
 use frontend::App;
-use git::github::GithubSession;
 #[cfg(feature = "evaluations")]
 use kwaak::evaluations;
 use kwaak::{
@@ -96,11 +95,9 @@ async fn main() -> Result<()> {
             }
             cli::Commands::Tui => start_tui(repository, &args).await,
             cli::Commands::ListTools => {
-                let github_session = Arc::new(GithubSession::from_repository(&repository)?);
                 let repository = Arc::new(repository);
                 let index = DuckdbIndex::default();
-                let tools =
-                    available_builtin_tools(&repository, Some(&github_session), None, &index)?;
+                let tools = available_builtin_tools(&repository, None, &index)?;
 
                 println!("**Enabled built-in tools:**");
                 for tool in tools {
@@ -122,7 +119,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             cli::Commands::Index => {
-                index_repository(&repository, &get_duckdb(&repository), None).await
+                index_repository(&repository, &get_duckdb(repository.config()), None).await
             }
             cli::Commands::TestTool {
                 tool_name,
@@ -130,7 +127,8 @@ async fn main() -> Result<()> {
             } => test_tool(repository.into(), &tool_name, tool_args.as_deref()).await,
             cli::Commands::Query { query: query_param } => {
                 let result =
-                    indexing::query(&repository, &get_duckdb(&repository), query_param).await;
+                    indexing::query(&repository, &get_duckdb(repository.config()), query_param)
+                        .await;
 
                 if let Ok(result) = result.as_deref() {
                     println!("{result}");
@@ -188,9 +186,8 @@ async fn test_tool(
     tool_name: &str,
     tool_args: Option<&str>,
 ) -> Result<()> {
-    let github_session = Arc::new(GithubSession::from_repository(&repository)?);
     let index = DuckdbIndex::default();
-    let tool = available_builtin_tools(&repository, Some(&github_session), None, &index)?
+    let tool = available_builtin_tools(&repository, None, &index)?
         .into_iter()
         .find(|tool| tool.name() == tool_name)
         .context("Tool not found")?;
@@ -231,7 +228,7 @@ async fn start_agent(
     repository.config_mut().endless_mode = true;
 
     if !args.skip_indexing {
-        indexing::index_repository(&repository, &get_duckdb(&repository), None).await?;
+        indexing::index_repository(&repository, &get_duckdb(repository.config()), None).await?;
     }
 
     let (tx, mut rx) = mpsc::unbounded_channel();
@@ -270,9 +267,11 @@ async fn start_agent(
 async fn start_tui(repository: repository::Repository, args: &cli::Args) -> Result<()> {
     ::tracing::info!("Loaded configuration: {:?}", repository.config());
 
+    let config = repository.config();
+
     // Before starting the TUI, check if there is already a kwaak running on the project
     if panic::catch_unwind(|| {
-        get_duckdb(&repository);
+        get_duckdb(&config);
     })
     .is_err()
     {

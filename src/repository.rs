@@ -7,14 +7,18 @@ use uuid::Uuid;
 
 use tokio::fs;
 
-use crate::config::{Config, SupportedToolExecutors};
 #[cfg(feature = "duckdb")]
 use crate::runtime_settings::RuntimeSettings;
+use crate::{
+    config::{Config, SupportedToolExecutors},
+    git::github::GithubSession,
+};
 
 #[derive(Debug, Clone)]
 pub struct Repository {
     config: Config,
     path: PathBuf,
+    github_session: Option<Arc<GithubSession>>,
 }
 
 impl Repository {
@@ -25,10 +29,26 @@ impl Repository {
     /// Panics if the current directory cannot be converted to a path
     #[must_use]
     pub fn from_config(config: impl Into<Config>) -> Repository {
-        Self {
-            config: config.into(),
+        let config = config.into();
+        let mut repository = Self {
+            config,
             path: PathBuf::from_str(".").expect("Failed to create path from current directory"),
+            github_session: None,
+        };
+
+        if repository.config().is_github_enabled() {
+            let github_session = match GithubSession::from_repository(&repository) {
+                Ok(session) => Some(Arc::new(session)),
+                Err(e) => {
+                    tracing::error!(error = ?e, "Failed to create github session");
+                    None
+                }
+            };
+
+            repository.github_session = github_session;
         }
+
+        repository
     }
 
     #[must_use]
@@ -93,5 +113,11 @@ impl Repository {
         };
 
         Ok(boxed)
+    }
+
+    /// Gets a github session for this repository if it is enabled
+    #[must_use]
+    pub fn github_session(&self) -> Option<&Arc<GithubSession>> {
+        self.github_session.as_ref()
     }
 }
