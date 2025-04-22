@@ -35,6 +35,7 @@ impl<'a> ToolSummarizer<'a> {
 
     // Rust has a long outstanding issue where it captures outer lifetimes when returning an impl
     // that also has lifetimes, see https://github.com/rust-lang/rust/issues/42940
+    #[must_use]
     pub fn summarize_hook(self) -> impl AfterToolFn + use<'a> {
         move |agent, tool_call, tool_output| {
             let llm = self.llm.clone();

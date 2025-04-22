@@ -171,7 +171,7 @@ impl<'command, I: Index + Clone + 'static> CommandHandler<I> {
                     return Ok(());
                 };
 
-                let base_sha = &session.agent_environment().start_ref;
+                let base_sha = &session.git_environment().start_ref;
                 let diff = git::util::diff(session.executor(), &base_sha, true).await?;
 
                 event.responder().system_message(&diff).await;
