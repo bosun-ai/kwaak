@@ -11,7 +11,7 @@ use swiftide::{
 use crate::{
     agent::{
         commit_and_push::CommitAndPush, conversation_summarizer::ConversationSummarizer,
-        env_setup::AgentEnvironment, running_agent::RunningAgent, session::Session,
+        git_agent_environment::GitAgentEnvironment, running_agent::RunningAgent, session::Session,
         tool_summarizer::ToolSummarizer,
     },
     commands::Responder,
@@ -24,7 +24,7 @@ pub async fn start(
     executor: &Arc<dyn ToolExecutor>,
     tools: &[Box<dyn Tool>],
     tool_boxes: &[Box<dyn ToolBox>],
-    agent_env: &AgentEnvironment,
+    agent_env: &GitAgentEnvironment,
     initial_context: String,
 ) -> Result<RunningAgent> {
     let agent = build(
@@ -48,7 +48,7 @@ pub async fn build(
     executor: &Arc<dyn ToolExecutor>,
     tools: &[Box<dyn Tool>],
     tool_boxes: &[Box<dyn ToolBox>],
-    agent_env: &AgentEnvironment,
+    agent_env: &GitAgentEnvironment,
     initial_context: Option<&str>,
 ) -> Result<AgentBuilder> {
     let backoff = repository.config().backoff;

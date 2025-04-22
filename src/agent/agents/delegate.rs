@@ -14,8 +14,9 @@ use swiftide::{
 
 use crate::{
     agent::{
-        conversation_summarizer::ConversationSummarizer, env_setup::AgentEnvironment,
-        running_agent::RunningAgent, session::Session, tool_summarizer::ToolSummarizer,
+        conversation_summarizer::ConversationSummarizer,
+        git_agent_environment::GitAgentEnvironment, running_agent::RunningAgent, session::Session,
+        tool_summarizer::ToolSummarizer,
     },
     commands::Responder,
     repository::Repository,
@@ -26,7 +27,7 @@ pub async fn start(
     executor: &Arc<dyn ToolExecutor>,
     tools: &[Box<dyn Tool>],
     tool_boxes: &[Box<dyn ToolBox>],
-    agent_env: &AgentEnvironment,
+    agent_env: &GitAgentEnvironment,
     initial_context: &str,
 ) -> Result<RunningAgent> {
     let agent = build(
@@ -50,7 +51,7 @@ pub async fn build(
     executor: &Arc<dyn ToolExecutor>,
     tools: &[Box<dyn Tool>],
     tool_boxes: &[Box<dyn ToolBox>],
-    agent_env: &AgentEnvironment,
+    agent_env: &GitAgentEnvironment,
     initial_context: Option<&str>,
 ) -> Result<AgentBuilder> {
     let config = repository.config();

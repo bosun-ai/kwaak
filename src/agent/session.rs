@@ -26,10 +26,7 @@ use crate::{
 };
 
 use super::{
-    agents,
-    env_setup::{self, AgentEnvironment, EnvSetup},
-    running_agent::RunningAgent,
-    tools,
+    agents, git_agent_environment::GitAgentEnvironment, running_agent::RunningAgent, tools,
 };
 
 /// Session represents the abstract state of an ongoing agent interaction (i.e. in a chat)
@@ -120,11 +117,11 @@ impl SessionBuilder {
             generate_initial_context(&session.repository, &session.initial_query, index)
         )?;
 
-        let env_setup = EnvSetup::new(&session.repository, &*executor);
-        let agent_environment = env_setup.exec_setup_commands(branch_name).await?;
+        let git_environment =
+            GitAgentEnvironment::setup(&session.repository, &executor, &branch_name).await?;
 
         let builtin_tools =
-            available_builtin_tools(&session.repository, Some(&agent_environment), index)?;
+            available_builtin_tools(&session.repository, Some(&git_environment), index)?;
 
         let mcp_toolboxes = start_mcp_toolboxes(&session.repository).await?;
 
@@ -135,7 +132,7 @@ impl SessionBuilder {
                     &executor,
                     &builtin_tools,
                     &mcp_toolboxes,
-                    &agent_environment,
+                    &git_environment,
                     initial_context,
                 )
                 .await
@@ -147,7 +144,7 @@ impl SessionBuilder {
                     &executor,
                     &builtin_tools,
                     &mcp_toolboxes,
-                    &agent_environment,
+                    &git_environment,
                     &initial_context,
                 )
                 .await
@@ -158,7 +155,7 @@ impl SessionBuilder {
             active_agent: Arc::new(Mutex::new(active_agent)),
             session,
             executor,
-            agent_environment,
+            git_environment,
             cancel_token: Arc::new(Mutex::new(CancellationToken::new())),
             message_task_handle: None,
         };
@@ -203,7 +200,7 @@ async fn start_plan_and_act(
     executor: &Arc<dyn ToolExecutor>,
     available_tools: &[Box<dyn Tool>],
     tool_boxes: &[Box<dyn ToolBox>],
-    agent_environment: &AgentEnvironment,
+    agent_environment: &GitAgentEnvironment,
     initial_context: &str,
 ) -> Result<RunningAgent> {
     let coding_agent = agents::coding::start(
@@ -262,7 +259,7 @@ pub struct RunningSession {
     message_task_handle: Option<Arc<AbortOnDropHandle<()>>>,
 
     executor: Arc<dyn ToolExecutor>,
-    agent_environment: AgentEnvironment,
+    git_environment: GitAgentEnvironment,
 
     cancel_token: Arc<Mutex<CancellationToken>>,
 }
@@ -304,8 +301,8 @@ impl RunningSession {
     }
 
     #[must_use]
-    pub fn agent_environment(&self) -> &AgentEnvironment {
-        &self.agent_environment
+    pub fn git_environment(&self) -> &GitAgentEnvironment {
+        &self.git_environment
     }
 
     /// Retrieve a copy of the cancel token
@@ -354,7 +351,7 @@ async fn generate_initial_context(
 
 pub fn available_builtin_tools(
     repository: &Arc<Repository>,
-    agent_env: Option<&env_setup::AgentEnvironment>,
+    agent_env: Option<&GitAgentEnvironment>,
     index: &impl Index,
 ) -> Result<Vec<Box<dyn Tool>>> {
     let index = index.clone();
