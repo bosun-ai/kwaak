@@ -8,11 +8,10 @@ use rmcp::{
     ServiceExt as _,
 };
 use swiftide::{
-    agents::tools::{local_executor::LocalExecutor, mcp::McpToolbox},
+    agents::tools::mcp::McpToolbox,
     chat_completion::{ParamSpec, Tool, ToolSpec},
     traits::{SimplePrompt, ToolBox, ToolExecutor},
 };
-use swiftide_docker_executor::DockerExecutor;
 use tavily::Tavily;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio_util::{sync::CancellationToken, task::AbortOnDropHandle};
@@ -21,7 +20,7 @@ use uuid::Uuid;
 use crate::{
     agent::{tools::DelegateAgent, util},
     commands::Responder,
-    config::{self, mcp::McpServer, AgentEditMode, SupportedToolExecutors},
+    config::{self, mcp::McpServer, AgentEditMode},
     git::github::GithubSession,
     indexing::Index,
     repository::Repository,
@@ -116,7 +115,9 @@ impl SessionBuilder {
                 &fast_query_provider,
                 &session.default_responder
             ),
-            start_tool_executor(session.session_id, &session.repository),
+            session
+                .repository
+                .start_tool_executor(Some(session.session_id)),
             // TODO: Below should probably be agent specific
             util::create_branch_name(
                 &session.initial_query,
@@ -352,34 +353,6 @@ impl RunningSession {
         let lock = self.active_agent.lock().unwrap().clone();
         lock.stop().await;
     }
-}
-
-#[tracing::instrument(skip_all)]
-async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Arc<dyn ToolExecutor>> {
-    let boxed = match repository.config().tool_executor {
-        SupportedToolExecutors::Docker => {
-            let mut executor = DockerExecutor::default();
-            let dockerfile = &repository.config().docker.dockerfile;
-
-            if std::fs::metadata(dockerfile).is_err() {
-                tracing::error!("Dockerfile not found at {}", dockerfile.display());
-                return Err(anyhow::anyhow!("Dockerfile not found"));
-            }
-            let running_executor = executor
-                .with_context_path(&repository.config().docker.context)
-                .with_image_name(repository.config().project_name.to_lowercase())
-                .with_dockerfile(dockerfile)
-                .with_container_uuid(uuid)
-                .to_owned()
-                .start()
-                .await?;
-
-            Arc::new(running_executor) as Arc<dyn ToolExecutor>
-        }
-        SupportedToolExecutors::Local => Arc::new(LocalExecutor::new(".")) as Arc<dyn ToolExecutor>,
-    };
-
-    Ok(boxed)
 }
 
 #[tracing::instrument(skip_all)]
