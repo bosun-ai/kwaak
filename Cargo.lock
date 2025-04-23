@@ -3332,7 +3332,6 @@ dependencies = [
  "swiftide",
  "swiftide-core",
  "swiftide-docker-executor",
- "swiftide-integrations",
  "swiftide-macros",
  "tavily",
  "tempfile",
