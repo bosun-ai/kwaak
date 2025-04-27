@@ -46,11 +46,11 @@ pub async fn start_tool_evaluation_agent(
         .system_prompt(system_prompt)
         .context(agent_context.clone())
         .llm(&query_provider)
-        .on_new_message(move |_, message| {
+        .on_new_message(move |agent, message| {
             let responder = responder_for_messages.clone();
             let message = message.clone();
             Box::pin(async move {
-                responder.agent_message(message).await;
+                responder.agent_message(agent, message).await;
                 Ok(())
             })
         })

@@ -8,7 +8,7 @@ use crate::config::Config;
 use agent::session::available_builtin_tools;
 use anyhow::{Context as _, Result};
 use clap::Parser;
-use commands::CommandResponse;
+use commands::Response;
 use frontend::App;
 #[cfg(feature = "evaluations")]
 use kwaak::evaluations;
@@ -236,18 +236,16 @@ async fn start_agent(
     let handle = tokio::spawn(async move {
         while let Some(response) = rx.recv().await {
             match response {
-                CommandResponse::Chat(message) => {
+                Response::Chat(message) => {
                     println!("{message}");
                 }
-                CommandResponse::Activity(message) => {
+                Response::Activity(message) => {
                     println!(">> {message}");
                 }
-                CommandResponse::BackendMessage(message) => {
+                Response::BackendMessage(message) => {
                     println!("Backend: {message}");
                 }
-                CommandResponse::RenameChat(..)
-                | CommandResponse::RenameBranch(..)
-                | CommandResponse::Completed => {}
+                Response::RenameChat(..) | Response::RenameBranch(..) | Response::Completed => {}
             }
         }
     });

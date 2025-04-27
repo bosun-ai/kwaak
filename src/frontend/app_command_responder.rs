@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::{
     chat_message::ChatMessage,
-    commands::{CommandResponse, Responder},
+    commands::{Responder, Response},
 };
 
 use super::ui_event::UIEvent;
@@ -27,7 +27,7 @@ pub struct AppCommandResponder {
 }
 
 #[derive(Debug)]
-struct ResponseWithChatId(Uuid, CommandResponse);
+struct ResponseWithChatId(Uuid, Response);
 
 #[derive(Debug, Clone)]
 pub struct AppCommandResponderForChatId {
@@ -44,12 +44,12 @@ impl AppCommandResponder {
                 tracing::debug!("[RESPONDER] Received response: {:?}", response);
                 let chat_id = response.0;
                 let ui_event = match response.1 {
-                    CommandResponse::Chat(msg) => UIEvent::ChatMessage(chat_id, msg.into()),
-                    CommandResponse::Activity(state) => UIEvent::ActivityUpdate(chat_id, state),
-                    CommandResponse::RenameChat(name) => UIEvent::RenameChat(chat_id, name),
-                    CommandResponse::RenameBranch(name) => UIEvent::RenameBranch(chat_id, name),
-                    CommandResponse::Completed => UIEvent::CommandDone(chat_id),
-                    CommandResponse::BackendMessage(msg) => {
+                    Response::Chat(msg) => UIEvent::ChatMessage(chat_id, msg.into()),
+                    Response::Activity(state) => UIEvent::ActivityUpdate(chat_id, state),
+                    Response::RenameChat(name) => UIEvent::RenameChat(chat_id, name),
+                    Response::RenameBranch(name) => UIEvent::RenameBranch(chat_id, name),
+                    Response::Completed => UIEvent::CommandDone(chat_id),
+                    Response::BackendMessage(msg) => {
                         UIEvent::ChatMessage(chat_id, ChatMessage::new_system(&msg))
                     }
                 };
@@ -80,7 +80,7 @@ impl AppCommandResponder {
 
 #[async_trait]
 impl Responder for AppCommandResponderForChatId {
-    async fn send(&self, response: CommandResponse) {
+    async fn send(&self, response: Response) {
         tracing::debug!("[RESPONDER SENDER] Sending response: {:?}", response);
         let response = ResponseWithChatId(self.uuid, response);
         if let Err(err) = self.inner.send(response) {
@@ -119,7 +119,7 @@ mod tests {
             _ => panic!("Unexpected UI event received"),
         }
 
-        responder.send(CommandResponse::Completed).await;
+        responder.send(Response::Completed).await;
 
         // Verify the UI event is received
         if let Some(ui_event) = ui_rx.recv().await {

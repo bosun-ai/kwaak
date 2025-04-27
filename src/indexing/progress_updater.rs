@@ -113,7 +113,7 @@ mod tests {
     use mockall::predicate;
     use swiftide::indexing::Node;
 
-    use crate::commands::{CommandResponse, MockResponder};
+    use crate::commands::{MockResponder, Response};
 
     use super::*;
     use std::sync::atomic::Ordering;
@@ -123,9 +123,7 @@ mod tests {
         let mut responder = MockResponder::default();
         responder
             .expect_send()
-            .with(predicate::eq(CommandResponse::Activity(
-                "Test update".to_string(),
-            )))
+            .with(predicate::eq(Response::Activity("Test update".to_string())))
             .once();
 
         let responder = Arc::new(responder);
@@ -143,7 +141,7 @@ mod tests {
         let mut responder = MockResponder::new();
         responder
             .expect_send()
-            .with(predicate::eq(CommandResponse::Activity(
+            .with(predicate::eq(Response::Activity(
                 "Indexing a bit of code 1/0".to_string(),
             )))
             .returning(|_| ())
@@ -170,7 +168,7 @@ mod tests {
         let mut responder = MockResponder::default();
         responder
             .expect_send()
-            .with(predicate::eq(CommandResponse::Activity(
+            .with(predicate::eq(Response::Activity(
                 "Indexing a bit of code 0/1".to_string(),
             )))
             .returning(|_| ())

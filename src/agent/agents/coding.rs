@@ -124,23 +124,23 @@ pub async fn build(
             let message = message.clone();
 
             Box::pin(async move {
-                responder.for_agent(&agent).agent_message(message).await;
+                responder.agent_message(agent,message).await;
 
                 Ok(())
             })
         })
-        .before_completion(move |agent, _| {
+        .before_completion(move |_agent, _| {
             let responder = tx_3.clone();
             Box::pin(async move {
-                responder.for_agent(&agent).update("running completions").await;
+                responder.update("running completions").await;
                 Ok(())
             })
         })
-        .before_tool(move |agent, tool| {
+        .before_tool(move |_agent, tool| {
             let responder = tx_4.clone();
             let tool = tool.clone();
             Box::pin(async move {
-                responder.for_agent(&agent).update(&format!("running tool {}", tool.name())).await;
+                responder.update(&format!("running tool {}", tool.name())).await;
                 Ok(())
             })
         })
@@ -163,7 +163,7 @@ pub async fn build(
                 }
 
                 if let Some(lint_fix_command) = &maybe_lint_fix_command {
-                    responder.for_agent(&agent).update("running lint and fix").await;
+                    responder.update("running lint and fix").await;
                     accept_non_zero_exit(agent.context().exec_cmd(&Command::shell(lint_fix_command)).await)
                         .context("Could not run lint and fix")?;
                 }

@@ -1,7 +1,7 @@
-use crate::commands::{CommandResponse, Responder};
+use crate::commands::{Responder, Response};
 use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
-use swiftide::chat_completion::ChatMessage;
+use swiftide::{agents::Agent, chat_completion::ChatMessage};
 
 #[derive(Debug, Clone)]
 pub struct LoggingResponder {
@@ -29,7 +29,7 @@ impl LoggingResponder {
 
 #[async_trait]
 impl Responder for LoggingResponder {
-    async fn agent_message(&self, message: ChatMessage) {
+    async fn agent_message(&self, _: &Agent, message: ChatMessage) {
         let mut messages = self.messages.lock().unwrap();
         let formatted = format!("{message:?}").replace("\\\\", "\\");
         messages.push(format!(
@@ -46,7 +46,7 @@ impl Responder for LoggingResponder {
         ));
     }
 
-    async fn send(&self, response: CommandResponse) {
+    async fn send(&self, response: Response) {
         let mut messages = self.messages.lock().unwrap();
         let formatted = format!("{response:?}").replace("\\\\", "\\");
         messages.push(format!(

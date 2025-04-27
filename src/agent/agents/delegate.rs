@@ -114,12 +114,12 @@ pub async fn build(
                 Ok(())
             })
         })
-        .on_new_message(move |_, message| {
+        .on_new_message(move |agent, message| {
             let command_responder = tx_2.clone();
             let message = message.clone();
 
             Box::pin(async move {
-                command_responder.agent_message(message).await;
+                command_responder.agent_message(agent,message).await;
 
                 Ok(())
             })
