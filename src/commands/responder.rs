@@ -5,7 +5,7 @@ use dyn_clone::DynClone;
 #[cfg(test)]
 use mockall::mock;
 use serde::{Deserialize, Serialize};
-use swiftide::chat_completion;
+use swiftide::{agents::Agent, chat_completion};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum CommandResponse {
@@ -29,12 +29,23 @@ pub enum CommandResponse {
 ///
 /// Backend expects the responder to know where it should go (i.e. the chat id)
 ///
+/// Responders are cloned often, so keep them small and cheap
+///
 /// TODO: Consider, perhaps with the new structure, less concrete methods are needed
 /// and the frontend just uses a oneoff handler for each command
 #[async_trait]
-pub trait Responder: std::fmt::Debug + Send + Sync + DynClone {
+pub trait Responder: std::fmt::Debug + Send + Sync + DynClone + 'static {
     /// Generic handler for command responses
     async fn send(&self, response: CommandResponse);
+
+    /// Responders can provide a way for all following messages
+    /// to be associated to a specific agent
+    fn for_agent(&self, _agent: &Agent) -> Box<dyn Responder>
+    where
+        Self: Sized,
+    {
+        dyn_clone::clone_box(self)
+    }
 
     /// Messages from an agent
     async fn agent_message(&self, message: chat_completion::ChatMessage) {
