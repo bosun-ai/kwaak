@@ -99,7 +99,54 @@ impl Responder for tokio::sync::mpsc::UnboundedSender<Response> {
 #[async_trait]
 impl Responder for Arc<dyn Responder> {
     async fn send(&self, response: Response) {
-        self.as_ref().send(response).await;
+        (**self).send(response).await;
+    }
+
+    async fn agent_message(&self, agent: &Agent, message: chat_completion::ChatMessage) {
+        (**self).agent_message(agent, message).await;
+    }
+
+    async fn system_message(&self, message: &str) {
+        (**self).system_message(message).await;
+    }
+
+    async fn update(&self, state: &str) {
+        (**self).update(state).await;
+    }
+
+    async fn rename_chat(&self, name: &str) {
+        (**self).rename_chat(name).await;
+    }
+
+    async fn rename_branch(&self, branch_name: &str) {
+        (**self).rename_branch(branch_name).await;
+    }
+}
+
+#[async_trait]
+impl Responder for Box<dyn Responder> {
+    async fn send(&self, response: Response) {
+        (**self).send(response).await;
+    }
+
+    async fn agent_message(&self, agent: &Agent, message: chat_completion::ChatMessage) {
+        (**self).agent_message(agent, message).await;
+    }
+
+    async fn system_message(&self, message: &str) {
+        (**self).system_message(message).await;
+    }
+
+    async fn update(&self, state: &str) {
+        (**self).update(state).await;
+    }
+
+    async fn rename_chat(&self, name: &str) {
+        (**self).rename_chat(name).await;
+    }
+
+    async fn rename_branch(&self, branch_name: &str) {
+        (**self).rename_branch(branch_name).await;
     }
 }
 
