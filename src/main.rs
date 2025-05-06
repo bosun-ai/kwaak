@@ -35,7 +35,9 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use swiftide::{agents::DefaultContext, chat_completion::Tool, traits::AgentContext};
+use swiftide::{
+    agents::DefaultContext, chat_completion::Tool, chat_completion::ToolBox, traits::AgentContext,
+};
 use swiftide_docker_executor::DockerExecutor;
 use tokio::{fs, sync::mpsc};
 use uuid::Uuid;

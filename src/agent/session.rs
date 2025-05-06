@@ -139,13 +139,18 @@ impl SessionBuilder {
 
         let mcp_toolboxes = start_mcp_toolboxes(&session.repository).await?;
 
+        let mcp_dyn = mcp_toolboxes
+            .iter()
+            .map(|toolbox| Box::new(toolbox.clone()) as Box<dyn ToolBox>)
+            .collect::<Vec<_>>();
+
         let active_agent = match session.repository.config().agent {
             config::SupportedAgentConfigurations::Coding => {
                 agents::coding::start(
                     &session,
                     &executor,
                     &builtin_tools,
-                    &mcp_toolboxes,
+                    &mcp_dyn,
                     &agent_environment,
                     initial_context,
                 )
@@ -157,7 +162,7 @@ impl SessionBuilder {
                     &session,
                     &executor,
                     &builtin_tools,
-                    &mcp_toolboxes,
+                    &mcp_dyn,
                     &agent_environment,
                     &initial_context,
                 )
@@ -173,6 +178,7 @@ impl SessionBuilder {
             agent_environment,
             cancel_token: Arc::new(Mutex::new(CancellationToken::new())),
             message_task_handle: None,
+            mcp_toolboxes,
         };
 
         // TODO: Consider how this might be dropped
@@ -272,12 +278,27 @@ pub struct RunningSession {
     session: Arc<Session>,
     active_agent: Arc<Mutex<RunningAgent>>,
     message_task_handle: Option<Arc<AbortOnDropHandle<()>>>,
+    mcp_toolboxes: Vec<McpToolbox>,
 
     github_session: Option<Arc<GithubSession>>,
     executor: Arc<dyn ToolExecutor>,
     agent_environment: AgentEnvironment,
 
     cancel_token: Arc<Mutex<CancellationToken>>,
+}
+
+impl Drop for RunningSession {
+    fn drop(&mut self) {
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(async {
+                for mcp in &mut self.mcp_toolboxes {
+                    if let Err(err) = mcp.cancel().await {
+                        tracing::error!(?err, "Failed to cancel mcp service");
+                    }
+                }
+            });
+        });
+    }
 }
 
 impl RunningSession {
@@ -464,7 +485,7 @@ pub fn available_builtin_tools(
     Ok(tools)
 }
 
-pub async fn start_mcp_toolboxes(repository: &Repository) -> Result<Vec<Box<dyn ToolBox>>> {
+pub async fn start_mcp_toolboxes(repository: &Repository) -> Result<Vec<McpToolbox>> {
     let mut services = Vec::new();
     if let Some(mcp_services) = &repository.config().mcp {
         for service in mcp_services {
@@ -507,7 +528,7 @@ pub async fn start_mcp_toolboxes(repository: &Repository) -> Result<Vec<Box<dyn 
                         toolbox.with_filter(filter.clone());
                     }
 
-                    services.push(toolbox.boxed());
+                    services.push(toolbox);
                 }
             }
         }
