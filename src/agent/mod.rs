@@ -1,12 +1,12 @@
 pub mod agents;
-mod commit_and_push;
+pub mod commit_and_push;
 pub mod conversation_summarizer;
-pub mod env_setup;
+pub mod git_agent_environment;
 pub mod running_agent;
 pub mod session;
-mod tool_summarizer;
+pub mod tool_summarizer;
 pub mod tools;
-mod util;
+pub mod util;
 use crate::{commands::Responder, indexing::Index, repository::Repository};
 use session::{RunningSession, Session};
 use std::sync::Arc;

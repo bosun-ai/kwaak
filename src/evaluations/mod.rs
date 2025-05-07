@@ -8,9 +8,6 @@ mod tool_evaluation_agent;
 
 pub use ragas::evaluate_query_pipeline;
 
-#[cfg(test)]
-mod tests;
-
 pub use tool_evaluation_agent::start_tool_evaluation_agent;
 
 pub async fn run_patch_evaluation(iterations: u32) -> Result<()> {

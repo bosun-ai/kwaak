@@ -4,7 +4,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use swiftide::integrations::duckdb::Duckdb;
 
-use crate::{commands::Responder, repository::Repository};
+use crate::{commands::Responder, config::Config, repository::Repository};
 
 use super::{index_repository, query, Index};
 
@@ -20,16 +20,15 @@ static DUCK_DB: OnceLock<Duckdb> = OnceLock::new();
 /// # Panics
 ///
 /// Panics if it cannot setup duckdb
-pub fn get_duckdb(repository: &Repository) -> Duckdb {
+pub fn get_duckdb(config: &Config) -> Duckdb {
     DUCK_DB
-        .get_or_init(|| build_duckdb(repository).expect("Failed to build duckdb"))
+        .get_or_init(|| build_duckdb(config).expect("Failed to build duckdb"))
         .to_owned()
 }
 
 // Probably should just be on the repository/config, cloned from there.
 // This sucks in tests
-pub(crate) fn build_duckdb(repository: &Repository) -> Result<Duckdb> {
-    let config = repository.config();
+pub(crate) fn build_duckdb(config: &Config) -> Result<Duckdb> {
     let path = config.cache_dir().join("duck.db3");
 
     tracing::debug!("Building Duckdb: {}", path.display());
@@ -63,7 +62,7 @@ pub struct DuckdbIndex {}
 impl DuckdbIndex {
     #[allow(clippy::unused_self)]
     fn get_duckdb(&self, repository: &Repository) -> Duckdb {
-        get_duckdb(repository)
+        get_duckdb(repository.config())
     }
 }
 

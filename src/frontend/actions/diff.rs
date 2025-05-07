@@ -4,7 +4,7 @@ use tokio::io::AsyncWriteExt as _;
 
 use crate::{
     chat_message::ChatMessage,
-    commands::{Command, CommandEvent, CommandResponse, Responder},
+    commands::{Command, CommandEvent, Responder, Response},
     frontend::{ui_event::UIEvent, App},
     git,
 };
@@ -30,7 +30,7 @@ pub async fn diff_show(app: &mut App<'_>) {
     let mut diff_message = String::new();
     while let Some(msg) = rx.recv().await {
         match msg {
-            CommandResponse::BackendMessage(ref payload) => {
+            Response::BackendMessage(ref payload) => {
                 if diff_message.is_empty() {
                     diff_message = payload.to_string();
                     let rendered = ansi_to_tui::IntoText::into_text(&diff_message).ok();
@@ -45,7 +45,7 @@ pub async fn diff_show(app: &mut App<'_>) {
                     app_tx.send(msg).await;
                 }
             }
-            CommandResponse::Completed => {
+            Response::Completed => {
                 app_tx.send(msg).await;
                 break;
             }
@@ -83,12 +83,12 @@ pub async fn diff_pull(app: &mut App<'_>) {
 
     while let Some(msg) = rx.recv().await {
         match msg {
-            CommandResponse::BackendMessage(ref payload) => {
+            Response::BackendMessage(ref payload) => {
                 if branch.is_empty() {
                     branch = payload.to_string();
                 }
             }
-            CommandResponse::Completed => {
+            Response::Completed => {
                 break;
             }
             _ => (),
@@ -112,12 +112,12 @@ pub async fn diff_pull(app: &mut App<'_>) {
     let mut diff = String::new();
     while let Some(msg) = rx.recv().await {
         match msg {
-            CommandResponse::BackendMessage(ref payload) => {
+            Response::BackendMessage(ref payload) => {
                 if diff.is_empty() {
                     diff = payload.to_string();
                 }
             }
-            CommandResponse::Completed => {
+            Response::Completed => {
                 break;
             }
             _ => (),
@@ -145,7 +145,7 @@ pub async fn diff_pull(app: &mut App<'_>) {
 
         app.command_responder
             .for_chat_id(current_chat_uuid)
-            .send(CommandResponse::Completed)
+            .send(Response::Completed)
             .await;
         return;
     }
@@ -186,7 +186,7 @@ pub async fn diff_pull(app: &mut App<'_>) {
 
         app.command_responder
             .for_chat_id(current_chat_uuid)
-            .send(CommandResponse::Completed)
+            .send(Response::Completed)
             .await;
         return;
     }
@@ -230,6 +230,6 @@ pub async fn diff_pull(app: &mut App<'_>) {
     // Tell the app that we are done
     app.command_responder
         .for_chat_id(current_chat_uuid)
-        .send(CommandResponse::Completed)
+        .send(Response::Completed)
         .await;
 }

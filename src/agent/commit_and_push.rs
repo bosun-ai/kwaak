@@ -4,7 +4,7 @@ use swiftide::traits::{Command, SimplePrompt};
 
 use crate::{repository::Repository, util::accept_non_zero_exit};
 
-use super::env_setup::AgentEnvironment;
+use super::git_agent_environment::GitAgentEnvironment;
 
 #[derive(Debug)]
 pub struct CommitAndPush {
@@ -17,7 +17,7 @@ pub struct CommitAndPush {
 const DEFAULT_COMMIT_MESSAGE: &str = "chore: Committed changes for completion";
 
 impl CommitAndPush {
-    pub fn try_new(repository: &Repository, agent_env: &AgentEnvironment) -> Result<Self> {
+    pub fn try_new(repository: &Repository, agent_env: &GitAgentEnvironment) -> Result<Self> {
         let auto_commit_enabled = !repository.config().git.auto_commit_disabled;
         let push_to_remote_enabled =
             agent_env.remote_enabled && repository.config().git.auto_push_remote;
@@ -37,6 +37,7 @@ impl CommitAndPush {
         })
     }
 
+    #[must_use]
     pub fn hook(self) -> impl AfterEachFn {
         let llm = self.llm;
         move |agent| {
@@ -114,7 +115,7 @@ mod tests {
     async fn test_auto_commit() {
         let (repository, _guard) = test_repository();
         let commit_and_push =
-            CommitAndPush::try_new(&repository, &AgentEnvironment::default()).unwrap();
+            CommitAndPush::try_new(&repository, &GitAgentEnvironment::default()).unwrap();
 
         std::fs::write(repository.path().join("test.txt"), "test").unwrap();
 
@@ -145,7 +146,7 @@ mod tests {
     async fn test_skips_commit_if_no_changes() {
         let (repository, _guard) = test_repository();
         let commit_and_push =
-            CommitAndPush::try_new(&repository, &AgentEnvironment::default()).unwrap();
+            CommitAndPush::try_new(&repository, &GitAgentEnvironment::default()).unwrap();
 
         let mut agent = test_agent_for_repository(&repository);
         commit_and_push.hook()(&mut agent).await.unwrap();
@@ -178,7 +179,7 @@ mod tests {
         repository.config_mut().git.generate_commit_message = false;
 
         let commit_and_push =
-            CommitAndPush::try_new(&repository, &AgentEnvironment::default()).unwrap();
+            CommitAndPush::try_new(&repository, &GitAgentEnvironment::default()).unwrap();
 
         let mut agent = test_agent_for_repository(&repository);
         commit_and_push.hook()(&mut agent).await.unwrap();
@@ -210,7 +211,7 @@ mod tests {
         let (repository, _guard) = test_repository();
 
         let mut commit_and_push =
-            CommitAndPush::try_new(&repository, &AgentEnvironment::default()).unwrap();
+            CommitAndPush::try_new(&repository, &GitAgentEnvironment::default()).unwrap();
 
         let message = "feat(quotes): this \"should'not break\n";
         commit_and_push.llm = Box::new(NoopLLM::new(message.into()));

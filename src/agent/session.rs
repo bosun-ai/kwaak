@@ -8,11 +8,10 @@ use rmcp::{
     ServiceExt as _,
 };
 use swiftide::{
-    agents::tools::{local_executor::LocalExecutor, mcp::McpToolbox},
+    agents::tools::mcp::McpToolbox,
     chat_completion::{ParamSpec, Tool, ToolSpec},
     traits::{SimplePrompt, ToolBox, ToolExecutor},
 };
-use swiftide_docker_executor::DockerExecutor;
 use tavily::Tavily;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio_util::{sync::CancellationToken, task::AbortOnDropHandle};
@@ -21,17 +20,13 @@ use uuid::Uuid;
 use crate::{
     agent::{tools::DelegateAgent, util},
     commands::Responder,
-    config::{self, mcp::McpServer, AgentEditMode, SupportedToolExecutors},
-    git::github::GithubSession,
+    config::{self, mcp::McpServer, AgentEditMode},
     indexing::Index,
     repository::Repository,
 };
 
 use super::{
-    agents,
-    env_setup::{self, AgentEnvironment, EnvSetup},
-    running_agent::RunningAgent,
-    tools,
+    agents, git_agent_environment::GitAgentEnvironment, running_agent::RunningAgent, tools,
 };
 
 /// Session represents the abstract state of an ongoing agent interaction (i.e. in a chat)
@@ -96,13 +91,6 @@ impl SessionBuilder {
                 .context("Failed to build session")?,
         );
 
-        let github_session = match session.repository.config().github_api_key {
-            Some(_) => Some(Arc::new(GithubSession::from_repository(
-                &session.repository,
-            )?)),
-            None => None,
-        };
-
         let backoff = session.repository.config().backoff;
         let fast_query_provider: Box<dyn SimplePrompt> = session
             .repository
@@ -116,7 +104,9 @@ impl SessionBuilder {
                 &fast_query_provider,
                 &session.default_responder
             ),
-            start_tool_executor(session.session_id, &session.repository),
+            session
+                .repository
+                .start_tool_executor(Some(session.session_id)),
             // TODO: Below should probably be agent specific
             util::create_branch_name(
                 &session.initial_query,
@@ -127,15 +117,11 @@ impl SessionBuilder {
             generate_initial_context(&session.repository, &session.initial_query, index)
         )?;
 
-        let env_setup = EnvSetup::new(&session.repository, github_session.as_deref(), &*executor);
-        let agent_environment = env_setup.exec_setup_commands(branch_name).await?;
+        let git_environment =
+            GitAgentEnvironment::setup(&session.repository, &executor, &branch_name).await?;
 
-        let builtin_tools = available_builtin_tools(
-            &session.repository,
-            github_session.as_ref(),
-            Some(&agent_environment),
-            index,
-        )?;
+        let builtin_tools =
+            available_builtin_tools(&session.repository, Some(&git_environment), index)?;
 
         let mcp_toolboxes = start_mcp_toolboxes(&session.repository).await?;
 
@@ -151,7 +137,7 @@ impl SessionBuilder {
                     &executor,
                     &builtin_tools,
                     &mcp_dyn,
-                    &agent_environment,
+                    &git_environment,
                     initial_context,
                 )
                 .await
@@ -163,7 +149,7 @@ impl SessionBuilder {
                     &executor,
                     &builtin_tools,
                     &mcp_dyn,
-                    &agent_environment,
+                    &git_environment,
                     &initial_context,
                 )
                 .await
@@ -173,9 +159,8 @@ impl SessionBuilder {
         let mut running_session = RunningSession {
             active_agent: Arc::new(Mutex::new(active_agent)),
             session,
-            github_session,
             executor,
-            agent_environment,
+            git_environment,
             cancel_token: Arc::new(Mutex::new(CancellationToken::new())),
             message_task_handle: None,
             mcp_toolboxes,
@@ -221,7 +206,7 @@ async fn start_plan_and_act(
     executor: &Arc<dyn ToolExecutor>,
     available_tools: &[Box<dyn Tool>],
     tool_boxes: &[Box<dyn ToolBox>],
-    agent_environment: &AgentEnvironment,
+    agent_environment: &GitAgentEnvironment,
     initial_context: &str,
 ) -> Result<RunningAgent> {
     let coding_agent = agents::coding::start(
@@ -280,9 +265,8 @@ pub struct RunningSession {
     message_task_handle: Option<Arc<AbortOnDropHandle<()>>>,
     mcp_toolboxes: Vec<McpToolbox>,
 
-    github_session: Option<Arc<GithubSession>>,
     executor: Arc<dyn ToolExecutor>,
-    agent_environment: AgentEnvironment,
+    git_environment: GitAgentEnvironment,
 
     cancel_token: Arc<Mutex<CancellationToken>>,
 }
@@ -338,8 +322,8 @@ impl RunningSession {
     }
 
     #[must_use]
-    pub fn agent_environment(&self) -> &AgentEnvironment {
-        &self.agent_environment
+    pub fn git_environment(&self) -> &GitAgentEnvironment {
+        &self.git_environment
     }
 
     /// Retrieve a copy of the cancel token
@@ -376,34 +360,6 @@ impl RunningSession {
 }
 
 #[tracing::instrument(skip_all)]
-async fn start_tool_executor(uuid: Uuid, repository: &Repository) -> Result<Arc<dyn ToolExecutor>> {
-    let boxed = match repository.config().tool_executor {
-        SupportedToolExecutors::Docker => {
-            let mut executor = DockerExecutor::default();
-            let dockerfile = &repository.config().docker.dockerfile;
-
-            if std::fs::metadata(dockerfile).is_err() {
-                tracing::error!("Dockerfile not found at {}", dockerfile.display());
-                return Err(anyhow::anyhow!("Dockerfile not found"));
-            }
-            let running_executor = executor
-                .with_context_path(&repository.config().docker.context)
-                .with_image_name(repository.config().project_name.to_lowercase())
-                .with_dockerfile(dockerfile)
-                .with_container_uuid(uuid)
-                .to_owned()
-                .start()
-                .await?;
-
-            Arc::new(running_executor) as Arc<dyn ToolExecutor>
-        }
-        SupportedToolExecutors::Local => Arc::new(LocalExecutor::new(".")) as Arc<dyn ToolExecutor>,
-    };
-
-    Ok(boxed)
-}
-
-#[tracing::instrument(skip_all)]
 async fn generate_initial_context(
     repository: &Repository,
     query: &str,
@@ -416,8 +372,7 @@ async fn generate_initial_context(
 
 pub fn available_builtin_tools(
     repository: &Arc<Repository>,
-    github_session: Option<&Arc<GithubSession>>,
-    agent_env: Option<&env_setup::AgentEnvironment>,
+    agent_env: Option<&GitAgentEnvironment>,
     index: &impl Index,
 ) -> Result<Vec<Box<dyn Tool>>> {
     let index = index.clone();
@@ -449,7 +404,7 @@ pub fn available_builtin_tools(
     }
 
     // gitHub-related tools
-    if let Some(github_session) = github_session {
+    if let Some(github_session) = repository.github_session() {
         tools.push(tools::CreateOrUpdatePullRequest::new(github_session).boxed());
         tools.push(tools::GithubSearchCode::new(github_session).boxed());
     }

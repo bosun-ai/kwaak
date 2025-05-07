@@ -11,7 +11,7 @@ use swiftide::{
 use crate::{
     agent::{
         commit_and_push::CommitAndPush, conversation_summarizer::ConversationSummarizer,
-        env_setup::AgentEnvironment, running_agent::RunningAgent, session::Session,
+        git_agent_environment::GitAgentEnvironment, running_agent::RunningAgent, session::Session,
         tool_summarizer::ToolSummarizer,
     },
     commands::Responder,
@@ -24,7 +24,7 @@ pub async fn start(
     executor: &Arc<dyn ToolExecutor>,
     tools: &[Box<dyn Tool>],
     tool_boxes: &[Box<dyn ToolBox>],
-    agent_env: &AgentEnvironment,
+    agent_env: &GitAgentEnvironment,
     initial_context: String,
 ) -> Result<RunningAgent> {
     let agent = build(
@@ -48,7 +48,7 @@ pub async fn build(
     executor: &Arc<dyn ToolExecutor>,
     tools: &[Box<dyn Tool>],
     tool_boxes: &[Box<dyn ToolBox>],
-    agent_env: &AgentEnvironment,
+    agent_env: &GitAgentEnvironment,
     initial_context: Option<&str>,
 ) -> Result<AgentBuilder> {
     let backoff = repository.config().backoff;
@@ -130,35 +130,35 @@ pub async fn build(
                 Ok(())
             })
         })
-        .on_new_message(move |_, message| {
-            let command_responder = tx_2.clone();
+        .on_new_message(move |agent, message| {
+            let responder = tx_2.clone();
             let message = message.clone();
 
             Box::pin(async move {
-                command_responder.agent_message(message).await;
+                responder.agent_message(agent,message).await;
 
                 Ok(())
             })
         })
-        .before_completion(move |_, _| {
-            let command_responder = tx_3.clone();
+        .before_completion(move |_agent, _| {
+            let responder = tx_3.clone();
             Box::pin(async move {
-                command_responder.update("running completions").await;
+                responder.update("running completions").await;
                 Ok(())
             })
         })
-        .before_tool(move |_, tool| {
-            let command_responder = tx_4.clone();
+        .before_tool(move |_agent, tool| {
+            let responder = tx_4.clone();
             let tool = tool.clone();
             Box::pin(async move {
-                command_responder.update(&format!("running tool {}", tool.name())).await;
+                responder.update(&format!("running tool {}", tool.name())).await;
                 Ok(())
             })
         })
         .after_tool(tool_summarizer.summarize_hook())
         .after_each(move |agent| {
             let maybe_lint_fix_command = maybe_lint_fix_command.clone();
-            let command_responder = responder.clone();
+            let responder = responder.clone();
             Box::pin(async move {
                 if accept_non_zero_exit(
                     agent.context()
@@ -174,7 +174,7 @@ pub async fn build(
                 }
 
                 if let Some(lint_fix_command) = &maybe_lint_fix_command {
-                    command_responder.update("running lint and fix").await;
+                    responder.update("running lint and fix").await;
                     accept_non_zero_exit(agent.context().exec_cmd(&Command::shell(lint_fix_command)).await)
                         .context("Could not run lint and fix")?;
                 }

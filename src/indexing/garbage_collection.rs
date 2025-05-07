@@ -29,7 +29,7 @@ impl<'repository> GarbageCollector<'repository> {
 
         Self {
             repository: Cow::Borrowed(repository),
-            duckdb: duckdb_index::get_duckdb(repository),
+            duckdb: duckdb_index::get_duckdb(repository.config()),
             file_extensions,
         }
     }
@@ -320,7 +320,7 @@ mod tests {
         node.metadata
             .insert(metadata_qa_code::NAME, "test".to_string());
 
-        let duckdb = duckdb_index::build_duckdb(&repository).unwrap();
+        let duckdb = duckdb_index::build_duckdb(repository.config()).unwrap();
 
         {
             duckdb.set(&node).await;

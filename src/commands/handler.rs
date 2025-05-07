@@ -19,7 +19,7 @@ use crate::{
 
 use super::{
     command::{Command, CommandEvent},
-    responder::{CommandResponse, Responder},
+    responder::{Responder, Response},
 };
 
 /// Commands always flow via the `CommandHandler`
@@ -92,7 +92,7 @@ impl<'command, I: Index + Clone + 'static> CommandHandler<I> {
                 joinset.spawn(async move {
                     let event = event.clone();
                     let result = Box::pin(this_handler.handle_command_event(&storage, &event)).await;
-                    event.responder().send(CommandResponse::Completed).await;
+                    event.responder().send(Response::Completed).await;
 
                     if let Err(error) = result {
                         tracing::error!(?error, cmd = %event.command(), "Failed to handle command {cmd} with error {error:#}", cmd= event.command());
@@ -171,7 +171,7 @@ impl<'command, I: Index + Clone + 'static> CommandHandler<I> {
                     return Ok(());
                 };
 
-                let base_sha = &session.agent_environment().start_ref;
+                let base_sha = &session.git_environment().start_ref;
                 let diff = git::util::diff(session.executor(), &base_sha, true).await?;
 
                 event.responder().system_message(&diff).await;
