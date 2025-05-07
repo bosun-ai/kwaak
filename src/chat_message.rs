@@ -1,4 +1,6 @@
 use ratatui::text::Text;
+use swiftide::chat_completion::ChatCompletionResponse;
+use uuid::Uuid;
 
 /// Represents a chat message that can be stored in a [`Chat`]
 ///
@@ -8,6 +10,8 @@ use ratatui::text::Text;
 /// TODO: All should be Cows
 #[derive(Clone, Default, PartialEq)]
 pub struct ChatMessage {
+    // Allows us to match partial streamed chunks, updating the original
+    stream_id: Option<Uuid>,
     role: ChatRole,
     content: String,
     /// Owned rendered text
@@ -19,6 +23,7 @@ pub struct ChatMessage {
 impl std::fmt::Debug for ChatMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ChatMessage")
+            .field("stream_id", &self.stream_id)
             .field("role", &self.role)
             .field("content", &self.content)
             .field("original", &self.original)
@@ -83,6 +88,11 @@ impl ChatMessage {
             .to_owned()
     }
 
+    #[must_use]
+    pub fn stream_id(&self) -> Option<&Uuid> {
+        self.stream_id.as_ref()
+    }
+
     pub fn with_role(&mut self, role: ChatRole) -> &mut Self {
         self.role = role;
         self
@@ -100,6 +110,11 @@ impl ChatMessage {
 
     pub fn with_rendered(&mut self, rendered: Option<Text<'static>>) -> &mut Self {
         self.rendered = rendered;
+        self
+    }
+
+    pub fn with_streaming_id(&mut self, id: Uuid) -> &mut Self {
+        self.stream_id = Some(id);
         self
     }
 
@@ -148,5 +163,13 @@ impl From<swiftide::chat_completion::ChatMessage> for ChatMessage {
         };
 
         builder.with_original(msg).to_owned()
+    }
+}
+
+impl From<ChatCompletionResponse> for ChatMessage {
+    fn from(msg: ChatCompletionResponse) -> Self {
+        ChatMessage::new_assistant(msg.message.unwrap_or_default())
+            .with_streaming_id(msg.id)
+            .to_owned()
     }
 }

@@ -52,6 +52,7 @@ impl AppCommandResponder {
                     Response::BackendMessage(msg) => {
                         UIEvent::ChatMessage(chat_id, ChatMessage::new_system(&msg))
                     }
+                    Response::ChatChunk(chunk) => UIEvent::ChatMessage(chat_id, chunk.into()),
                 };
 
                 if let Err(err) = ui_tx.send(ui_event) {

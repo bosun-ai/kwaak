@@ -53,6 +53,32 @@ impl Chat {
     }
 
     pub fn add_message(&mut self, message: ChatMessage) {
+        // If there is a stream ID, we update the existing message
+        if message.stream_id().is_some() {
+            if let Some(existing_streamed) = self
+                .messages
+                .iter_mut()
+                .rfind(|m| m.stream_id() == message.stream_id())
+            {
+                existing_streamed.with_content(message.content());
+                return;
+            }
+        }
+
+        // If it was an assistant message and the last message is the same, assume it was
+        // streamed and replace the last message
+        if message.role().is_assistant() {
+            if let Some(last_message) = self.messages.last_mut() {
+                if !last_message.content().is_empty() && last_message.content() == message.content()
+                {
+                    // replace the old message with the new one
+                    *last_message = message;
+                    self.new_message_count += 1;
+                    return;
+                }
+            }
+        }
+
         if !message.role().is_user() {
             self.new_message_count += 1;
         }
