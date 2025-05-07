@@ -39,11 +39,11 @@ impl ProgressUpdater {
         self.updater = Some(sender);
         let responder = self.responder.take();
 
-        tracing::info!("Spawning progress updater");
+        tracing::debug!("Spawning progress updater");
         AbortOnDropHandle::new(tokio::spawn(async move {
-            tracing::info!("Starting progress updater");
+            tracing::debug!("Starting progress updater");
             while let Some(update) = receiver.recv().await {
-                tracing::info!("Sending update: {}", update);
+                tracing::trace!("Sending update: {}", update);
 
                 // If there's nothing to send updates to, that's fine
                 if let Some(responder) = &responder {
@@ -136,14 +136,10 @@ mod tests {
 
     #[test_log::test(tokio::test)]
     async fn test_count_processed_fn() {
-        // NOTE: The mock expectation doesn't work. Synce we know the function is called, calling it a
-        // day
         let mut responder = MockResponder::new();
         responder
-            .expect_send()
-            .with(predicate::eq(Response::Activity(
-                "Indexing a bit of code 1/0".to_string(),
-            )))
+            .expect_update()
+            .with(predicate::eq("Indexing a bit of code 1/0"))
             .returning(|_| ())
             .once();
 
@@ -167,10 +163,8 @@ mod tests {
     async fn test_count_total_fn() {
         let mut responder = MockResponder::default();
         responder
-            .expect_send()
-            .with(predicate::eq(Response::Activity(
-                "Indexing a bit of code 0/1".to_string(),
-            )))
+            .expect_update()
+            .with(predicate::eq("Indexing a bit of code 0/1"))
             .returning(|_| ())
             .once();
         let responder = Arc::new(responder);
