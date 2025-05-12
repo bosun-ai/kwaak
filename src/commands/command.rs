@@ -3,7 +3,7 @@ use std::sync::Arc;
 use derive_builder::Builder;
 use uuid::Uuid;
 
-use crate::repository::Repository;
+use crate::{agent::session::OnAgentBuildFn, repository::Repository};
 
 use super::Responder;
 
@@ -42,13 +42,32 @@ pub enum Command {
     RetryChat,
 }
 
-#[derive(Debug, Clone, Builder)]
+#[derive(Clone, Builder)]
 pub struct CommandEvent {
     command: Command,
     #[builder(default)]
     repository: Option<Arc<Repository>>,
     uuid: Uuid,
     responder: Arc<dyn Responder>,
+
+    /// Optional callback to modify the agent if it was not started yet
+    ///
+    /// NOTE: Intended as  a temporary solution until we can use swiftide tasks instead of sessions and remove
+    /// some of the abstractions and complexity.
+    #[builder(default)]
+    on_agent_build: Option<OnAgentBuildFn>,
+}
+
+impl std::fmt::Debug for CommandEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CommandEvent")
+            .field("command", &self.command)
+            .field("repository", &self.repository)
+            .field("uuid", &self.uuid)
+            .field("responder", &self.responder)
+            .field("on_agent_build", &self.on_agent_build.is_some())
+            .finish()
+    }
 }
 
 impl CommandEvent {
@@ -58,8 +77,8 @@ impl CommandEvent {
     }
 
     #[must_use]
-    pub fn repository(&self) -> Option<&Repository> {
-        self.repository.as_deref()
+    pub fn repository(&self) -> Option<&Arc<Repository>> {
+        self.repository.as_ref()
     }
 
     #[must_use]
@@ -73,13 +92,13 @@ impl CommandEvent {
     }
 
     #[must_use]
-    pub fn responder(&self) -> &dyn Responder {
+    pub fn responder(&self) -> &Arc<dyn Responder> {
         &self.responder
     }
 
     #[must_use]
-    pub fn clone_responder(&self) -> Arc<dyn Responder> {
-        Arc::clone(&self.responder)
+    pub fn on_agent_build(&self) -> Option<&OnAgentBuildFn> {
+        self.on_agent_build.as_ref()
     }
 
     pub fn with_uuid(&mut self, uuid: Uuid) -> &mut Self {
@@ -122,7 +141,7 @@ mod tests {
         let dyn_responder = responder as Arc<dyn Responder>;
         assert!(event.command().is_quit());
         assert_eq!(event.uuid(), uuid);
-        assert!(Arc::ptr_eq(&event.clone_responder(), &dyn_responder));
+        assert!(Arc::ptr_eq(&event.responder(), &dyn_responder));
     }
 
     #[test]

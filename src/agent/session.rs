@@ -8,7 +8,7 @@ use rmcp::{
     ServiceExt as _,
 };
 use swiftide::{
-    agents::tools::mcp::McpToolbox,
+    agents::{tools::mcp::McpToolbox, AgentBuilder},
     chat_completion::{ParamSpec, Tool, ToolSpec},
     traits::{SimplePrompt, ToolBox, ToolExecutor},
 };
@@ -29,6 +29,8 @@ use super::{
     agents, git_agent_environment::GitAgentEnvironment, running_agent::RunningAgent, tools,
 };
 
+pub type OnAgentBuildFn = Arc<dyn Fn(&mut AgentBuilder) + Send + Sync>;
+
 /// Session represents the abstract state of an ongoing agent interaction (i.e. in a chat)
 ///
 /// Consider the implementation 'emergent architecture' (an excuse for an isolated mess)
@@ -46,6 +48,9 @@ pub struct Session {
     pub repository: Arc<Repository>,
     pub default_responder: Arc<dyn Responder>,
     pub initial_query: String,
+
+    /// Optionally run a callback on the agent builder before starting the session
+    pub on_agent_build: Option<OnAgentBuildFn>,
 
     /// Handle to send messages to the running session
     running_session_tx: UnboundedSender<SessionMessage>,
@@ -91,6 +96,11 @@ impl SessionBuilder {
                 .context("Failed to build session")?,
         );
 
+        session
+            .default_responder
+            .update("starting up agent for the first time, this might take a while")
+            .await;
+
         let backoff = session.repository.config().backoff;
         let fast_query_provider: Box<dyn SimplePrompt> = session
             .repository
@@ -130,21 +140,22 @@ impl SessionBuilder {
             .map(|toolbox| Box::new(toolbox.clone()) as Box<dyn ToolBox>)
             .collect::<Vec<_>>();
 
-        let active_agent = match session.repository.config().agent {
+        let mut builder = match session.repository.config().agent {
             config::SupportedAgentConfigurations::Coding => {
-                agents::coding::start(
-                    &session,
+                agents::coding::build(
+                    &session.repository,
+                    &session.default_responder,
                     &executor,
                     &builtin_tools,
                     &mcp_dyn,
                     &git_environment,
-                    initial_context,
+                    Some(&initial_context),
                 )
                 .await
             }
             // TODO: Strip tools for delegate agent and add tool for delegate
             config::SupportedAgentConfigurations::PlanAct => {
-                start_plan_and_act(
+                build_plan_and_act(
                     &session,
                     &executor,
                     &builtin_tools,
@@ -155,6 +166,12 @@ impl SessionBuilder {
                 .await
             }
         }?;
+
+        if let Some(Some(on_agent_build)) = self.on_agent_build.take() {
+            on_agent_build(&mut builder);
+        }
+
+        let active_agent = builder.build()?.into();
 
         let mut running_session = RunningSession {
             active_agent: Arc::new(Mutex::new(active_agent)),
@@ -201,14 +218,14 @@ static BLACKLIST_DELEGATE_TOOLS: &[&str] = &[
     "add_lines",
 ];
 
-async fn start_plan_and_act(
+async fn build_plan_and_act(
     session: &Arc<Session>,
     executor: &Arc<dyn ToolExecutor>,
     available_tools: &[Box<dyn Tool>],
     tool_boxes: &[Box<dyn ToolBox>],
     agent_environment: &GitAgentEnvironment,
     initial_context: &str,
-) -> Result<RunningAgent> {
+) -> Result<AgentBuilder> {
     let coding_agent = agents::coding::start(
         &session,
         &executor,
@@ -243,13 +260,14 @@ async fn start_plan_and_act(
         .chain(std::iter::once(delegate_tool.boxed()))
         .collect::<Vec<_>>();
 
-    agents::delegate::start(
-        &session,
+    agents::delegate::build(
+        &session.repository,
+        &session.default_responder,
         &executor,
         &delegate_tools,
         &tool_boxes,
         &agent_environment,
-        initial_context,
+        Some(initial_context),
     )
     .await
 }

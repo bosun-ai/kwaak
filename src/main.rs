@@ -13,8 +13,13 @@ use frontend::App;
 #[cfg(feature = "evaluations")]
 use kwaak::evaluations;
 use kwaak::{
-    agent::{self, session::start_mcp_toolboxes},
-    cli, commands, config, frontend, git,
+    agent::{
+        self,
+        session::{start_mcp_toolboxes, Session},
+    },
+    cli,
+    commands::{self, Responder},
+    config, frontend, git,
     indexing::{
         self,
         duckdb_index::{get_duckdb, DuckdbIndex},
@@ -254,10 +259,16 @@ async fn start_agent(
 
     let query = initial_message.to_string();
     let index = DuckdbIndex::default();
-    let agent =
-        agent::start_session(Uuid::new_v4(), &repository, &index, &query, Arc::new(tx)).await?;
+    let responder: Arc<dyn Responder> = Arc::new(tx);
+    let session = Session::builder()
+        .session_id(Uuid::new_v4())
+        .repository(Arc::new(repository))
+        .default_responder(responder)
+        .initial_query(&query)
+        .start(&index)
+        .await?;
 
-    agent.active_agent().query(&query).await?;
+    session.active_agent().query(&query).await?;
     handle.abort();
     Ok(())
 }
