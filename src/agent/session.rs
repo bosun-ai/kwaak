@@ -34,7 +34,9 @@ use super::{
 };
 
 pub type OnAgentBuildFn = Arc<
-    dyn Fn(&mut AgentBuilder) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> + Send + Sync,
+    dyn for<'a> Fn(&'a mut AgentBuilder) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>
+        + Send
+        + Sync,
 >;
 
 /// Session represents the abstract state of an ongoing agent interaction (i.e. in a chat)
