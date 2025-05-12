@@ -1,4 +1,8 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    future::Future,
+    pin::Pin,
+    sync::{Arc, Mutex},
+};
 
 use anyhow::{Context as _, Result};
 use derive_builder::Builder;
@@ -29,7 +33,9 @@ use super::{
     agents, git_agent_environment::GitAgentEnvironment, running_agent::RunningAgent, tools,
 };
 
-pub type OnAgentBuildFn = Arc<dyn Fn(&mut AgentBuilder) + Send + Sync>;
+pub type OnAgentBuildFn = Arc<
+    dyn Fn(&mut AgentBuilder) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> + Send + Sync,
+>;
 
 /// Session represents the abstract state of an ongoing agent interaction (i.e. in a chat)
 ///
@@ -168,7 +174,7 @@ impl SessionBuilder {
         }?;
 
         if let Some(Some(on_agent_build)) = self.on_agent_build.take() {
-            on_agent_build(&mut builder);
+            on_agent_build(&mut builder).await?;
         }
 
         let active_agent = builder.build()?.into();
