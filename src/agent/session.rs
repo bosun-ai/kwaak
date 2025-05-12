@@ -95,7 +95,10 @@ impl Session {
 impl SessionBuilder {
     /// Starts a session
     #[tracing::instrument(skip_all)]
-    pub async fn start(&mut self, index: &impl Index) -> Result<RunningSession> {
+    pub async fn start(
+        &mut self,
+        index: &(impl Index + 'static + Clone),
+    ) -> Result<RunningSession> {
         let (running_session_tx, running_session_rx) = tokio::sync::mpsc::unbounded_channel();
 
         let session = Arc::new(
@@ -399,7 +402,7 @@ async fn generate_initial_context(
 pub fn available_builtin_tools(
     repository: &Arc<Repository>,
     agent_env: Option<&GitAgentEnvironment>,
-    index: &impl Index,
+    index: &(impl Index + 'static + Clone),
 ) -> Result<Vec<Box<dyn Tool>>> {
     let index = index.clone();
     let mut tools = vec![

@@ -68,11 +68,7 @@ impl DuckdbIndex {
 
 #[async_trait]
 impl Index for DuckdbIndex {
-    async fn query_repository(
-        &self,
-        repository: &Repository,
-        query: impl AsRef<str> + Send,
-    ) -> Result<String> {
+    async fn query_repository(&self, repository: &Repository, query: &str) -> Result<String> {
         let storage = self.get_duckdb(repository);
         query::query(repository, &storage, query).await
     }
