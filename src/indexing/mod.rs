@@ -37,3 +37,22 @@ pub trait Index: Send + Sync + std::fmt::Debug + Clone + 'static {
         responder: Option<Arc<dyn Responder>>,
     ) -> Result<()>;
 }
+
+#[async_trait]
+impl<I: Index> Index for Arc<I> {
+    async fn query_repository(
+        &self,
+        repository: &Repository,
+        query: impl AsRef<str> + Send,
+    ) -> Result<String> {
+        (**self).query_repository(repository, query).await
+    }
+
+    async fn index_repository(
+        &self,
+        repository: &Repository,
+        responder: Option<Arc<dyn Responder>>,
+    ) -> Result<()> {
+        (**self).index_repository(repository, responder).await
+    }
+}
