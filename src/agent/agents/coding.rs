@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::{Context as _, Result};
 use swiftide::{
-    agents::{system_prompt::SystemPrompt, Agent, AgentBuilder, DefaultContext},
+    agents::{Agent, AgentBuilder, DefaultContext, system_prompt::SystemPrompt},
     chat_completion::{self, ChatCompletion, Tool},
     prompt::Prompt,
     traits::{AgentContext, Command, SimplePrompt, ToolBox, ToolExecutor},
@@ -82,6 +82,7 @@ pub async fn build(
     let tx_2 = responder.clone();
     let tx_3 = responder.clone();
     let tx_4 = responder.clone();
+    let tx_5 = responder.clone();
 
     let tool_summarizer = ToolSummarizer::new(
         fast_query_provider,
@@ -155,6 +156,21 @@ pub async fn build(
                 Ok(())
             })
         })
+        .on_stop(move |_agent, stop_reason, _error| {
+            let responder = tx_5.clone();
+
+            let Some((tool_call, payload)) = stop_reason.as_feedback_required().map(|(t,p)| (t.clone(), p.cloned())) else {
+                return Box::pin(async { Ok(())})
+            };
+
+            Box::pin(
+                async move {
+                    responder.tool_feedback_requested(tool_call, payload).await;
+                    Ok(())
+
+                })
+        })
+
         .after_tool(tool_summarizer.summarize_hook())
         .after_each(move |agent| {
             let maybe_lint_fix_command = maybe_lint_fix_command.clone();
@@ -293,10 +309,12 @@ mod tests {
         repository.config_mut().endless_mode = true;
         let prompt = build_system_prompt(&repository).unwrap();
 
-        assert!(prompt
-            .render()
-            .unwrap()
-            .contains("You cannot ask for feedback and have to try to complete the given task"));
+        assert!(
+            prompt
+                .render()
+                .unwrap()
+                .contains("You cannot ask for feedback and have to try to complete the given task")
+        );
     }
 
     #[tokio::test]

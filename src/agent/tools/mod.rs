@@ -14,7 +14,7 @@ use swiftide::{
     chat_completion::{errors::ToolError, ToolOutput},
     traits::{AgentContext, Command},
 };
-use swiftide_macros::{tool, Tool};
+use swiftide::{tool, Tool};
 use tavily::Tavily;
 
 use crate::{

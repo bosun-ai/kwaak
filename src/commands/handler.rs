@@ -203,6 +203,38 @@ impl<'command, I: Index + Clone + 'static> CommandHandler<I> {
 
                 }?;
             }
+            Command::ToolFeedback {
+                tool_call,
+                feedback,
+            } => {
+                let Some(session) = self.find_agent_by_uuid(event.uuid()).await else {
+                    event
+                        .responder()
+                        .system_message("No agent found (yet), is it starting up?")
+                        .await;
+                    return Ok(());
+                };
+
+                // TODO: This might not work as expected if a session has multiple agents and the
+                // active agent did not request the feedback
+                session
+                    .active_agent()
+                    .agent
+                    .lock()
+                    .await
+                    .context()
+                    .feedback_received(tool_call, feedback)
+                    .await?;
+
+                let token = session.cancel_token().clone();
+
+                tokio::select! {
+                    () = token.cancelled() => Ok(()),
+                    result = session.run_agent() => result,
+
+                }?;
+            }
+
             Command::Quit => unreachable!("Quit should be handled earlier"),
         }
         // Sleep for a tiny bit to avoid racing with agent responses
