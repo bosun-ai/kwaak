@@ -9,6 +9,7 @@ use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
 use swiftide::integrations::treesitter::SupportedLanguages;
 
+use super::{CommandConfiguration, LLMConfiguration, LLMConfigurations};
 use super::{api_key::ApiKey, tools::Tools};
 use super::{
     defaults::{
@@ -17,7 +18,6 @@ use super::{
     },
     mcp::McpServer,
 };
-use super::{CommandConfiguration, LLMConfiguration, LLMConfigurations};
 
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -451,7 +451,7 @@ impl Config {
     pub fn enabled_tools(&self) -> Vec<&str> {
         self.tools
             .iter()
-            .filter(|(_, &enabled)| enabled)
+            .filter(|(_, enabled)| **enabled)
             .map(|(key, _)| key.as_str())
             .collect()
     }
@@ -461,7 +461,7 @@ impl Config {
     pub fn disabled_tools(&self) -> Vec<&str> {
         self.tools
             .iter()
-            .filter(|(_, &enabled)| !enabled)
+            .filter(|(_, enabled)| !*enabled)
             .map(|(key, _)| key.as_str())
             .collect()
     }

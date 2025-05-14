@@ -2,11 +2,11 @@
 use swiftide::traits::CommandError;
 
 use anyhow::Result;
+use swiftide::tool;
 use swiftide::{
     chat_completion::{errors::ToolError, ToolOutput},
     traits::{AgentContext, Command},
 };
-use swiftide_macros::tool;
 
 const REPLACE_LINES_DESCRIPTION: &str = "Replace lines in a file.
 
