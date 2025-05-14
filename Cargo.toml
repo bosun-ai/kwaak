@@ -164,9 +164,9 @@ duckdb = [
 # diffy = { git = "https://github.com/timonv/diffy", branch = "fix/debug-wrong-line" }
 # arrow = { version = "=53.2.0", optional = false }
 # arrow-arith = { version = "=53.2.0", optional = false }
-swiftide = { path = "../swiftide/swiftide" }
+swiftide = { git = "https://github.com/bosun-ai/swiftide", branch = "feat/hitl" }
 # swiftide-macros = { path = "../swiftide/swiftide-macros" }
-swiftide-core = { path = "../swiftide/swiftide-core" }
+swiftide-core = { git = "https://github.com/bosun-ai/swiftide", branch = "feat/hitl" }
 # swiftide-agents = { path = "../swiftide/swiftide-agents" }
 
 [workspace.metadata.cross.target.aarch64-unknown-linux-gnu]
