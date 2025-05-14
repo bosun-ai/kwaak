@@ -2,11 +2,11 @@ use std::{borrow::Cow, str::FromStr};
 
 use anyhow::{Context as _, Result};
 use diffy::Patch;
+use swiftide::tool;
 use swiftide::{
-    chat_completion::{errors::ToolError, ToolOutput},
+    chat_completion::{ToolOutput, errors::ToolError},
     traits::{AgentContext, Command},
 };
-use swiftide_macros::tool;
 
 const REPLACE_PATCH_DESCRIPTION: &str = "Replace content with a Unified format git patch.
 
@@ -40,6 +40,7 @@ async fn patch_file(
 ) -> Result<ToolOutput, ToolError> {
     let cmd = Command::ReadFile(file_name.into());
     let mut old_content = context
+        .executor()
         .exec_cmd(&cmd)
         .await
         .with_context(|| format!("Failed to read file {file_name}"))?
@@ -67,7 +68,7 @@ async fn patch_file(
         }
     };
     let cmd = Command::WriteFile(file_name.into(), patched);
-    let output = context.exec_cmd(&cmd).await?;
+    let output = context.executor().exec_cmd(&cmd).await?;
 
     tracing::debug!(output = ?output, "Patch applied");
 
@@ -196,7 +197,9 @@ fn rebuild_hunks(candidates: &[Candidate<'_>]) -> Vec<Hunk> {
             let (Some(existing_source), Some(new_source)) =
                 (&existing.header.fixed_source, &hunk.header.fixed_source)
             else {
-                tracing::warn!("Potential bad duplicate when rebuilding patch; could be a bug, please check the edit");
+                tracing::warn!(
+                    "Potential bad duplicate when rebuilding patch; could be a bug, please check the edit"
+                );
                 continue;
             };
 
@@ -711,7 +714,7 @@ mod tests {
         let hunk = rebuild_hunks(&candidates).first().unwrap().clone();
 
         assert_eq!(hunk.header.fixed_source.as_ref().unwrap().start, 641); // One less than
-                                                                           // in the source file
+        // in the source file
         assert_eq!(hunk.header.fixed_source.as_ref().unwrap().range, 7);
         assert_eq!(hunk.header.fixed_dest.as_ref().unwrap().start, 641);
         assert_eq!(hunk.header.fixed_dest.as_ref().unwrap().range, 9);
@@ -747,12 +750,14 @@ mod tests {
             assert_eq!(hunk.header.fixed_dest.as_ref().unwrap().range, dest.1);
         }
 
-        insta::assert_snapshot!(hunks
-            .iter()
-            .map(Hunk::render_updated)
-            .collect::<Result<Vec<_>>>()
-            .unwrap()
-            .join("\n"));
+        insta::assert_snapshot!(
+            hunks
+                .iter()
+                .map(Hunk::render_updated)
+                .collect::<Result<Vec<_>>>()
+                .unwrap()
+                .join("\n")
+        );
 
         let patch_str = rebuild_patch(&BAD_SINGLE_HUNK, &hunks).unwrap();
         println!("{patch_str}");

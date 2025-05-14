@@ -116,7 +116,8 @@ impl<'repository> GarbageCollector<'repository> {
 
         let prefix = self.repository.path();
         let last_cleaned_up_at = self.get_last_cleaned_up_at().await;
-        let modified_files = ignore::Walk::new(self.repository.path())
+
+        ignore::Walk::new(self.repository.path())
             .filter_map(Result::ok)
             .filter(|entry| entry.file_type().is_some_and(|ft| ft.is_file()))
             .filter(|entry| {
@@ -155,9 +156,7 @@ impl<'repository> GarbageCollector<'repository> {
             })
             .map(ignore::DirEntry::into_path)
             .map(|path| path.strip_prefix(prefix).unwrap().to_path_buf())
-            .collect::<Vec<_>>();
-
-        modified_files
+            .collect::<Vec<_>>()
     }
 
     async fn delete_files_from_index(&self, files: Vec<PathBuf>) -> Result<()> {
@@ -281,7 +280,7 @@ mod tests {
     use std::time::Duration;
 
     use swiftide::{
-        indexing::{transformers::metadata_qa_code, EmbeddedField, Node},
+        indexing::{EmbeddedField, Node, transformers::metadata_qa_code},
         traits::{NodeCache, Persist},
     };
 

@@ -68,7 +68,7 @@ pub async fn create_branch_name(
 
 #[cfg(test)]
 mod tests {
-    use swiftide_core::MockSimplePrompt;
+    use swiftide::traits::MockSimplePrompt;
 
     use crate::commands::MockResponder;
     use mockall::{predicate, PredicateBooleanExt};

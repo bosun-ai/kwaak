@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use derive_builder::Builder;
 use serde::Deserialize;
 use swiftide::{
-    chat_completion::{self, errors::ToolError, Tool, ToolOutput, ToolSpec},
+    chat_completion::{self, errors::ToolError, Tool, ToolCall, ToolOutput, ToolSpec},
     traits::AgentContext,
 };
 
@@ -55,9 +55,9 @@ impl Tool for DelegateAgent {
     async fn invoke(
         &self,
         agent_context: &dyn AgentContext,
-        raw_args: Option<&str>,
+        tool_call: &ToolCall,
     ) -> Result<ToolOutput, ToolError> {
-        let Some(args) = raw_args else {
+        let Some(args) = tool_call.args() else {
             return Err(ToolError::MissingArguments(format!(
                 "No arguments provided for {}",
                 self.name()

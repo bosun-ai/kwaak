@@ -10,11 +10,11 @@ use std::sync::Arc;
 use swiftide::traits::CommandError;
 
 use anyhow::{Context as _, Result};
+use swiftide::{Tool, tool};
 use swiftide::{
-    chat_completion::{errors::ToolError, ToolOutput},
+    chat_completion::{ToolOutput, errors::ToolError},
     traits::{AgentContext, Command},
 };
-use swiftide_macros::{tool, Tool};
 use tavily::Tavily;
 
 use crate::{
@@ -44,7 +44,12 @@ pub async fn shell_command(context: &dyn AgentContext, cmd: &str) -> Result<Tool
                 .into(),
         );
     }
-    let output = accept_non_zero_exit(context.exec_cmd(&Command::Shell(cmd.into())).await)?;
+    let output = accept_non_zero_exit(
+        context
+            .executor()
+            .exec_cmd(&Command::Shell(cmd.into()))
+            .await,
+    )?;
     Ok(output.into())
 }
 
@@ -59,7 +64,7 @@ pub async fn read_file(
     let cmd = Command::ReadFile(file_name.into());
 
     // i.e. if the file doesn't exist, just forward that message
-    let output = accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
+    let output = accept_non_zero_exit(context.executor().exec_cmd(&cmd).await)?;
 
     Ok(output.into())
 }
@@ -76,7 +81,7 @@ pub async fn read_file_with_line_numbers(
     let cmd = Command::ReadFile(file_name.into());
 
     // i.e. if the file doesn't exist, just forward that message
-    let output = accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
+    let output = accept_non_zero_exit(context.executor().exec_cmd(&cmd).await)?;
 
     let lines = output
         .output
@@ -99,7 +104,7 @@ pub async fn write_file(
 ) -> Result<ToolOutput, ToolError> {
     let cmd = Command::WriteFile(file_name.into(), content.into());
 
-    context.exec_cmd(&cmd).await?;
+    context.executor().exec_cmd(&cmd).await?;
 
     let success_message = format!("File written successfully to {file_name}");
 
@@ -115,7 +120,7 @@ pub async fn search_file(
     file_name: &str,
 ) -> Result<ToolOutput, ToolError> {
     let cmd = Command::Shell(format!("fd -E '.git/*' -iH --full-path '{file_name}'"));
-    let output = accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
+    let output = accept_non_zero_exit(context.executor().exec_cmd(&cmd).await)?;
 
     Ok(output.into())
 }
@@ -133,7 +138,7 @@ pub async fn git(context: &dyn AgentContext, command: &str) -> Result<ToolOutput
         );
     }
     let cmd = Command::Shell(cmd);
-    let output = accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
+    let output = accept_non_zero_exit(context.executor().exec_cmd(&cmd).await)?;
 
     Ok(output.into())
 }
@@ -163,7 +168,7 @@ impl ResetFile {
             start_ref = self.start_ref
         ));
 
-        let output = accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
+        let output = accept_non_zero_exit(context.executor().exec_cmd(&cmd).await)?;
 
         Ok(output.into())
     }
@@ -178,7 +183,7 @@ impl ResetFile {
 )]
 pub async fn search_code(context: &dyn AgentContext, query: &str) -> Result<ToolOutput, ToolError> {
     let cmd = Command::Shell(format!("rg -g '!.git' -i. -F '{query}'"));
-    let output = accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
+    let output = accept_non_zero_exit(context.executor().exec_cmd(&cmd).await)?;
     Ok(output.into())
 }
 
@@ -242,18 +247,18 @@ impl CreateOrUpdatePullRequest {
     ) -> Result<ToolOutput, ToolError> {
         // Create a new branch
         let cmd = Command::Shell("git rev-parse --abbrev-ref HEAD".to_string());
-        let branch_name = accept_non_zero_exit(context.exec_cmd(&cmd).await)?
+        let branch_name = accept_non_zero_exit(context.executor().exec_cmd(&cmd).await)?
             .to_string()
             .trim()
             .to_string();
 
         let cmd = Command::Shell(format!("git add . && git commit -m '{title}'"));
-        accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
+        accept_non_zero_exit(context.executor().exec_cmd(&cmd).await)?;
 
         // Commit changes
         // Push the current branch first
         let cmd = Command::Shell("git push origin HEAD".to_string());
-        accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
+        accept_non_zero_exit(context.executor().exec_cmd(&cmd).await)?;
 
         // Any errors we just forward to the llm at this point
         let response = self
@@ -263,7 +268,7 @@ impl CreateOrUpdatePullRequest {
                 &self.github_session.main_branch(),
                 title,
                 pull_request_body,
-                &context.history().await
+                &context.history().await?
             )
             .await
             .map(
@@ -299,7 +304,7 @@ impl RunTests {
 
     async fn run_tests(&self, context: &dyn AgentContext) -> Result<ToolOutput, ToolError> {
         let cmd = Command::Shell(self.test_command.clone());
-        let output = accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
+        let output = accept_non_zero_exit(context.executor().exec_cmd(&cmd).await)?;
 
         Ok(output.into())
     }
@@ -322,7 +327,7 @@ impl RunCoverage {
 
     async fn run_coverage(&self, context: &dyn AgentContext) -> Result<ToolOutput, ToolError> {
         let cmd = Command::Shell(self.coverage_command.clone());
-        let output = accept_non_zero_exit(context.exec_cmd(&cmd).await)?;
+        let output = accept_non_zero_exit(context.executor().exec_cmd(&cmd).await)?;
 
         Ok(output.into())
     }
@@ -474,7 +479,7 @@ pub async fn add_lines(
     // Read the file content
     let cmd = Command::ReadFile(file_name.into());
 
-    let file_content = match context.exec_cmd(&cmd).await {
+    let file_content = match context.executor().exec_cmd(&cmd).await {
         Ok(output) => output.output,
         Err(CommandError::NonZeroExit(output, ..)) => {
             return Ok(output.into());
@@ -502,7 +507,7 @@ pub async fn add_lines(
     lines.insert(start_line, content);
 
     let write_cmd = Command::WriteFile(file_name.into(), lines.join("\n"));
-    context.exec_cmd(&write_cmd).await?;
+    context.executor().exec_cmd(&write_cmd).await?;
 
     Ok(format!("Successfully added content to {file_name} at line {start_line}. Before making new edits, you MUST read the file again, as the line numbers WILL have changed.").into())
 }

@@ -11,7 +11,7 @@
 //! and the current diff
 //!
 //! The agent completes messages since the last summary.
-use std::sync::{atomic::AtomicUsize, Arc};
+use std::sync::{Arc, atomic::AtomicUsize};
 
 use swiftide::{
     agents::hooks::AfterEachFn,
@@ -74,7 +74,7 @@ impl ConversationSummarizer {
             Box::pin(
                 async move {
                     // Search for the last user message before the first agent message
-                    let history = agent.context().history().await;
+                    let history = agent.context().history().await?;
                     let initial_user_message = history
                         .iter()
                         .enumerate()
@@ -88,7 +88,7 @@ impl ConversationSummarizer {
 
                     let current_diff = accept_non_zero_exit(
                         agent
-                            .context()
+                            .context().executor()
                             .exec_cmd(&Command::shell(format!(
                                 "git diff {git_start_sha} --no-color"
                             )))
@@ -99,7 +99,7 @@ impl ConversationSummarizer {
                     let prompt = prompt.with_context_value("diff", current_diff).render()?;
 
                     let mut messages =
-                        filter_messages_since_summary(agent.context().history().await);
+                        filter_messages_since_summary(agent.context().history().await?);
                     messages.push(ChatMessage::new_user(prompt));
 
                     let mut summary = llm.complete(&messages.into()).await?;
@@ -123,7 +123,7 @@ impl ConversationSummarizer {
                         agent
                             .context()
                             .add_message(ChatMessage::new_summary(summary))
-                            .await;
+                            .await?;
                     } else {
                         tracing::error!("No summary generated, this is a bug");
                     }
@@ -277,7 +277,7 @@ fn filter_messages_since_summary(messages: Vec<ChatMessage>) -> Vec<ChatMessage>
 
 #[cfg(test)]
 mod tests {
-    use crate::test_utils::{test_agent_for_repository, test_repository, NoopLLM};
+    use crate::test_utils::{NoopLLM, test_agent_for_repository, test_repository};
 
     use super::*;
     use swiftide::chat_completion::{ChatMessage, ToolCallBuilder};
@@ -416,7 +416,8 @@ mod tests {
                 ChatMessage::new_assistant(Some("Assistant message 1"), None),
                 ChatMessage::new_user("User message 2"),
             ])
-            .await;
+            .await
+            .unwrap();
 
         // Create our hook
         let summarizer =
@@ -430,7 +431,7 @@ mod tests {
         summarizer.summarize_hook()(&agent).await.unwrap();
 
         // Assert that the summary was added
-        let history = agent.context().history().await;
+        let history = agent.context().history().await.unwrap();
 
         assert!(
             history.iter().any(ChatMessage::is_summary),
@@ -464,7 +465,8 @@ mod tests {
                 ChatMessage::new_assistant(Some("Assistant message 1"), None),
                 ChatMessage::new_user("User message 2"),
             ])
-            .await;
+            .await
+            .unwrap();
 
         // Create our hook
         let summarizer =
@@ -474,7 +476,7 @@ mod tests {
         summarizer.summarize_hook()(&agent).await.unwrap();
 
         // Assert that the summary was not
-        let history = agent.context().history().await;
+        let history = agent.context().history().await.unwrap();
 
         assert!(
             !history.iter().any(ChatMessage::is_summary),

@@ -59,6 +59,7 @@ impl<'a> ToolSummarizer<'a> {
                     async move {
                         let current_diff = accept_non_zero_exit(
                             agent.context()
+                                .executor()
                                 .exec_cmd(&Command::shell(format!(
                                     "git diff {git_start_sha} --no-color"
                                 )))

@@ -2,11 +2,11 @@
 use swiftide::traits::CommandError;
 
 use anyhow::Result;
+use swiftide::tool;
 use swiftide::{
-    chat_completion::{errors::ToolError, ToolOutput},
+    chat_completion::{ToolOutput, errors::ToolError},
     traits::{AgentContext, Command},
 };
-use swiftide_macros::tool;
 
 const REPLACE_LINES_DESCRIPTION: &str = "Replace lines in a file.
 
@@ -103,7 +103,7 @@ pub async fn replace_lines(
 ) -> Result<ToolOutput, ToolError> {
     let cmd = Command::ReadFile(file_name.into());
 
-    let file_content = match context.exec_cmd(&cmd).await {
+    let file_content = match context.executor().exec_cmd(&cmd).await {
         Ok(output) => output.output,
         Err(CommandError::NonZeroExit(output, ..)) => {
             return Ok(output.into());
@@ -140,7 +140,7 @@ pub async fn replace_lines(
     }
 
     let write_cmd = Command::WriteFile(file_name.into(), new_file_content.unwrap());
-    context.exec_cmd(&write_cmd).await?;
+    context.executor().exec_cmd(&write_cmd).await?;
 
     Ok(format!("Successfully replaced content in {file_name}. Before making new edits, you MUST read the file again, as the line numbers WILL have changed.").into())
 }

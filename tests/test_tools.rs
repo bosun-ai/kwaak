@@ -3,15 +3,16 @@ use std::sync::Arc;
 use kwaak::agent::tools;
 use serde_json::json;
 use swiftide::agents::{tools::local_executor::LocalExecutor, DefaultContext};
+use swiftide::chat_completion::ToolCall;
 use swiftide::traits::{AgentContext, ToolExecutor};
 use tempfile::tempdir;
 
 macro_rules! invoke {
     ($tool:expr, $context:expr, $json:expr) => {{
-        let json = $json.to_string();
+        let tool_call = ToolCall::builder().args($json.to_string()).build().unwrap();
 
         $tool
-            .invoke($context as &dyn AgentContext, Some(&json))
+            .invoke($context as &dyn AgentContext, &tool_call)
             .await
             .unwrap()
             .content()
@@ -167,8 +168,12 @@ async fn test_edit_file() {
         "content": "one\nline"
     });
 
+    let tool_call = ToolCall::builder()
+        .args(tool_args.to_string())
+        .build()
+        .unwrap();
     let tool_response = tool
-        .invoke(&context as &dyn AgentContext, Some(&tool_args.to_string()))
+        .invoke(&context as &dyn AgentContext, &tool_call)
         .await
         .unwrap();
 

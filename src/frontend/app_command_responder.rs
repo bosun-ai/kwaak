@@ -53,6 +53,10 @@ impl AppCommandResponder {
                         UIEvent::ChatMessage(chat_id, ChatMessage::new_system(&msg))
                     }
                     Response::ChatChunk(chunk) => UIEvent::ChatMessage(chat_id, chunk.into()),
+                    Response::ToolFeedbackRequested(..) => {
+                        tracing::error!("Received tool feedback request, this should not happen and is not implemented in the UI");
+                        continue;
+                    }
                 };
 
                 if let Err(err) = ui_tx.send(ui_event) {

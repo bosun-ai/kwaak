@@ -40,7 +40,9 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use swiftide::{
-    agents::DefaultContext, chat_completion::Tool, chat_completion::ToolBox, traits::AgentContext,
+    agents::DefaultContext,
+    chat_completion::{Tool, ToolBox, ToolCall},
+    traits::AgentContext,
 };
 use swiftide_docker_executor::DockerExecutor;
 use tokio::{fs, sync::mpsc};
@@ -217,8 +219,12 @@ async fn test_tool(
     let agent_context = DefaultContext::from_executor(running_executor);
 
     println!("Invoking tool: {tool_name}");
+    let tool_call = ToolCall::builder()
+        .name(tool_name)
+        .maybe_args(tool_args.map(str::to_string))
+        .build()?;
     let output = tool
-        .invoke(&agent_context as &dyn AgentContext, tool_args)
+        .invoke(&agent_context as &dyn AgentContext, &tool_call)
         .await?;
 
     println!("{output}");

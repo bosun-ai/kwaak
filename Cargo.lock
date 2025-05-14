@@ -2047,15 +2047,16 @@ dependencies = [
 
 [[package]]
 name = "fastembed"
-version = "4.8.0"
+version = "4.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d2b9796de3fccb3fd73ccbb23744f287033b8b9362f236a29b88ab2c02e8bdb"
+checksum = "04c269a76bfc6cea69553b7d040acb16c793119cebd97c756d21e08d0f075ff8"
 dependencies = [
  "anyhow",
  "hf-hub",
  "image",
  "ndarray",
  "ort",
+ "ort-sys",
  "rayon",
  "serde_json",
  "tokenizers",
@@ -2516,15 +2517,15 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "hermit-abi"
-version = "0.3.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
-
-[[package]]
-name = "hermit-abi"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fbf6a919d6cf397374f7dfeeea91d974c7c0a7221d0d0f4f20d859d329e53fcc"
+
+[[package]]
+name = "hermit-abi"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f154ce46856750ed433c8649605bf7ed2de3bc35fd9d2a9f30cddd873c80cb08"
 
 [[package]]
 name = "hex"
@@ -3349,9 +3350,7 @@ dependencies = [
  "strum 0.27.1",
  "strum_macros 0.27.1",
  "swiftide",
- "swiftide-core",
  "swiftide-docker-executor",
- "swiftide-macros",
  "tavily",
  "tempfile",
  "tera",
@@ -3998,11 +3997,11 @@ dependencies = [
 
 [[package]]
 name = "num_cpus"
-version = "1.16.0"
+version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4161fcb6d602d4d2081af7c3a45852d875a03dd337a6bfdd6e06407b61342a43"
+checksum = "91df4bbde75afed763b708b7eee1e8e7651e02d97f6d5dd763e89367e957b23b"
 dependencies = [
- "hermit-abi 0.3.9",
+ "hermit-abi 0.5.1",
  "libc",
 ]
 
@@ -6287,8 +6286,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "swiftide"
 version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51694189b521d2cc729c4632cb0df6332fadc2089af708074ea9d9e33295b48c"
+source = "git+https://github.com/bosun-ai/swiftide#254bd3a32ffbd4d06abd6a4f3950a2b8556dc310"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6306,8 +6304,7 @@ dependencies = [
 [[package]]
 name = "swiftide-agents"
 version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc86d9e171eecdfc5da067a27b949b922c9dcb59605c5f7c7a8dafaac47a8a46"
+source = "git+https://github.com/bosun-ai/swiftide#254bd3a32ffbd4d06abd6a4f3950a2b8556dc310"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6331,8 +6328,7 @@ dependencies = [
 [[package]]
 name = "swiftide-core"
 version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31fbbac65f0ffa52a37660d9590ac0e3b3458e70e654b3bffb7ec56b8c2a5e02"
+source = "git+https://github.com/bosun-ai/swiftide#254bd3a32ffbd4d06abd6a4f3950a2b8556dc310"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6388,8 +6384,7 @@ dependencies = [
 [[package]]
 name = "swiftide-indexing"
 version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f0e98ab8c3162867aac9b2f667d2282db5b19c754dda493323cc82a599b9faa"
+source = "git+https://github.com/bosun-ai/swiftide#254bd3a32ffbd4d06abd6a4f3950a2b8556dc310"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6415,8 +6410,7 @@ dependencies = [
 [[package]]
 name = "swiftide-integrations"
 version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5a9a80dde0e37cd72fdf42823358222f7c159124c73698b24c8a1cc55c63550"
+source = "git+https://github.com/bosun-ai/swiftide#254bd3a32ffbd4d06abd6a4f3950a2b8556dc310"
 dependencies = [
  "anyhow",
  "async-anthropic",
@@ -6461,8 +6455,7 @@ dependencies = [
 [[package]]
 name = "swiftide-macros"
 version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c44a78998a51377057d342db5c91fb37fcf07f4e2036cecb9beea622a282d5d6"
+source = "git+https://github.com/bosun-ai/swiftide#254bd3a32ffbd4d06abd6a4f3950a2b8556dc310"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6479,8 +6472,7 @@ dependencies = [
 [[package]]
 name = "swiftide-query"
 version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6bd7938a7a542a73e52eecfa37ba69ce254427ff92de846d767d12440799b7e8"
+source = "git+https://github.com/bosun-ai/swiftide#254bd3a32ffbd4d06abd6a4f3950a2b8556dc310"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7694,13 +7686,15 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "uuid"
-version = "1.16.0"
+version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "458f7a779bf54acc9f347480ac654f68407d3aab21269a6e3c9f922acd9e2da9"
+checksum = "3cf4199d1e5d15ddd86a694e4d0dffa9c323ce759fea589f00fef9d81cc1931d"
 dependencies = [
  "getrandom 0.3.2",
+ "js-sys",
  "md-5",
  "serde",
+ "wasm-bindgen",
 ]
 
 [[package]]
