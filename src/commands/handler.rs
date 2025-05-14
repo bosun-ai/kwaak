@@ -8,14 +8,8 @@ use tokio::{
 use tokio_util::task::AbortOnDropHandle;
 use uuid::Uuid;
 
-use crate::indexing::Index;
-use crate::{
-    agent::{self, session::RunningSession},
-    frontend::App,
-    git,
-    repository::Repository,
-    util::accept_non_zero_exit,
-};
+use crate::{agent::session::RunningSession, frontend::App, git, util::accept_non_zero_exit};
+use crate::{agent::session::Session, indexing::Index};
 
 use super::{
     command::{Command, CommandEvent},
@@ -120,15 +114,14 @@ impl<'command, I: Index + Clone + 'static> CommandHandler<I> {
         #[allow(clippy::match_wildcard_for_single_variants)]
         match cmd {
             Command::StopAgent => {
-                self.stop_agent(event.uuid(), event.clone_responder())
-                    .await?;
+                self.stop_agent(event.uuid(), event.responder()).await?;
             }
             Command::IndexRepository => {
                 let Some(repository) = repository else {
                     bail!("`IndexRepository` expects a repository")
                 };
                 index
-                    .index_repository(repository, Some(event.clone_responder()))
+                    .index_repository(repository, Some(Arc::clone(event.responder())))
                     .await?;
             }
             Command::ShowConfig => {
@@ -141,18 +134,8 @@ impl<'command, I: Index + Clone + 'static> CommandHandler<I> {
                     .await;
             }
             Command::Chat { message } => {
-                let Some(repository) = repository else {
-                    bail!("`Chat` expects a repository")
-                };
                 let message = message.clone();
-                let session = self
-                    .find_or_start_agent_by_uuid(
-                        event.uuid(),
-                        &message,
-                        &repository,
-                        event.clone_responder(),
-                    )
-                    .await?;
+                let session = self.find_or_start_agent_by_uuid(&event, &message).await?;
                 let token = session.cancel_token().clone();
 
                 tokio::select! {
@@ -245,22 +228,34 @@ impl<'command, I: Index + Clone + 'static> CommandHandler<I> {
 
     async fn find_or_start_agent_by_uuid(
         &self,
-        uuid: Uuid,
-        query: &str,
-        repository: &Repository,
-        responder: Arc<dyn Responder>,
+        event: &CommandEvent,
+        message: &str,
     ) -> Result<RunningSession> {
-        if let Some(session) = self.agent_sessions.lock().await.get_mut(&uuid) {
+        if let Some(session) = self.agent_sessions.lock().await.get_mut(&event.uuid()) {
             session.reset_cancel_token();
 
             return Ok(session.clone());
         }
 
-        let running_agent =
-            agent::start_session(uuid, repository, &self.index, query, responder).await?;
-        let cloned = running_agent.clone();
+        let Some(repository) = event.repository() else {
+            bail!("`Chat` expects a repository")
+        };
 
-        self.agent_sessions.lock().await.insert(uuid, running_agent);
+        let session = Session::builder()
+            .session_id(event.uuid())
+            .repository(Arc::clone(repository))
+            .default_responder(Arc::clone(event.responder()))
+            .initial_query(message)
+            .on_agent_build(event.on_agent_build().map(Arc::clone))
+            .start(&self.index)
+            .await?;
+
+        let cloned = session.clone();
+
+        self.agent_sessions
+            .lock()
+            .await
+            .insert(event.uuid(), session);
 
         Ok(cloned)
     }
@@ -272,7 +267,7 @@ impl<'command, I: Index + Clone + 'static> CommandHandler<I> {
         None
     }
 
-    async fn stop_agent(&self, uuid: Uuid, responder: Arc<dyn Responder>) -> Result<()> {
+    async fn stop_agent(&self, uuid: Uuid, responder: &dyn Responder) -> Result<()> {
         let lock = self.agent_sessions.lock().await;
         let Some(session) = lock.get(&uuid) else {
             responder

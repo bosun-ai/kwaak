@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use dyn_clone::DynClone;
 pub use query::build_query_pipeline;
 pub use query::query;
 pub use repository::index_repository;
@@ -24,16 +25,42 @@ mod garbage_collection;
 ///
 /// Implementors of index are expected to be owned and cheap to clone
 #[async_trait]
-pub trait Index: Send + Sync + std::fmt::Debug + Clone + 'static {
-    async fn query_repository(
-        &self,
-        repository: &Repository,
-        query: impl AsRef<str> + Send,
-    ) -> Result<String>;
+pub trait Index: Send + Sync + std::fmt::Debug + DynClone {
+    async fn query_repository(&self, repository: &Repository, query: &str) -> Result<String>;
 
     async fn index_repository(
         &self,
         repository: &Repository,
         responder: Option<Arc<dyn Responder>>,
     ) -> Result<()>;
+}
+
+#[async_trait]
+impl<I: Index> Index for Arc<I> {
+    async fn query_repository(&self, repository: &Repository, query: &str) -> Result<String> {
+        (**self).query_repository(repository, query).await
+    }
+
+    async fn index_repository(
+        &self,
+        repository: &Repository,
+        responder: Option<Arc<dyn Responder>>,
+    ) -> Result<()> {
+        (**self).index_repository(repository, responder).await
+    }
+}
+
+#[async_trait]
+impl Index for Arc<dyn Index> {
+    async fn query_repository(&self, repository: &Repository, query: &str) -> Result<String> {
+        (**self).query_repository(repository, query).await
+    }
+
+    async fn index_repository(
+        &self,
+        repository: &Repository,
+        responder: Option<Arc<dyn Responder>>,
+    ) -> Result<()> {
+        (**self).index_repository(repository, responder).await
+    }
 }
