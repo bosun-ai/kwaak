@@ -71,7 +71,7 @@ tavily = "2.0.3"
 regex = "1.11.1"
 clap = { version = "4.5.38", features = ["derive"] }
 tera = "1.20.0"
-rust-embed = { version = "8.7.0", features = ["debug-embed"] }
+rust-embed = { version = "8.7.2", features = ["debug-embed"] }
 ratatui-splash-screen = "0.1.4"
 reqwest = { version = "0.12.12", features = [
   "rustls-tls",
@@ -80,7 +80,7 @@ reqwest = { version = "0.12.12", features = [
   "macos-system-configuration",
 ], default-features = false }
 num_cpus = "1.16.0"
-htmd = "0.2.1"
+htmd = "0.2.2"
 ansi-to-tui = "7.0.0"
 tempfile = { version = "3.20.0" }
 backoff = "0.4.0"
