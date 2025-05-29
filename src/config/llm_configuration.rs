@@ -79,8 +79,7 @@ pub enum LLMConfiguration {
         prompt_model: String,
     },
     FastEmbed {
-        // TODO: Currently we only support the default. There is a PR open that adds
-        // serialize/deserialize to all models, making a proper setup a lot easier.
+        #[serde(default)]
         embedding_model: FastembedModel,
     },
     Anthropic {
@@ -289,7 +288,7 @@ pub enum OpenAIEmbeddingModel {
 
 impl LLMConfiguration {
     #[allow(dead_code, reason = "Not used if duckdb is not enabled")]
-    pub(crate) fn vector_size(&self) -> i32 {
+    pub fn vector_size(&self) -> i32 {
         match self {
             LLMConfiguration::OpenAI {
                 embedding_model, ..
