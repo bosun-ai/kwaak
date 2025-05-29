@@ -2,11 +2,11 @@ use std::{borrow::Cow, str::FromStr};
 
 use anyhow::{Context as _, Result};
 use diffy::Patch;
+use swiftide::tool;
 use swiftide::{
     chat_completion::{errors::ToolError, ToolOutput},
     traits::{AgentContext, Command},
 };
-use swiftide_macros::tool;
 
 const REPLACE_PATCH_DESCRIPTION: &str = "Replace content with a Unified format git patch.
 
