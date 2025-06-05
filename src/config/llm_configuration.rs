@@ -122,6 +122,9 @@ pub enum AnthropicModel {
     #[serde(rename = "claude-3-7-sonnet-latest")]
     #[default]
     Clause37Sonnet,
+    #[strum(serialize = "claude-sonnet-4-latest")]
+    #[serde(rename = "claude-sonnet-4-latest")]
+    Clause40Sonnet,
 }
 
 #[derive(Debug, Clone)]
@@ -254,6 +257,9 @@ pub enum OpenAIPromptModel {
     #[strum(serialize = "o3-mini")]
     #[serde(rename = "o3-mini")]
     O3Mini,
+    #[strum(serialize = "o4-mini")]
+    #[serde(rename = "o4-mini")]
+    O4Mini,
     #[strum(serialize = "gpt-4.1")]
     #[serde(rename = "gpt-4.1")]
     GPT41,
