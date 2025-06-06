@@ -7,7 +7,7 @@ use mockall::mock;
 use serde::{Deserialize, Serialize};
 use swiftide::{
     agents::Agent,
-    chat_completion::{self, ChatCompletionResponse},
+    chat_completion::{self, ChatCompletionResponse, ToolCall},
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -26,6 +26,9 @@ pub enum Response {
     Completed,
     /// A streamed chunk of a chat message. Keeps it simple now to just return the updated string
     ChatChunk(chat_completion::ChatCompletionResponse),
+
+    /// A request for feedback is requested
+    ToolFeedbackRequested(ToolCall, Option<serde_json::Value>),
 }
 
 /// A responder reacts to updates from agents and other updates from commands
@@ -74,6 +77,15 @@ pub trait Responder: std::fmt::Debug + Send + Sync + DynClone + 'static {
     async fn completion_chunk(&self, completion: ChatCompletionResponse) {
         self.send(Response::ChatChunk(completion)).await;
     }
+
+    async fn tool_feedback_requested(
+        &self,
+        tool_call: ToolCall,
+        payload: Option<serde_json::Value>,
+    ) {
+        self.send(Response::ToolFeedbackRequested(tool_call, payload))
+            .await;
+    }
 }
 
 dyn_clone::clone_trait_object!(Responder);
@@ -91,6 +103,11 @@ mock! {
         async fn update(&self, state: &str);
         async fn rename_chat(&self, name: &str);
         async fn rename_branch(&self, name: &str);
+        async fn tool_feedback_requested(
+            &self,
+            tool_call: ToolCall,
+            payload: Option<serde_json::Value>,
+        );
     }
 
     impl Clone for Responder {
@@ -131,6 +148,14 @@ impl Responder for Arc<dyn Responder> {
     async fn rename_branch(&self, branch_name: &str) {
         (**self).rename_branch(branch_name).await;
     }
+
+    async fn tool_feedback_requested(
+        &self,
+        tool_call: ToolCall,
+        payload: Option<serde_json::Value>,
+    ) {
+        (**self).tool_feedback_requested(tool_call, payload).await;
+    }
 }
 
 #[async_trait]
@@ -157,6 +182,14 @@ impl Responder for Box<dyn Responder> {
 
     async fn rename_branch(&self, branch_name: &str) {
         (**self).rename_branch(branch_name).await;
+    }
+
+    async fn tool_feedback_requested(
+        &self,
+        tool_call: ToolCall,
+        payload: Option<serde_json::Value>,
+    ) {
+        (**self).tool_feedback_requested(tool_call, payload).await;
     }
 }
 
