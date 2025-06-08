@@ -11,6 +11,7 @@ use swiftide::traits::{NodeCache, Persist, SimplePrompt};
 
 #[cfg(feature = "duckdb")]
 use super::garbage_collection::GarbageCollector;
+use super::multi_language_chunker::MultiLanguageChunker;
 use super::progress_updater::ProgressUpdater;
 
 const CODE_CHUNK_RANGE: std::ops::Range<usize> = 100..2048;
@@ -35,7 +36,7 @@ where
     garbage_collect(&updater, &repository).await?;
 
     updater.send_update("Starting to index your code ...");
-    let mut extensions = repository.config().language.file_extensions().to_vec();
+    let mut extensions = repository.config().language_extensions();
     extensions.push("md");
 
     let loader = loaders::FileLoader::new(repository.path()).with_extensions(&extensions);
@@ -62,8 +63,8 @@ where
         });
 
     code = code
-        .then_chunk(transformers::ChunkCode::try_for_language_and_chunk_size(
-            repository.config().language,
+        .then_chunk(MultiLanguageChunker::try_for_languages_and_chunk_size(
+            &repository.config().languages,
             CODE_CHUNK_RANGE,
         )?)
         .then(updater.count_total_fn())

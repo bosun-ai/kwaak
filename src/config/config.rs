@@ -6,7 +6,7 @@ use std::{
 };
 
 use anyhow::{Context as _, Result};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use swiftide::integrations::treesitter::SupportedLanguages;
 
 use super::{api_key::ApiKey, tools::Tools};
@@ -24,7 +24,8 @@ use super::{CommandConfiguration, LLMConfiguration, LLMConfigurations};
 pub struct Config {
     #[serde(default = "default_project_name")]
     pub project_name: String,
-    pub language: SupportedLanguages,
+    #[serde(alias = "language", deserialize_with = "deserialize_languages")]
+    pub languages: Vec<SupportedLanguages>,
     pub llm: Box<LLMConfigurations>,
     pub commands: CommandConfiguration,
     #[serde(default = "default_cache_dir")]
@@ -155,6 +156,24 @@ pub struct Config {
     pub mcp: Option<Vec<McpServer>>,
 }
 
+fn deserialize_languages<'de, D>(deserializer: D) -> Result<Vec<SupportedLanguages>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Helper {
+        Single(SupportedLanguages),
+        Multiple(Vec<SupportedLanguages>),
+    }
+
+    let helper = Helper::deserialize(deserializer)?;
+
+    match helper {
+        Helper::Single(lang) => Ok(vec![lang]),
+        Helper::Multiple(langs) => Ok(langs),
+    }
+}
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct UIConfig {
@@ -336,6 +355,17 @@ impl Config {
             .map_err(Into::into)
             .and_then(Config::fill_llm_api_keys)
             .map(Config::add_project_name_to_paths)
+    }
+
+    #[must_use]
+    pub fn language_extensions(&self) -> Vec<&str> {
+        let mut extensions = vec![];
+
+        for lang in &self.languages {
+            extensions.extend(lang.file_extensions());
+        }
+
+        extensions
     }
 
     // Seeds the api keys into the LLM configurations
@@ -563,7 +593,7 @@ mod tests {
             "#;
 
         let config: Config = Config::from_str(toml).unwrap();
-        assert_eq!(config.language, SupportedLanguages::Rust);
+        assert_eq!(config.languages, vec![SupportedLanguages::Rust]);
 
         if let LLMConfigurations {
             indexing,
@@ -740,5 +770,41 @@ mod tests {
         assert!(config.disabled_tools().contains(&"write_file"));
         assert!(config.enabled_tools().contains(&"run_tests"));
         assert_eq!(config.enabled_tools().len(), 1);
+    }
+
+    #[test]
+    fn test_multiple_languages() {
+        let toml = r#"
+            languages = ["rust", "python"]
+
+            [commands]
+            test = "cargo test"
+            coverage = "cargo tarpaulin"
+
+            [git]
+            owner = "bosun-ai"
+            repository = "kwaak"
+
+            [llm.indexing]
+            provider = "OpenAI"
+            api_key = "text:test-key"
+            prompt_model = "gpt-4o-mini"
+
+            [llm.query]
+            provider = "OpenAI"
+            api_key = "text:other-test-key"
+            prompt_model = "gpt-4o-mini"
+
+            [llm.embedding]
+            provider = "OpenAI"
+            api_key = "text:other-test-key"
+            embedding_model = "text-embedding-3-small"
+        "#;
+
+        let config: Config = Config::from_str(toml).unwrap();
+        assert_eq!(
+            config.languages,
+            vec![SupportedLanguages::Rust, SupportedLanguages::Python]
+        );
     }
 }
