@@ -135,22 +135,23 @@ impl GithubSession {
 
     /// Retrieves the `kwaak.toml` configuration file from the repository
     pub async fn get_config(&self) -> Result<Config> {
-        let mut content = self
-            .octocrab
+        self.get_file("kwaak.toml").await?.parse()
+    }
+
+    /// Retrieves a file from the repository
+    pub async fn get_file(&self, path: &str) -> Result<String> {
+        self.octocrab
             .repos(&self.git_owner, &self.git_repository)
             .get_content()
-            .path("kwaak.toml")
+            .path(path)
             .r#ref(&self.git_main_branch)
             .send()
             .await
-            .context("Failed to get repository config")?;
-
-        content
+            .context("Failed to get file from repository")?
             .take_items()
             .first()
             .and_then(Content::decoded_content)
-            .context("Could not find `kwaak.toml` in repository")?
-            .parse()
+            .with_context(|| format!("Could not find file {path} in repository"))
     }
 
     /// Adds the github token to the repository url
