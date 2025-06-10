@@ -5,15 +5,25 @@ use std::fmt::Write as _;
 use std::sync::Mutex;
 
 use anyhow::{Context, Result};
-use octocrab::{models::pulls::PullRequest, Octocrab, Page};
+use base64::{prelude::BASE64_STANDARD, Engine as _};
+use jsonwebtoken::EncodingKey;
+use octocrab::{
+    models::{pulls::PullRequest, repos::Content},
+    params::apps::CreateInstallationAccessToken,
+    Octocrab, Page,
+};
 use reqwest::header::{HeaderMap, ACCEPT};
-use secrecy::SecretString;
+use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use swiftide::chat_completion::ChatMessage;
 use url::Url;
 
-use crate::{config::ApiKey, repository::Repository, templates::Templates};
+use crate::{
+    config::{defaults::extract_owner_and_repo, ApiKey, Config},
+    repository::Repository,
+    templates::Templates,
+};
 
 #[derive(Debug)]
 pub struct GithubSession {
@@ -26,6 +36,63 @@ pub struct GithubSession {
     git_repository: String,
 }
 impl GithubSession {
+    pub async fn new_for_installation(
+        app_id: u64,
+        private_key: &SecretString,
+        repository_url: &Url,
+    ) -> Result<Self> {
+        let jwt = generate_jwt(&private_key)?;
+
+        // First authenticate our app with GitHub using the JWT
+        let octocrab = Octocrab::builder()
+            .app(app_id.into(), jwt)
+            .build()
+            .context("Failed to build octocrab")?;
+
+        let (git_owner, git_repository) = extract_owner_and_repo(repository_url.as_str())
+            .context("Failed to extract owner and repo")?;
+
+        let installation = octocrab
+            .apps()
+            .get_repository_installation(&git_owner, &git_repository)
+            .await?;
+
+        // We now have an octocrab instance authenticated as the app for the specified
+        // installation.
+        let octocrab = octocrab
+            .installation(installation.id)
+            .context("Failed to create octocrab installation")?;
+
+        // Retrieve the default branch of the repository
+        let git_main_branch = octocrab
+            .repos(&git_owner, &git_repository)
+            .get()
+            .await?
+            .default_branch
+            .unwrap_or_else(|| "main".to_string());
+
+        let create_access_token = CreateInstallationAccessToken::default();
+        let access_token_url = Url::parse(
+            installation
+                .access_tokens_url
+                .as_ref()
+                .context("infallible; installation access tokens url should always be present")?,
+        )?;
+
+        let token = octocrab
+            .post(access_token_url.path(), Some(&create_access_token))
+            .await?;
+
+        Ok(Self {
+            token,
+            octocrab,
+            active_pull_request: Mutex::new(None),
+            git_main_branch,
+            git_owner,
+            git_repository,
+        })
+    }
+
     pub fn from_repository(repository: &Repository) -> Result<Self> {
         if !repository.config().is_github_enabled() {
             return Err(anyhow::anyhow!(
@@ -64,6 +131,26 @@ impl GithubSession {
                 .context("Expected repository; infallible")?
                 .to_string(),
         })
+    }
+
+    /// Retrieves the `kwaak.toml` configuration file from the repository
+    pub async fn get_config(&self) -> Result<Config> {
+        let mut content = self
+            .octocrab
+            .repos(&self.git_owner, &self.git_repository)
+            .get_content()
+            .path("kwaak.toml")
+            .r#ref(&self.git_main_branch)
+            .send()
+            .await
+            .context("Failed to get repository config")?;
+
+        content
+            .take_items()
+            .first()
+            .and_then(Content::decoded_content)
+            .context("Could not find `kwaak.toml` in repository")?
+            .parse()
     }
 
     /// Adds the github token to the repository url
@@ -184,6 +271,16 @@ impl GithubSession {
         Ok(pull_request)
     }
 }
+
+/// Generates a JWT key for the GitHub App
+fn generate_jwt(app_private_key: &SecretString) -> Result<EncodingKey> {
+    let exposed_key = app_private_key.expose_secret();
+    let app_private_key = String::from_utf8(BASE64_STANDARD.decode(exposed_key)?)?;
+
+    jsonwebtoken::EncodingKey::from_rsa_pem(app_private_key.as_bytes())
+        .context("Could not generate jwt token")
+}
+
 /// A struct to hold a GitHub issue and its comments
 #[derive(Debug, Clone)]
 pub struct GithubIssueWithComments {

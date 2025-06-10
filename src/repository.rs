@@ -51,6 +51,12 @@ impl Repository {
         repository
     }
 
+    pub fn with_github_session(&mut self, session: Arc<GithubSession>) -> &mut Self {
+        self.github_session = Some(session);
+
+        self
+    }
+
     #[must_use]
     pub fn path(&self) -> &PathBuf {
         &self.path

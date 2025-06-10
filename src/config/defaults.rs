@@ -83,7 +83,7 @@ pub fn default_owner_and_repo() -> Option<(String, String)> {
     extract_owner_and_repo(&url)
 }
 
-fn extract_owner_and_repo(url: &str) -> Option<(String, String)> {
+pub(crate) fn extract_owner_and_repo(url: &str) -> Option<(String, String)> {
     let re = Regex::new(r"^(?:https://|git@|ssh://|git://|http://)?(?:[^@/]+@)?(?:[^/:]+[/:])?([^/]+)/([^/.]+)(?:\.git)?$").unwrap();
 
     re.captures(&url.trim()).and_then(|caps| {
