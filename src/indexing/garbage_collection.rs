@@ -329,10 +329,7 @@ mod tests {
 
         tracing::warn!("Setting up duckdb");
         {
-            if let Err(err) = std::panic::AssertUnwindSafe(duckdb.setup())
-                .catch_unwind()
-                .await
-            {
+            if let Err(err) = duckdb.setup().await {
                 tracing::warn!(?err, "Failed to setup duckdb; might be an error");
             }
         }
