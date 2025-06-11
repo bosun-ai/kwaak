@@ -103,6 +103,7 @@ impl<'command, I: Index + Clone + 'static> CommandHandler<I> {
     }
 
     #[tracing::instrument(skip_all, fields(otel.name = %event.command().to_string(), uuid = %event.uuid()), err)]
+    #[allow(clippy::too_many_lines)]
     async fn handle_command_event(&self, index: &I, event: &CommandEvent) -> Result<()> {
         let now = std::time::Instant::now();
 

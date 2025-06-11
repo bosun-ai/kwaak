@@ -328,11 +328,6 @@ mod tests {
 
         let duckdb = get_duckdb(repository.config());
 
-        {
-            let conn = duckdb.connection().lock().unwrap();
-            conn.execute("PRAGMA enable_logging;", []);
-        }
-
         tracing::warn!("Setting up duckdb");
         {
             if let Err(err) = std::panic::AssertUnwindSafe(duckdb.setup())
