@@ -115,7 +115,7 @@ impl CommitAndPush {
 mod tests {
     use tokio::process::Command;
 
-    use crate::test_utils::{test_agent_for_repository, test_repository, NoopLLM};
+    use crate::test_utils::{NoopLLM, test_agent_for_repository, test_repository};
 
     use super::*;
 

@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use derive_builder::Builder;
 use serde::Deserialize;
 use swiftide::{
-    chat_completion::{self, errors::ToolError, Tool, ToolCall, ToolOutput, ToolSpec},
+    chat_completion::{self, Tool, ToolCall, ToolOutput, ToolSpec, errors::ToolError},
     traits::AgentContext,
 };
 

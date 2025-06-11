@@ -6,8 +6,8 @@ use std::{
 };
 
 use serde::{
-    de::{MapAccess, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
+    de::{MapAccess, Visitor},
 };
 
 #[derive(Debug, Default, Clone)]

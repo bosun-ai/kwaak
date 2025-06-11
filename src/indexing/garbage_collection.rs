@@ -4,7 +4,6 @@
 //! NOTE: If more general settings are added to duckdb, better extract this to a more general place.
 
 use anyhow::{Context as _, Result};
-use futures::FutureExt as _;
 use std::{borrow::Cow, path::PathBuf, time::SystemTime};
 use swiftide::{integrations::duckdb::Duckdb, traits::Persist};
 

@@ -54,7 +54,9 @@ impl AppCommandResponder {
                     }
                     Response::ChatChunk(chunk) => UIEvent::ChatMessage(chat_id, chunk.into()),
                     Response::ToolFeedbackRequested(..) => {
-                        tracing::error!("Received tool feedback request, this should not happen and is not implemented in the UI");
+                        tracing::error!(
+                            "Received tool feedback request, this should not happen and is not implemented in the UI"
+                        );
                         continue;
                     }
                 };

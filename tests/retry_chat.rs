@@ -1,6 +1,6 @@
 use kwaak::commands::Command;
-use kwaak::frontend::{ui, UIEvent, UserInputCommand};
-use kwaak::test_utils::integration::{setup_integration, IntegrationContext};
+use kwaak::frontend::{UIEvent, UserInputCommand, ui};
+use kwaak::test_utils::integration::{IntegrationContext, setup_integration};
 use kwaak::{assert_agent_responded, assert_command_done};
 
 #[test_log::test(tokio::test(flavor = "multi_thread"))]

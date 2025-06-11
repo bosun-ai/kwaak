@@ -15,29 +15,29 @@ use kwaak::evaluations;
 use kwaak::{
     agent::{
         self,
-        session::{start_mcp_toolboxes, Session},
+        session::{Session, start_mcp_toolboxes},
     },
     cli,
     commands::{self, Responder},
     config, frontend, git,
     indexing::{
         self,
-        duckdb_index::{get_duckdb, DuckdbIndex},
+        duckdb_index::{DuckdbIndex, get_duckdb},
         index_repository,
     },
     onboarding, repository,
 };
 
 use ratatui::{
-    backend::{Backend, CrosstermBackend},
     Terminal,
+    backend::{Backend, CrosstermBackend},
 };
 
 use ::tracing::instrument;
 use crossterm::{
     event::{KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use swiftide::{
     agents::DefaultContext,

@@ -71,7 +71,7 @@ mod tests {
     use swiftide::traits::MockSimplePrompt;
 
     use crate::commands::MockResponder;
-    use mockall::{predicate, PredicateBooleanExt};
+    use mockall::{PredicateBooleanExt, predicate};
 
     use super::*;
 

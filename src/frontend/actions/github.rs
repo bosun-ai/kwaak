@@ -1,6 +1,6 @@
 use {
     crate::{
-        chat_message::ChatMessage, commands::Command, frontend::ui_event::UIEvent, frontend::App,
+        chat_message::ChatMessage, commands::Command, frontend::App, frontend::ui_event::UIEvent,
     },
     uuid::Uuid,
 };

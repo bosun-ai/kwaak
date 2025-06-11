@@ -7,12 +7,12 @@ use std::{
 use anyhow::{Context as _, Result};
 use derive_builder::Builder;
 use rmcp::{
+    ServiceExt as _,
     model::{ClientInfo, Implementation},
     transport::TokioChildProcess,
-    ServiceExt as _,
 };
 use swiftide::{
-    agents::{tools::mcp::McpToolbox, AgentBuilder},
+    agents::{AgentBuilder, tools::mcp::McpToolbox},
     chat_completion::{ParamSpec, Tool, ToolSpec},
     traits::{SimplePrompt, ToolBox, ToolExecutor},
 };
@@ -24,7 +24,7 @@ use uuid::Uuid;
 use crate::{
     agent::{tools::DelegateAgent, util},
     commands::Responder,
-    config::{self, mcp::McpServer, AgentEditMode},
+    config::{self, AgentEditMode, mcp::McpServer},
     indexing::Index,
     repository::Repository,
 };

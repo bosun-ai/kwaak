@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use kwaak::agent::tools;
 use serde_json::json;
-use swiftide::agents::{tools::local_executor::LocalExecutor, DefaultContext};
+use swiftide::agents::{DefaultContext, tools::local_executor::LocalExecutor};
 use swiftide::chat_completion::ToolCall;
 use swiftide::traits::{AgentContext, ToolExecutor};
 use tempfile::tempdir;
