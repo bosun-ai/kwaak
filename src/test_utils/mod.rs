@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use swiftide::{
-    agents::{tools::local_executor::LocalExecutor, Agent, DefaultContext},
-    chat_completion::{errors::LanguageModelError, ChatCompletion, ChatCompletionResponse},
+    agents::{Agent, DefaultContext, tools::local_executor::LocalExecutor},
+    chat_completion::{ChatCompletion, ChatCompletionResponse, errors::LanguageModelError},
     traits::{EmbeddingModel, SimplePrompt, ToolExecutor},
 };
 
@@ -60,7 +60,6 @@ pub fn test_repository() -> (Repository, TestGuard) {
     *repository.path_mut() = tempdir.path().join("app");
 
     let config = repository.config_mut();
-    dbg!(&suffix);
     config.project_name = format!("test_repository_{suffix}");
     config.cache_dir = tempdir.path().to_path_buf();
     config.log_dir = tempdir.path().join("logs");

@@ -4,6 +4,7 @@
 //! NOTE: If more general settings are added to duckdb, better extract this to a more general place.
 
 use anyhow::{Context as _, Result};
+use futures::FutureExt as _;
 use std::{borrow::Cow, path::PathBuf, time::SystemTime};
 use swiftide::{integrations::duckdb::Duckdb, traits::Persist};
 
@@ -20,6 +21,7 @@ pub struct GarbageCollector<'repository> {
     duckdb: Duckdb,
     /// Extensions to consider for GC
     file_extensions: Vec<&'repository str>,
+    skip_table_setup: bool,
 }
 
 impl<'repository> GarbageCollector<'repository> {
@@ -31,6 +33,7 @@ impl<'repository> GarbageCollector<'repository> {
             repository: Cow::Borrowed(repository),
             duckdb: duckdb_index::get_duckdb(repository.config()),
             file_extensions,
+            skip_table_setup: false,
         }
     }
 
@@ -162,11 +165,12 @@ impl<'repository> GarbageCollector<'repository> {
     async fn delete_files_from_index(&self, files: Vec<PathBuf>) -> Result<()> {
         // Ensure the table is set up
         tracing::info!("Setting up duckdb table for deletion of files: {:?}", files);
-        if let Err(err) = self.duckdb.setup().await {
-            // Duck currently does not allow `IF NOT EXISTS` on creating indices.
-            // We just ignore the error here if the table already exists.
-            // This is expected to happen always.
-            tracing::debug!("Failed to setup duckdb in GC (this is ok): {:#}", err);
+
+        if self.skip_table_setup {
+            tracing::debug!("Skipping DuckDB table setup as per configuration.");
+        } else {
+            tracing::debug!("DuckDB table does not exist, setting it up.");
+            self.duckdb.setup().await?;
         }
 
         let mut conn = self.duckdb.connection().lock().unwrap();
@@ -284,7 +288,10 @@ mod tests {
         traits::{NodeCache, Persist},
     };
 
-    use crate::test_utils::{self, TestGuard};
+    use crate::{
+        indexing::duckdb_index::get_duckdb,
+        test_utils::{self, TestGuard},
+    };
 
     use super::*;
 
@@ -319,19 +326,30 @@ mod tests {
         node.metadata
             .insert(metadata_qa_code::NAME, "test".to_string());
 
-        let duckdb = duckdb_index::build_duckdb(repository.config()).unwrap();
+        let duckdb = get_duckdb(repository.config());
+
+        {
+            let conn = duckdb.connection().lock().unwrap();
+            conn.execute("PRAGMA enable_logging;", []);
+        }
+
+        tracing::warn!("Setting up duckdb");
+        {
+            if let Err(err) = std::panic::AssertUnwindSafe(duckdb.setup())
+                .catch_unwind()
+                .await
+            {
+                tracing::warn!(?err, "Failed to setup duckdb; might be an error");
+            }
+        }
+
+        tracing::debug!("Duckdb setup complete, checking if node is already indexed.");
 
         {
             duckdb.set(&node).await;
-            let conn = duckdb.connection().lock().unwrap();
-            conn.flush_prepared_statement_cache();
+            // conn.flush_prepared_statement_cache();
         }
         assert!(duckdb.get(&node).await);
-
-        dbg!(&duckdb);
-        if let Err(err) = duckdb.setup().await {
-            tracing::warn!(?err, "Failed to setup duckdb; might be an error");
-        }
         tracing::info!("Duckdb setup completed.");
         let node = duckdb.store(node).await.unwrap();
 
@@ -339,6 +357,7 @@ mod tests {
             repository: Cow::Owned(repository.clone()),
             duckdb: duckdb.clone(),
             file_extensions: vec!["md"],
+            skip_table_setup: true,
         };
         TestContext {
             duckdb,
@@ -421,7 +440,7 @@ mod tests {
     }
 
     #[cfg_attr(coverage, ignore)] // Fails with nightly in llvm cov, that's ok
-    #[test_log::test(tokio::test)]
+    #[test_log::test(tokio::test(flavor = "multi_thread"))]
     async fn test_detect_deleted_file() {
         let context = setup().await;
         context
