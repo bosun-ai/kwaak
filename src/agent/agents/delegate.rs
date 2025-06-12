@@ -202,7 +202,7 @@ pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
     }
 
     let prompt = SystemPrompt::builder()
-        .role(format!("You are an autonomous ai agent tasked with helping a user with a code project. You can delegate tasks to other agents, but cannot code yourself. Your goal is to either answer questions directly, or delegate to an agent that can solve the problem. The project is called {} and is written in {}", repository.config().project_name, repository.config().language))
+        .role(format!("You are an autonomous ai agent tasked with helping a user with a code project. You can solve coding problems yourself and should try to always work towards a full solution. The project is called {} and is written in {}", repository.config().project_name, repository.config().languages.iter().map(std::string::ToString::to_string).collect::<Vec<_>>().join(", ")))
         .constraints(constraints).build()?.into();
 
     Ok(prompt)
