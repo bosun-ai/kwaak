@@ -20,7 +20,6 @@ pub struct GarbageCollector<'repository> {
     duckdb: Duckdb,
     /// Extensions to consider for GC
     file_extensions: Vec<&'repository str>,
-    skip_table_setup: bool,
 }
 
 impl<'repository> GarbageCollector<'repository> {
@@ -32,7 +31,6 @@ impl<'repository> GarbageCollector<'repository> {
             repository: Cow::Borrowed(repository),
             duckdb: duckdb_index::get_duckdb(repository.config()),
             file_extensions,
-            skip_table_setup: false,
         }
     }
 
@@ -165,12 +163,7 @@ impl<'repository> GarbageCollector<'repository> {
         // Ensure the table is set up
         tracing::info!("Setting up duckdb table for deletion of files: {:?}", files);
 
-        if self.skip_table_setup {
-            tracing::debug!("Skipping DuckDB table setup as per configuration.");
-        } else {
-            tracing::debug!("DuckDB table does not exist, setting it up.");
-            self.duckdb.setup().await?;
-        }
+        self.duckdb.setup().await?;
 
         let mut conn = self.duckdb.connection().lock().unwrap();
         let tx = conn.transaction()?;
@@ -348,7 +341,6 @@ mod tests {
             repository: Cow::Owned(repository.clone()),
             duckdb: duckdb.clone(),
             file_extensions: vec!["md"],
-            skip_table_setup: true,
         };
         TestContext {
             duckdb,
