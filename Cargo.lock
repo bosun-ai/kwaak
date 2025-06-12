@@ -1503,7 +1503,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users 0.5.0",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.1",
 ]
 
 [[package]]
@@ -2198,9 +2198,9 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "hermit-abi"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f154ce46856750ed433c8649605bf7ed2de3bc35fd9d2a9f30cddd873c80cb08"
+checksum = "fc0fef456e4baa96da950455cd02c081ca953b141298e41db3fc7e36b1da849c"
 
 [[package]]
 name = "hex"
@@ -3185,7 +3185,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "07033963ba89ebaf1584d767badaa2e8fcec21aedea6b8c0346d487d49c28667"
 dependencies = [
  "cfg-if",
- "windows-targets 0.53.0",
+ "windows-targets 0.53.1",
 ]
 
 [[package]]
@@ -3384,9 +3384,9 @@ dependencies = [
 
 [[package]]
 name = "memchr"
-version = "2.7.4"
+version = "2.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
+checksum = "32a282da65faaf38286cf3be983213fcf1d2e2a58700e808f83f4ea9a4804bc0"
 
 [[package]]
 name = "memmap2"
@@ -4266,13 +4266,13 @@ checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
 name = "plist"
-version = "1.7.1"
+version = "1.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eac26e981c03a6e53e0aee43c113e3202f5581d5360dae7bd2c70e800dd0451d"
+checksum = "3d77244ce2d584cd84f6a15f86195b8c9b2a0dfbfd817c09e0464244091a58ed"
 dependencies = [
  "base64 0.22.1",
  "indexmap 2.9.0",
- "quick-xml 0.32.0",
+ "quick-xml",
  "serde",
  "time",
 ]
@@ -4542,15 +4542,6 @@ name = "quick-error"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a993555f31e5a609f617c12db6250dedcac1b0a85076912c436e6fc9b2c8e6a3"
-
-[[package]]
-name = "quick-xml"
-version = "0.32.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d3a6e5838b60e0e8fa7a43f22ade549a37d61f8bdbe636d0d7816191de969c2"
-dependencies = [
- "memchr",
-]
 
 [[package]]
 name = "quick-xml"
@@ -5991,9 +5982,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "swiftide"
-version = "0.27.0"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f76912796fedfe1c951ae7cc82721a3d6c78f76331962fcaa703482dcad9725"
+checksum = "e2d7ccd5cad8b585ee8c5594b2db52d669fd95cc43f70e77430c1b95f7e2b137"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6010,9 +6001,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-agents"
-version = "0.27.0"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b87e7bd769d858fc7d192e289449b6eb84a56391050e260fe415a1115742733e"
+checksum = "7c1082c108083ea10036bd61baaeec1f428a1c63634adecd4fa54c5355a6b57f"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6035,9 +6026,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-core"
-version = "0.27.0"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce705b147a8de07f561147a4664c39a08253cded439b4403f43f4288e63e26ff"
+checksum = "3207e76211331fc2535b03c8c5e00340344393f308939d353bdcf6002e22d887"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6092,9 +6083,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-indexing"
-version = "0.27.0"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70de37ae5169a9e2563d4450d1203acf7af9a58917057fe2668a72a0720c40e0"
+checksum = "107db5d9653fde6ce1accc215f9ebfc8744413fdd345be2c7fceb3c67b01bca1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6119,9 +6110,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-integrations"
-version = "0.27.0"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c26c3e462cde08d6483fc97c85564c9b428ba38bb9bf645a817e5c7a83bd798"
+checksum = "7b3c6da5037ec5d0bfda1198c491936132dacc223e1d221b43128bf002ae48a5"
 dependencies = [
  "anyhow",
  "async-anthropic",
@@ -6165,9 +6156,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-macros"
-version = "0.27.0"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8321331a870be65fa3b621670d3a2f8dac118c1bfc62ebd44dd810ee206035f"
+checksum = "33b60bab741aa843e6c3592a839b4ab3f2c4e25e9fc6267df02226b1feedb28e"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6183,9 +6174,9 @@ dependencies = [
 
 [[package]]
 name = "swiftide-query"
-version = "0.27.0"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95e6db9d95baa43dd07a88568cf6e6a09982a0fef16682b0bde1747330631e9b"
+checksum = "c1360c0a141b6849c5b7e61f442e9a72cbb5431ffd64bb0e7a21276ac2a56642"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7635,7 +7626,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "896fdafd5d28145fce7958917d69f2fd44469b1d4e861cb5961bcbeebc6d1484"
 dependencies = [
  "proc-macro2",
- "quick-xml 0.37.5",
+ "quick-xml",
  "quote",
 ]
 
@@ -7776,9 +7767,9 @@ dependencies = [
 
 [[package]]
 name = "windows-link"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76840935b766e1b0a05c0066835fb9ec80071d4c09a16f6bd5f7e655e3c14c38"
+checksum = "d3bfe459f85da17560875b8bf1423d6f113b7a87a5d942e7da0ac71be7c61f8b"
 
 [[package]]
 name = "windows-registry"
@@ -7837,6 +7828,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "windows-sys"
+version = "0.60.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b36e9ed89376c545e20cbf5a13c306b49106b21b9d1d4f9cb9a1cb6b1e9ee06a"
+dependencies = [
+ "windows-targets 0.53.1",
+]
+
+[[package]]
 name = "windows-targets"
 version = "0.48.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7869,9 +7869,9 @@ dependencies = [
 
 [[package]]
 name = "windows-targets"
-version = "0.53.0"
+version = "0.53.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1e4c7e8ceaaf9cb7d7507c974735728ab453b67ef8f18febdd7c11fe59dca8b"
+checksum = "30357ec391cde730f8fbfcdc29adc47518b06504528df977ab5af02ef23fdee9"
 dependencies = [
  "windows_aarch64_gnullvm 0.53.0",
  "windows_aarch64_msvc 0.53.0",
