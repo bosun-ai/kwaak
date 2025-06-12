@@ -116,6 +116,7 @@ impl<'repository> GarbageCollector<'repository> {
 
         let prefix = self.repository.path();
         let last_cleaned_up_at = self.get_last_cleaned_up_at().await;
+        
 
         ignore::Walk::new(self.repository.path())
             .filter_map(Result::ok)
@@ -162,8 +163,12 @@ impl<'repository> GarbageCollector<'repository> {
     async fn delete_files_from_index(&self, files: Vec<PathBuf>) -> Result<()> {
         // Ensure the table is set up
         tracing::info!("Setting up duckdb table for deletion of files: {:?}", files);
-
-        self.duckdb.setup().await?;
+        if let Err(err) = self.duckdb.setup().await {
+            // Duck currently does not allow `IF NOT EXISTS` on creating indices.
+            // We just ignore the error here if the table already exists.
+            // This is expected to happen always.
+            tracing::debug!("Failed to setup duckdb in GC (this is ok): {:#}", err);
+        }
 
         let mut conn = self.duckdb.connection().lock().unwrap();
         let tx = conn.transaction()?;
@@ -276,14 +281,11 @@ mod tests {
     use std::time::Duration;
 
     use swiftide::{
-        indexing::{EmbeddedField, Node, transformers::metadata_qa_code},
+        indexing::{transformers::metadata_qa_code, EmbeddedField, Node},
         traits::{NodeCache, Persist},
     };
 
-    use crate::{
-        indexing::duckdb_index::get_duckdb,
-        test_utils::{self, TestGuard},
-    };
+    use crate::test_utils::{self, TestGuard};
 
     use super::*;
 
@@ -318,22 +320,19 @@ mod tests {
         node.metadata
             .insert(metadata_qa_code::NAME, "test".to_string());
 
-        let duckdb = get_duckdb(repository.config());
-
-        tracing::warn!("Setting up duckdb");
-        {
-            if let Err(err) = duckdb.setup().await {
-                tracing::warn!(?err, "Failed to setup duckdb; might be an error");
-            }
-        }
-
-        tracing::debug!("Duckdb setup complete, checking if node is already indexed.");
+        let duckdb = duckdb_index::build_duckdb(repository.config()).unwrap();
 
         {
             duckdb.set(&node).await;
-            // conn.flush_prepared_statement_cache();
+            let conn = duckdb.connection().lock().unwrap();
+            conn.flush_prepared_statement_cache();
         }
         assert!(duckdb.get(&node).await);
+
+        dbg!(&duckdb);
+        if let Err(err) = duckdb.setup().await {
+            tracing::warn!(?err, "Failed to setup duckdb; might be an error");
+        }
         tracing::info!("Duckdb setup completed.");
         let node = duckdb.store(node).await.unwrap();
 
@@ -423,7 +422,7 @@ mod tests {
     }
 
     #[cfg_attr(coverage, ignore)] // Fails with nightly in llvm cov, that's ok
-    #[test_log::test(tokio::test(flavor = "multi_thread"))]
+    #[test_log::test(tokio::test)]
     async fn test_detect_deleted_file() {
         let context = setup().await;
         context
