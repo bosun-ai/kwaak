@@ -116,7 +116,6 @@ impl<'repository> GarbageCollector<'repository> {
 
         let prefix = self.repository.path();
         let last_cleaned_up_at = self.get_last_cleaned_up_at().await;
-        
 
         ignore::Walk::new(self.repository.path())
             .filter_map(Result::ok)
@@ -281,7 +280,7 @@ mod tests {
     use std::time::Duration;
 
     use swiftide::{
-        indexing::{transformers::metadata_qa_code, EmbeddedField, Node},
+        indexing::{EmbeddedField, Node, transformers::metadata_qa_code},
         traits::{NodeCache, Persist},
     };
 
