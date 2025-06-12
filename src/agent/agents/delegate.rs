@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use swiftide::{
-    agents::{system_prompt::SystemPrompt, Agent, AgentBuilder, DefaultContext},
+    agents::{Agent, AgentBuilder, DefaultContext, system_prompt::SystemPrompt},
     chat_completion::{self, ChatCompletion, Tool},
     prompt::Prompt,
     traits::{AgentContext, Command, SimplePrompt, ToolBox, ToolExecutor},
@@ -67,6 +67,7 @@ pub async fn build(
     let mut context = DefaultContext::from_executor(Arc::clone(&executor));
 
     let top_level_project_overview = context
+        .executor()
         .exec_cmd(&Command::shell("fd -iH -d2 -E '.git/'"))
         .await?
         .output;
@@ -105,11 +106,11 @@ pub async fn build(
 
             Box::pin(async move {
                 if let Some(initial_context) = initial_context {
-                    agent.context().add_message(chat_completion::ChatMessage::new_user(initial_context)).await;
+                    agent.context().add_message(chat_completion::ChatMessage::new_user(initial_context)).await?;
                 }
 
-                let top_level_project_overview = agent.context().exec_cmd(&Command::shell("fd -iH -d2 -E '.git/*'")).await?.output;
-                agent.context().add_message(chat_completion::ChatMessage::new_user(format!("The following is a max depth 2, high level overview of the directory structure of the project: \n ```{top_level_project_overview}```"))).await;
+                let top_level_project_overview = agent.context().executor().exec_cmd(&Command::shell("fd -iH -d2 -E '.git/*'")).await?.output;
+                agent.context().add_message(chat_completion::ChatMessage::new_user(format!("The following is a max depth 2, high level overview of the directory structure of the project: \n ```{top_level_project_overview}```"))).await?;
 
                 Ok(())
             })
@@ -219,10 +220,12 @@ mod tests {
         repository.config_mut().endless_mode = true;
         let prompt = build_system_prompt(&repository).unwrap();
 
-        assert!(prompt
-            .render()
-            .unwrap()
-            .contains("You cannot ask for feedback and have to try to complete the given task"));
+        assert!(
+            prompt
+                .render()
+                .unwrap()
+                .contains("You cannot ask for feedback and have to try to complete the given task")
+        );
     }
 
     #[tokio::test]

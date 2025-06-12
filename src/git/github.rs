@@ -5,14 +5,14 @@ use std::fmt::Write as _;
 use std::sync::Mutex;
 
 use anyhow::{Context, Result};
-use base64::{prelude::BASE64_STANDARD, Engine as _};
+use base64::{Engine as _, prelude::BASE64_STANDARD};
 use jsonwebtoken::EncodingKey;
 use octocrab::{
+    Octocrab, Page,
     models::{pulls::PullRequest, repos::Content},
     params::apps::CreateInstallationAccessToken,
-    Octocrab, Page,
 };
-use reqwest::header::{HeaderMap, ACCEPT};
+use reqwest::header::{ACCEPT, HeaderMap};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -20,7 +20,7 @@ use swiftide::chat_completion::ChatMessage;
 use url::Url;
 
 use crate::{
-    config::{defaults::extract_owner_and_repo, ApiKey, Config},
+    config::{ApiKey, Config, defaults::extract_owner_and_repo},
     repository::Repository,
     templates::Templates,
 };

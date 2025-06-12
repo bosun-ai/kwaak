@@ -48,6 +48,7 @@ impl CommitAndPush {
                     if accept_non_zero_exit(
                         agent
                             .context()
+                            .executor()
                             .exec_cmd(&Command::shell("git status --porcelain"))
                             .await,
                     )
@@ -60,7 +61,11 @@ impl CommitAndPush {
                     }
 
                     accept_non_zero_exit(
-                        agent.context().exec_cmd(&Command::shell("git add .")).await,
+                        agent
+                            .context()
+                            .executor()
+                            .exec_cmd(&Command::shell("git add ."))
+                            .await,
                     )
                     .context("Could not add files to git")?;
 
@@ -68,6 +73,7 @@ impl CommitAndPush {
                         let diff = accept_non_zero_exit(
                             agent
                                 .context()
+                                .executor()
                                 .exec_cmd(&Command::shell("git diff --color=never --staged"))
                                 .await,
                         )?;
@@ -83,6 +89,7 @@ impl CommitAndPush {
                     accept_non_zero_exit(
                         agent
                             .context()
+                            .executor()
                             .exec_cmd(&Command::shell(format!("git commit -m {escaped}")))
                             .await,
                     )?;
@@ -90,7 +97,11 @@ impl CommitAndPush {
 
                 if push_to_remote_enabled {
                     accept_non_zero_exit(
-                        agent.context().exec_cmd(&Command::shell("git push")).await,
+                        agent
+                            .context()
+                            .executor()
+                            .exec_cmd(&Command::shell("git push"))
+                            .await,
                     )
                     .context("Could not push changes to git")?;
                 }
@@ -104,7 +115,7 @@ impl CommitAndPush {
 mod tests {
     use tokio::process::Command;
 
-    use crate::test_utils::{test_agent_for_repository, test_repository, NoopLLM};
+    use crate::test_utils::{NoopLLM, test_agent_for_repository, test_repository};
 
     use super::*;
 

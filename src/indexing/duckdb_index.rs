@@ -6,7 +6,7 @@ use swiftide::integrations::duckdb::Duckdb;
 
 use crate::{commands::Responder, config::Config, repository::Repository};
 
-use super::{index_repository, query, Index};
+use super::{Index, index_repository, query};
 
 use std::sync::OnceLock;
 

@@ -3,8 +3,8 @@ use indoc::formatdoc;
 use swiftide::traits::EvaluateQuery;
 use swiftide::{
     query::{
-        self, answers, query_transformers, search_strategies::SimilaritySingleEmbedding, states,
-        Query,
+        self, Query, answers, query_transformers, search_strategies::SimilaritySingleEmbedding,
+        states,
     },
     traits::{EmbeddingModel, Persist, Retrieve, SimplePrompt},
 };
@@ -20,6 +20,7 @@ pub async fn query<S>(
 where
     S: Retrieve<SimilaritySingleEmbedding> + Persist + Clone + 'static,
 {
+    tracing::debug!(query = query.as_ref(), "querying repository");
     // Ensure the table exists to avoid dumb errors
     let _ = storage.setup().await;
 
@@ -126,10 +127,12 @@ mod tests {
             ])),
         );
 
-        assert_snapshot!(Templates::render(
-            "indexing_document.md",
-            &Context::from_serialize(document).unwrap(),
-        )
-        .unwrap());
+        assert_snapshot!(
+            Templates::render(
+                "indexing_document.md",
+                &Context::from_serialize(document).unwrap(),
+            )
+            .unwrap()
+        );
     }
 }

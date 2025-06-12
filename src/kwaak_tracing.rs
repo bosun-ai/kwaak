@@ -3,7 +3,7 @@ use anyhow::Result;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::registry::LookupSpan;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 
 #[cfg(feature = "otel")]
 pub struct Guard {

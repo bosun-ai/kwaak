@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use derive_builder::Builder;
+use swiftide::{chat_completion::ToolCall, traits::ToolFeedback};
 use uuid::Uuid;
 
 use crate::{agent::session::OnAgentBuildFn, repository::Repository};
@@ -40,6 +41,12 @@ pub enum Command {
     /// Retry the last chat with the agent
     /// Will reset history to the point of the last chat, then re-run the chat
     RetryChat,
+
+    /// Provide feedback on a tool call, i.e. approval
+    ToolFeedback {
+        tool_call: ToolCall,
+        feedback: ToolFeedback,
+    },
 }
 
 #[derive(Clone, Builder)]

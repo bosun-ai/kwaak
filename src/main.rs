@@ -15,32 +15,34 @@ use kwaak::evaluations;
 use kwaak::{
     agent::{
         self,
-        session::{start_mcp_toolboxes, Session},
+        session::{Session, start_mcp_toolboxes},
     },
     cli,
     commands::{self, Responder},
     config, frontend, git,
     indexing::{
         self,
-        duckdb_index::{get_duckdb, DuckdbIndex},
+        duckdb_index::{DuckdbIndex, get_duckdb},
         index_repository,
     },
     onboarding, repository,
 };
 
 use ratatui::{
-    backend::{Backend, CrosstermBackend},
     Terminal,
+    backend::{Backend, CrosstermBackend},
 };
 
 use ::tracing::instrument;
 use crossterm::{
     event::{KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use swiftide::{
-    agents::DefaultContext, chat_completion::Tool, chat_completion::ToolBox, traits::AgentContext,
+    agents::DefaultContext,
+    chat_completion::{Tool, ToolBox, ToolCall},
+    traits::AgentContext,
 };
 use swiftide_docker_executor::DockerExecutor;
 use tokio::{fs, sync::mpsc};
@@ -217,8 +219,12 @@ async fn test_tool(
     let agent_context = DefaultContext::from_executor(running_executor);
 
     println!("Invoking tool: {tool_name}");
+    let tool_call = ToolCall::builder()
+        .name(tool_name)
+        .maybe_args(tool_args.map(str::to_string))
+        .build()?;
     let output = tool
-        .invoke(&agent_context as &dyn AgentContext, tool_args)
+        .invoke(&agent_context as &dyn AgentContext, &tool_call)
         .await?;
 
     println!("{output}");

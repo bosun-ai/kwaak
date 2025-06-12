@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use ratatui::{backend::TestBackend, Terminal};
+use ratatui::{Terminal, backend::TestBackend};
 use swiftide::traits::Persist as _;
 use tokio_util::task::AbortOnDropHandle;
 use uuid::Uuid;
@@ -13,7 +13,7 @@ use crate::{
     repository::Repository,
 };
 
-use super::{test_repository, TestGuard};
+use super::{TestGuard, test_repository};
 
 pub struct IntegrationContext {
     pub app: App<'static>,
@@ -60,6 +60,7 @@ pub async fn setup_integration() -> Result<IntegrationContext> {
     current_chat.uuid = uuid;
     app.current_chat_uuid = uuid;
 
+    tracing::debug!("Integration test setup complete");
     Ok(IntegrationContext {
         app,
         uuid,
