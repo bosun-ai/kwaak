@@ -60,6 +60,7 @@ pub async fn setup_integration() -> Result<IntegrationContext> {
     current_chat.uuid = uuid;
     app.current_chat_uuid = uuid;
 
+    tracing::debug!("Integration test setup complete");
     Ok(IntegrationContext {
         app,
         uuid,

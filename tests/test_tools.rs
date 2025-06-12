@@ -9,7 +9,12 @@ use tempfile::tempdir;
 
 macro_rules! invoke {
     ($tool:expr, $context:expr, $json:expr) => {{
-        let tool_call = ToolCall::builder().args($json.to_string()).build().unwrap();
+        let tool_call = ToolCall::builder()
+            .id("1")
+            .name($tool.name())
+            .args($json.to_string())
+            .build()
+            .unwrap();
 
         $tool
             .invoke($context as &dyn AgentContext, &tool_call)
@@ -169,6 +174,8 @@ async fn test_edit_file() {
     });
 
     let tool_call = ToolCall::builder()
+        .id("2")
+        .name(tool.name())
         .args(tool_args.to_string())
         .build()
         .unwrap();

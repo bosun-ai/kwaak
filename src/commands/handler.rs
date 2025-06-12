@@ -110,8 +110,6 @@ impl<'command, I: Index + Clone + 'static> CommandHandler<I> {
         let repository = event.repository();
         let cmd = event.command();
 
-        tracing::info!("Handling command {cmd}");
-
         #[allow(clippy::match_wildcard_for_single_variants)]
         match cmd {
             Command::StopAgent => {

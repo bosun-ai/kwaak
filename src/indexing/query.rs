@@ -20,8 +20,9 @@ pub async fn query<S>(
 where
     S: Retrieve<SimilaritySingleEmbedding> + Persist + Clone + 'static,
 {
+    tracing::debug!(query = query.as_ref(), "querying repository");
     // Ensure the table exists to avoid dumb errors
-    let _ = storage.setup().await;
+    // let _ = storage.setup().await;
 
     let answer = build_query_pipeline(repository, storage, None)?
         .query(query.as_ref())
