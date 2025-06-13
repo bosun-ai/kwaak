@@ -68,6 +68,22 @@ impl GithubSession {
             .get_repository_installation(&git_owner, &git_repository)
             .await?;
 
+        tracing::debug!(
+            "Retrieving installation access token for {}",
+            installation.id
+        );
+        let create_access_token = CreateInstallationAccessToken::default();
+        let access_token_url = Url::parse(
+            installation
+                .access_tokens_url
+                .as_ref()
+                .context("infallible; installation access tokens url should always be present")?,
+        )?;
+
+        let token = octocrab
+            .post(access_token_url.path(), Some(&create_access_token))
+            .await?;
+
         // We now have an octocrab instance authenticated as the app for the specified
         // installation.
         tracing::debug!("Creating octocrab installation for {}", installation.id);
@@ -94,22 +110,6 @@ impl GithubSession {
             .unwrap_or("main")
             .to_string()
             .into();
-
-        tracing::debug!(
-            "Retrieving installation access token for {}",
-            installation.id
-        );
-        let create_access_token = CreateInstallationAccessToken::default();
-        let access_token_url = Url::parse(
-            installation
-                .access_tokens_url
-                .as_ref()
-                .context("infallible; installation access tokens url should always be present")?,
-        )?;
-
-        let token = octocrab
-            .post(access_token_url.path(), Some(&create_access_token))
-            .await?;
 
         Ok(Self {
             token,
