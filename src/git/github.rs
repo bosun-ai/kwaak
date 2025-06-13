@@ -41,6 +41,7 @@ pub struct GithubSession {
     octocrab_repo: Arc<OnceCell<octocrab::models::Repository>>,
 }
 impl GithubSession {
+    #[tracing::instrument(skip_all, err)]
     pub async fn new_for_installation(
         app_id: u64,
         private_key: &SecretString,
@@ -101,7 +102,8 @@ impl GithubSession {
         })
     }
 
-    pub async fn from_repository(repository: &Repository) -> Result<Self> {
+    #[tracing::instrument(skip_all, err)]
+    pub fn from_repository(repository: &Repository) -> Result<Self> {
         if !repository.config().is_github_enabled() {
             return Err(anyhow::anyhow!(
                 "Github is not enabled; make sure it is properly configured."
@@ -311,6 +313,7 @@ impl GithubSession {
     async fn octocrab_repo(&self) -> Result<&octocrab::models::Repository> {
         self.octocrab_repo
             .get_or_try_init(|| async {
+                tracing::debug!("Retrieving repository information from GitHub");
                 self.octocrab
                     .repos(&*self.git_owner, &*self.git_repository)
                     .get()
@@ -524,7 +527,7 @@ mod tests {
         let (mut repository, _) = test_utils::test_repository(); // Assuming you have a default implementation for Repository
         let config_mut = repository.config_mut();
         config_mut.github_api_key = Some("token".into());
-        let github_session = GithubSession::from_repository(&repository).await.unwrap();
+        let github_session = GithubSession::from_repository(&repository).unwrap();
 
         let repo_url = "https://github.com/owner/repo";
         let tokenized_url = github_session.add_token_to_url(repo_url).unwrap();
@@ -548,7 +551,7 @@ mod tests {
         let (mut repository, _) = test_utils::test_repository(); // Assuming you have a default implementation for Repository
         let config_mut = repository.config_mut();
         config_mut.github_api_key = Some("token".into());
-        let github_session = GithubSession::from_repository(&repository).await.unwrap();
+        let github_session = GithubSession::from_repository(&repository).unwrap();
 
         let repo_url = "git@github.com:user/repo.git";
         let tokenized_url = github_session.add_token_to_url(repo_url).unwrap();

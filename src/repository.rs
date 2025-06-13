@@ -120,12 +120,11 @@ impl Repository {
     /// Gets a github session for this repository if it is enabled
     ///
     /// Initializes the session lazily, so it will only be created when first accessed.
-    #[must_use]
     pub async fn github_session(&self) -> Result<Option<&GithubSession>> {
         self.github_session
             .get_or_try_init(|| async {
                 if self.config().is_github_enabled() {
-                    return Some(GithubSession::from_repository(self).await).transpose();
+                    return Some(GithubSession::from_repository(self)).transpose();
                 }
                 Ok(None)
             })

@@ -27,7 +27,9 @@ impl GitAgentEnvironment {
         branch_name: &str,
     ) -> Result<Self> {
         // Only run these command if the executor is not local
-        if repository.config().tool_executor != SupportedToolExecutors::Local {
+        if repository.config().tool_executor == SupportedToolExecutors::Local {
+            tracing::debug!("Local executor detected, skipping git setup");
+
             return Ok(GitAgentEnvironment {
                 branch_name: Self::get_current_branch(executor).await?,
                 start_ref: Self::get_current_ref(executor).await?,
@@ -35,19 +37,24 @@ impl GitAgentEnvironment {
             });
         }
 
-        let mut remote_enabled = true;
-        if let Err(e) = Self::setup_github_auth(repository, executor).await {
-            tracing::warn!(error = ?e, "Failed to setup github auth");
-            remote_enabled = false;
-        }
+        tracing::debug!("Skipping clone/pull of main branch");
+        Self::configure_git_user(repository, executor).await?;
 
+        let mut remote_enabled = true;
         // If enabled, we clone the repository or pull the latest changes on the main branch,
         // before switching to the work branch
         if repository.config().git.clone_repository_on_start {
+            tracing::debug!("Cloning or pulling main branch");
             Self::clone_or_pull_main(repository, executor).await?;
         } else {
-            Self::configure_git_user(repository, executor).await?;
+            tracing::debug!("Adding credentials to remote");
+            if let Err(e) = Self::setup_github_auth(repository, executor).await {
+                tracing::warn!(error = ?e, "Failed to setup github auth");
+                remote_enabled = false;
+            }
         }
+
+        tracing::debug!("Switching to work branch: {}", branch_name);
         Self::switch_to_work_branch(executor, branch_name).await?;
 
         Ok(GitAgentEnvironment {
