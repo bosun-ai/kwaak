@@ -49,6 +49,7 @@ impl GithubSession {
         let jwt = generate_jwt(&private_key)?;
 
         // First authenticate our app with GitHub using the JWT
+        tracing::debug!("Authenticating GitHub App with JWT");
         let octocrab = Octocrab::builder()
             .app(app_id.into(), jwt)
             .build()
@@ -57,6 +58,11 @@ impl GithubSession {
         let (git_owner, git_repository) = extract_owner_and_repo(repository_url.as_str())
             .context("Failed to extract owner and repo")?;
 
+        tracing::debug!(
+            "Retrieving installation for repository {}/{}",
+            git_owner,
+            git_repository
+        );
         let installation = octocrab
             .apps()
             .get_repository_installation(&git_owner, &git_repository)
@@ -64,10 +70,21 @@ impl GithubSession {
 
         // We now have an octocrab instance authenticated as the app for the specified
         // installation.
+        tracing::debug!("Creating octocrab installation for {}", installation.id);
         let octocrab: Octocrab = octocrab
             .installation(installation.id)
             .context("Failed to create octocrab installation")?;
 
+        tracing::debug!(
+            "Successfully authenticated as GitHub App for repository {}/{}",
+            git_owner,
+            git_repository
+        );
+        tracing::debug!(
+            "Retrieving repository information {}/{}",
+            git_owner,
+            git_repository
+        );
         // Retrieve the default branch of the repository
         let octocrab_repo = octocrab.repos(&git_owner, &git_repository).get().await?;
 
@@ -78,6 +95,10 @@ impl GithubSession {
             .to_string()
             .into();
 
+        tracing::debug!(
+            "Retrieving installation access token for {}",
+            installation.id
+        );
         let create_access_token = CreateInstallationAccessToken::default();
         let access_token_url = Url::parse(
             installation
