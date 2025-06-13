@@ -7,7 +7,6 @@ use std::sync::Mutex;
 use std::{fmt::Write as _, sync::Arc};
 
 use anyhow::{Context, Result};
-use base64::{Engine as _, prelude::BASE64_STANDARD};
 use jsonwebtoken::EncodingKey;
 use octocrab::{
     Octocrab, Page,
@@ -326,10 +325,8 @@ impl GithubSession {
 
 /// Generates a JWT key for the GitHub App
 fn generate_jwt(app_private_key: &SecretString) -> Result<EncodingKey> {
-    let exposed_key = app_private_key.expose_secret();
-    let app_private_key = String::from_utf8(BASE64_STANDARD.decode(exposed_key)?)?;
-
-    jsonwebtoken::EncodingKey::from_rsa_pem(app_private_key.as_bytes())
+    tracing::debug!("Generating JWT for GitHub App");
+    jsonwebtoken::EncodingKey::from_rsa_pem(app_private_key.expose_secret().as_bytes())
         .context("Could not generate jwt token")
 }
 

@@ -67,7 +67,6 @@ async-trait = "0.1.87"
 url = "2.5.4"
 octocrab = "0.44.1"
 jsonwebtoken = { version = "9.3.1" }
-base64 = "0.22.1"
 indoc = "2.0.5"
 tavily = "2.0.3"
 regex = "1.11.1"
