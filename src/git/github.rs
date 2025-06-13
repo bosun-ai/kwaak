@@ -27,6 +27,11 @@ use crate::{
     templates::Templates,
 };
 
+#[derive(Debug, Clone, Deserialize)]
+struct AccessTokenHelper {
+    token: SecretString,
+}
+
 #[derive(Debug, Clone)]
 pub struct GithubSession {
     token: Arc<SecretString>,
@@ -80,9 +85,10 @@ impl GithubSession {
                 .context("infallible; installation access tokens url should always be present")?,
         )?;
 
-        let access_token: SecretString = octocrab
+        let access_token: AccessTokenHelper = octocrab
             .post(access_token_url.path(), Some(&create_access_token))
-            .await?;
+            .await
+            .context("Could not parse acces token response")?;
 
         // We now have an octocrab instance authenticated as the app for the specified
         // installation.
@@ -112,7 +118,7 @@ impl GithubSession {
             .into();
 
         Ok(Self {
-            token: Arc::new(access_token.into()),
+            token: Arc::new(access_token.token.into()),
             octocrab: octocrab.into(),
             git_main_branch,
             active_pull_request: Arc::new(Mutex::new(None)),
