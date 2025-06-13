@@ -80,7 +80,7 @@ impl GithubSession {
                 .context("infallible; installation access tokens url should always be present")?,
         )?;
 
-        let access_token = octocrab
+        let access_token: SecretString = octocrab
             .post(access_token_url.path(), Some(&create_access_token))
             .await?;
 
@@ -112,7 +112,7 @@ impl GithubSession {
             .into();
 
         Ok(Self {
-            token: access_token,
+            token: Arc::new(access_token.into()),
             octocrab: octocrab.into(),
             git_main_branch,
             active_pull_request: Arc::new(Mutex::new(None)),
