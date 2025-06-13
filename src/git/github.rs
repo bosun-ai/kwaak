@@ -34,6 +34,8 @@ pub struct GithubSession {
     git_main_branch: String,
     git_owner: String,
     git_repository: String,
+
+    octocrab_repo: octocrab::models::Repository,
 }
 impl GithubSession {
     pub async fn new_for_installation(
@@ -64,12 +66,13 @@ impl GithubSession {
             .context("Failed to create octocrab installation")?;
 
         // Retrieve the default branch of the repository
-        let git_main_branch = octocrab
-            .repos(&git_owner, &git_repository)
-            .get()
-            .await?
+        let octocrab_repo = octocrab.repos(&git_owner, &git_repository).get().await?;
+
+        let git_main_branch = octocrab_repo
             .default_branch
-            .unwrap_or_else(|| "main".to_string());
+            .as_deref()
+            .unwrap_or_else(|| "main")
+            .to_string();
 
         let create_access_token = CreateInstallationAccessToken::default();
         let access_token_url = Url::parse(
@@ -90,10 +93,11 @@ impl GithubSession {
             git_main_branch,
             git_owner,
             git_repository,
+            octocrab_repo,
         })
     }
 
-    pub fn from_repository(repository: &Repository) -> Result<Self> {
+    pub async fn from_repository(repository: &Repository) -> Result<Self> {
         if !repository.config().is_github_enabled() {
             return Err(anyhow::anyhow!(
                 "Github is not enabled; make sure it is properly configured."
@@ -109,6 +113,15 @@ impl GithubSession {
         let octocrab = Octocrab::builder()
             .personal_token(token.expose_secret())
             .build()?;
+
+        let octocrab_repo = octocrab
+            .repos(
+                // These unwraps are infallible as `is_github_enabled` checks that both are present
+                repository.config().git.owner.as_ref().unwrap(),
+                repository.config().git.repository.as_ref().unwrap(),
+            )
+            .get()
+            .await?;
 
         Ok(Self {
             token,
@@ -130,6 +143,7 @@ impl GithubSession {
                 .as_deref()
                 .context("Expected repository; infallible")?
                 .to_string(),
+            octocrab_repo,
         })
     }
 
