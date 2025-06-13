@@ -29,7 +29,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct GithubSession {
-    token: Arc<ApiKey>,
+    token: Arc<SecretString>,
     octocrab: Arc<Octocrab>,
     active_pull_request: Arc<Mutex<Option<PullRequest>>>,
 
@@ -80,7 +80,7 @@ impl GithubSession {
                 .context("infallible; installation access tokens url should always be present")?,
         )?;
 
-        let token = octocrab
+        let access_token = octocrab
             .post(access_token_url.path(), Some(&create_access_token))
             .await?;
 
@@ -112,7 +112,7 @@ impl GithubSession {
             .into();
 
         Ok(Self {
-            token,
+            token: access_token,
             octocrab: octocrab.into(),
             git_main_branch,
             active_pull_request: Arc::new(Mutex::new(None)),
@@ -141,7 +141,7 @@ impl GithubSession {
             .build()?;
 
         Ok(Self {
-            token: token.into(),
+            token: Arc::new(token.into()),
             octocrab: octocrab.into(),
             active_pull_request: Arc::new(Mutex::new(None)),
 
