@@ -139,7 +139,7 @@ impl GitAgentEnvironment {
 
         let cmd = Command::Shell(format!(
             "git clone {} .",
-            github_session.clone_url()?.expose_secret()
+            github_session.clone_url().await?.expose_secret()
         ));
         executor.exec_cmd(&cmd).await?;
         Ok(())

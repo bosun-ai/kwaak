@@ -19,6 +19,7 @@ use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use swiftide::chat_completion::ChatMessage;
+use tokio::sync::OnceCell;
 use url::Url;
 
 use crate::{
@@ -37,7 +38,7 @@ pub struct GithubSession {
     git_owner: Arc<String>,
     git_repository: Arc<String>,
 
-    octocrab_repo: Arc<octocrab::models::Repository>,
+    octocrab_repo: Arc<OnceCell<octocrab::models::Repository>>,
 }
 impl GithubSession {
     pub async fn new_for_installation(
@@ -96,7 +97,7 @@ impl GithubSession {
             active_pull_request: Arc::new(Mutex::new(None)),
             git_owner: git_owner.into(),
             git_repository: git_repository.into(),
-            octocrab_repo: octocrab_repo.into(),
+            octocrab_repo: Arc::new(OnceCell::from(octocrab_repo)),
         })
     }
 
@@ -116,15 +117,6 @@ impl GithubSession {
         let octocrab = Octocrab::builder()
             .personal_token(token.expose_secret())
             .build()?;
-
-        let octocrab_repo = octocrab
-            .repos(
-                // These unwraps are infallible as `is_github_enabled` checks that both are present
-                repository.config().git.owner.as_ref().unwrap(),
-                repository.config().git.repository.as_ref().unwrap(),
-            )
-            .get()
-            .await?;
 
         Ok(Self {
             token: token.into(),
@@ -148,14 +140,15 @@ impl GithubSession {
                 .context("Expected repository; infallible")?
                 .to_string()
                 .into(),
-            octocrab_repo: octocrab_repo.into(),
+            octocrab_repo: Arc::new(OnceCell::new()),
         })
     }
 
     /// Returns a cloneable URL for the repository with the token included
-    pub fn clone_url(&self) -> Result<SecretString> {
+    pub async fn clone_url(&self) -> Result<SecretString> {
         let repo_url = self
-            .octocrab_repo
+            .octocrab_repo()
+            .await?
             .clone_url
             .as_ref()
             .context("No clone URL found")?;
@@ -312,6 +305,19 @@ impl GithubSession {
             .replace(pull_request.clone());
 
         Ok(pull_request)
+    }
+
+    /// Lazy loads the repository information from GitHub
+    async fn octocrab_repo(&self) -> Result<&octocrab::models::Repository> {
+        self.octocrab_repo
+            .get_or_try_init(|| async {
+                self.octocrab
+                    .repos(&*self.git_owner, &*self.git_repository)
+                    .get()
+                    .await
+                    .map_err(anyhow::Error::from)
+            })
+            .await
     }
 }
 
