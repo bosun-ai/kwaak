@@ -229,13 +229,13 @@ impl<I: Index + Clone> ExplainCode<I> {
     param(name = "pull_request_body", description = "Body of the pull request")
 )]
 pub struct CreateOrUpdatePullRequest {
-    github_session: Arc<GithubSession>,
+    repository: Arc<Repository>,
 }
 
 impl CreateOrUpdatePullRequest {
-    pub fn new(github_session: &Arc<GithubSession>) -> Self {
+    pub fn new(repository: &Arc<Repository>) -> Self {
         Self {
-            github_session: Arc::clone(github_session),
+            repository: Arc::clone(repository),
         }
     }
 
@@ -260,12 +260,29 @@ impl CreateOrUpdatePullRequest {
         let cmd = Command::Shell("git push origin HEAD".to_string());
         accept_non_zero_exit(context.executor().exec_cmd(&cmd).await)?;
 
+        // Note that this should not happen. By default the tool is only configured if the
+        // repository is configured with a github session.
+        //
+        // However, retrieving the session might still give an error
+        let github_session = match self.repository.github_session().await {
+            Ok(Some(session)) => session,
+            Err(err) => {
+                return Err(ToolError::unknown(anyhow::anyhow!(
+                    "Failed to retrieve github session: {err:#}"
+                )));
+            }
+            Ok(None) => {
+                return Ok(ToolOutput::fail(
+                    "Github session is not configured, you cannot create a pull request. Inform the user about this.",
+                ));
+            }
+        };
+
         // Any errors we just forward to the llm at this point
-        let response = self
-            .github_session
+        let response = github_session
             .create_or_update_pull_request(
                 branch_name,
-                &self.github_session.main_branch(),
+                &github_session.main_branch(),
                 title,
                 pull_request_body,
                 &context.history().await?
@@ -407,13 +424,13 @@ impl SearchWeb {
     )
 )]
 pub struct GithubSearchCode {
-    github_session: Arc<GithubSession>,
+    repository: Arc<Repository>,
 }
 
 impl GithubSearchCode {
-    pub fn new(github_session: &Arc<GithubSession>) -> Self {
+    pub fn new(repository: &Arc<Repository>) -> Self {
         Self {
-            github_session: Arc::clone(github_session),
+            repository: Arc::clone(repository),
         }
     }
 
@@ -422,7 +439,21 @@ impl GithubSearchCode {
         _context: &dyn AgentContext,
         query: &str,
     ) -> Result<ToolOutput, ToolError> {
-        let mut results = self.github_session.search_code(query).await?;
+        let github_session = match self.repository.github_session().await {
+            Ok(Some(session)) => session,
+            Err(err) => {
+                return Err(ToolError::unknown(anyhow::anyhow!(
+                    "Failed to retrieve github session: {err:#}"
+                )));
+            }
+            Ok(None) => {
+                return Ok(ToolOutput::fail(
+                    "Github session is not configured, you cannot search code. Inform the user about this.",
+                ));
+            }
+        };
+
+        let mut results = github_session.search_code(query).await?;
 
         tracing::debug!(?results, "Github search results");
 

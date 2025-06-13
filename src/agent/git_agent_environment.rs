@@ -9,6 +9,7 @@ use swiftide::traits::ToolExecutor;
 
 use crate::config::SupportedToolExecutors;
 use crate::repository::Repository;
+use crate::util::accept_non_zero_exit;
 
 /// Returned after setting up the environment
 #[derive(Default, Debug, Clone)]
@@ -25,8 +26,8 @@ impl GitAgentEnvironment {
         executor: &dyn ToolExecutor,
         branch_name: &str,
     ) -> Result<Self> {
-        // Only run these commands if we are running inside a docker container
-        if repository.config().tool_executor != SupportedToolExecutors::Docker {
+        // Only run these command if the executor is not local
+        if repository.config().tool_executor != SupportedToolExecutors::Local {
             return Ok(GitAgentEnvironment {
                 branch_name: Self::get_current_branch(executor).await?,
                 start_ref: Self::get_current_ref(executor).await?,
@@ -40,9 +41,15 @@ impl GitAgentEnvironment {
             remote_enabled = false;
         }
 
-        Self::configure_git_user(repository, executor).await?;
-
+        // If enabled, we clone the repository or pull the latest changes on the main branch,
+        // before switching to the work branch
+        if repository.config().git.clone_repository_on_start {
+            Self::clone_or_pull_main(repository, executor).await?;
+        } else {
+            Self::configure_git_user(repository, executor).await?;
+        }
         Self::switch_to_work_branch(executor, branch_name).await?;
+
         Ok(GitAgentEnvironment {
             branch_name: Self::get_current_branch(executor).await?,
             start_ref: Self::get_current_ref(executor).await?,
@@ -51,7 +58,7 @@ impl GitAgentEnvironment {
     }
 
     async fn setup_github_auth(repository: &Repository, executor: &dyn ToolExecutor) -> Result<()> {
-        let Some(github_session) = repository.github_session() else {
+        let Ok(Some(github_session)) = repository.github_session().await else {
             anyhow::bail!("Github session is required to setup github auth");
         };
 
@@ -93,8 +100,53 @@ impl GitAgentEnvironment {
         Ok(())
     }
 
+    async fn clone_or_pull_main(
+        repository: &Repository,
+        executor: &dyn ToolExecutor,
+    ) -> Result<()> {
+        // If the current directory is a git repository, we pull the latest changes
+        // switching to the main branch
+        if accept_non_zero_exit(
+            executor
+                .exec_cmd(&Command::shell("git rev-parse --is-inside-work-tree"))
+                .await,
+        )
+        .is_ok()
+        {
+            Self::setup_github_auth(repository, executor).await?;
+
+            // Stash any changes before pulling, just to be safe
+            let _ = executor
+                .exec_cmd(&Command::shell("git stash --include-untracked"))
+                .await;
+
+            // Check-out the main branch
+            executor
+                .exec_cmd(&Command::shell(format!(
+                    "git checkout {}",
+                    repository.config().git.main_branch
+                )))
+                .await?;
+
+            return Ok(());
+        }
+
+        // Otherwise, we clone the repository
+
+        let Ok(Some(github_session)) = repository.github_session().await else {
+            anyhow::bail!("Github session is required to setup github auth");
+        };
+
+        let cmd = Command::Shell(format!(
+            "git clone {} .",
+            github_session.clone_url()?.expose_secret()
+        ));
+        executor.exec_cmd(&cmd).await?;
+        Ok(())
+    }
+
     async fn switch_to_work_branch(executor: &dyn ToolExecutor, branch_name: &str) -> Result<()> {
-        let cmd = Command::Shell(format!("git checkout -b {branch_name}"));
+        let cmd = Command::Shell(format!("git checkout -B {branch_name}"));
         executor.exec_cmd(&cmd).await?;
         Ok(())
     }
