@@ -5,6 +5,7 @@
 use anyhow::Result;
 use secrecy::ExposeSecret;
 use swiftide::traits::Command;
+use swiftide::traits::CommandOutput;
 use swiftide::traits::ToolExecutor;
 
 use crate::config::SupportedToolExecutors;
@@ -114,29 +115,28 @@ impl GitAgentEnvironment {
     ) -> Result<()> {
         // If the current directory is a git repository, we pull the latest changes
         // switching to the main branch
-        if accept_non_zero_exit(
-            executor
-                .exec_cmd(&Command::shell("git rev-parse --is-inside-work-tree"))
-                .await,
-        )
-        .is_ok()
+        if let Ok(output) = executor
+            .exec_cmd(&Command::shell("git rev-parse --is-inside-work-tree"))
+            .await
         {
-            Self::setup_github_auth(repository, executor).await?;
+            if output.as_ref() == "true" {
+                Self::setup_github_auth(repository, executor).await?;
 
-            // Stash any changes before pulling, just to be safe
-            let _ = executor
-                .exec_cmd(&Command::shell("git stash --include-untracked"))
-                .await;
+                // Stash any changes before pulling, just to be safe
+                let _ = executor
+                    .exec_cmd(&Command::shell("git stash --include-untracked"))
+                    .await;
 
-            // Check-out the main branch
-            executor
-                .exec_cmd(&Command::shell(format!(
-                    "git checkout {}",
-                    repository.config().git.main_branch
-                )))
-                .await?;
+                // Check-out the main branch
+                executor
+                    .exec_cmd(&Command::shell(format!(
+                        "git checkout {}",
+                        repository.config().git.main_branch
+                    )))
+                    .await?;
 
-            return Ok(());
+                return Ok(());
+            }
         }
 
         // Otherwise, we clone the repository
