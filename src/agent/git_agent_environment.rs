@@ -37,7 +37,7 @@ impl GitAgentEnvironment {
             });
         }
 
-        tracing::debug!("Skipping clone/pull of main branch");
+        tracing::debug!("Configuring git user");
         Self::configure_git_user(repository, executor).await?;
 
         let mut remote_enabled = true;
@@ -47,6 +47,7 @@ impl GitAgentEnvironment {
             tracing::debug!("Cloning or pulling main branch");
             Self::clone_or_pull_main(repository, executor).await?;
         } else {
+            tracing::debug!("Skipping clone/pull of main branch");
             tracing::debug!("Adding credentials to remote");
             if let Err(e) = Self::setup_github_auth(repository, executor).await {
                 tracing::warn!(error = ?e, "Failed to setup github auth");
