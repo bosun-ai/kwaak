@@ -22,7 +22,7 @@ use tokio::sync::OnceCell;
 use url::Url;
 
 use crate::{
-    config::{ApiKey, Config, defaults::extract_owner_and_repo},
+    config::{Config, defaults::extract_owner_and_repo},
     repository::Repository,
     templates::Templates,
 };
@@ -63,15 +63,13 @@ impl GithubSession {
         let (git_owner, git_repository) = extract_owner_and_repo(repository_url.as_str())
             .context("Failed to extract owner and repo")?;
 
-        tracing::debug!(
-            "Retrieving installation for repository {}/{}",
-            git_owner,
-            git_repository
-        );
+        let repository_name = format!("{git_owner}/{git_repository}");
+        tracing::debug!("Retrieving installation for repository {repository_name}",);
         let installation = octocrab
             .apps()
             .get_repository_installation(&git_owner, &git_repository)
-            .await?;
+            .await
+            .with_context(|| format!("Failed to get installation for {repository_name}"))?;
 
         tracing::debug!(
             "Retrieving installation access token for {}",
@@ -88,7 +86,7 @@ impl GithubSession {
         let access_token: AccessTokenHelper = octocrab
             .post(access_token_url.path(), Some(&create_access_token))
             .await
-            .context("Could not parse acces token response")?;
+            .with_context(|| format!("Failed to retrieve access token for {repository_name}"))?;
 
         // We now have an octocrab instance authenticated as the app for the specified
         // installation.
@@ -108,7 +106,11 @@ impl GithubSession {
             git_repository
         );
         // Retrieve the default branch of the repository
-        let octocrab_repo = octocrab.repos(&git_owner, &git_repository).get().await?;
+        let octocrab_repo = octocrab
+            .repos(&git_owner, &git_repository)
+            .get()
+            .await
+            .with_context(|| format!("Failed to retrieve repository {repository_name}"))?;
 
         let git_main_branch = octocrab_repo
             .default_branch
@@ -118,7 +120,7 @@ impl GithubSession {
             .into();
 
         Ok(Self {
-            token: Arc::new(access_token.token.into()),
+            token: Arc::new(access_token.token),
             octocrab: octocrab.into(),
             git_main_branch,
             active_pull_request: Arc::new(Mutex::new(None)),

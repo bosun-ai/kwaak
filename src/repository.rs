@@ -1,9 +1,5 @@
 use anyhow::Result;
-use std::{
-    path::PathBuf,
-    str::FromStr as _,
-    sync::{Arc, Mutex},
-};
+use std::{path::PathBuf, str::FromStr as _, sync::Arc};
 use swiftide::agents::tools::local_executor::LocalExecutor;
 use swiftide::traits::ToolExecutor;
 use swiftide_docker_executor::DockerExecutor;
@@ -36,15 +32,12 @@ impl Repository {
     #[must_use]
     pub fn from_config(config: impl Into<Config>) -> Repository {
         let config = config.into();
-        let repository = Self {
-            config,
-            path: PathBuf::from_str(".")
-                .expect("Failed to create path from current directory")
-                .into(),
-            github_session: Arc::new(OnceCell::new()),
-        };
 
-        repository
+        Self {
+            config,
+            path: PathBuf::from_str(".").expect("Failed to create path from current directory"),
+            github_session: Arc::new(OnceCell::new()),
+        }
     }
 
     pub fn with_github_session(&mut self, session: &GithubSession) -> &mut Self {
