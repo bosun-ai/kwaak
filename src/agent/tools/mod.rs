@@ -19,7 +19,6 @@ use tavily::Tavily;
 
 use crate::{
     config::ApiKey,
-    git::github::GithubSession,
     indexing::Index,
     repository::Repository,
     templates::Templates,
@@ -233,7 +232,7 @@ pub struct CreateOrUpdatePullRequest {
 }
 
 impl CreateOrUpdatePullRequest {
-    pub fn new(repository: &Arc<Repository>) -> Self {
+    #[must_use] pub fn new(repository: &Arc<Repository>) -> Self {
         Self {
             repository: Arc::clone(repository),
         }
@@ -428,7 +427,7 @@ pub struct GithubSearchCode {
 }
 
 impl GithubSearchCode {
-    pub fn new(repository: &Arc<Repository>) -> Self {
+    #[must_use] pub fn new(repository: &Arc<Repository>) -> Self {
         Self {
             repository: Arc::clone(repository),
         }

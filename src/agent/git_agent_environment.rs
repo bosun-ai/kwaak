@@ -5,12 +5,10 @@
 use anyhow::Result;
 use secrecy::ExposeSecret;
 use swiftide::traits::Command;
-use swiftide::traits::CommandOutput;
 use swiftide::traits::ToolExecutor;
 
 use crate::config::SupportedToolExecutors;
 use crate::repository::Repository;
-use crate::util::accept_non_zero_exit;
 
 /// Returned after setting up the environment
 #[derive(Default, Debug, Clone)]
