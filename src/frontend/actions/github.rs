@@ -11,7 +11,7 @@ pub async fn github_issue(app: &mut App<'_>, number: u64, uuid: Uuid) {
         return;
     };
 
-    let Some(github_session) = chat.repository.github_session() else {
+    let Ok(Some(github_session)) = chat.repository.github_session().await else {
         app.add_chat_message(
                 uuid,
                 ChatMessage::new_system("GitHub is not available for this repository; if that is not intended check the logs for errors".to_string()),

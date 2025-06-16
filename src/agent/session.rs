@@ -433,9 +433,9 @@ pub fn available_builtin_tools(
     }
 
     // gitHub-related tools
-    if let Some(github_session) = repository.github_session() {
-        tools.push(tools::CreateOrUpdatePullRequest::new(github_session).boxed());
-        tools.push(tools::GithubSearchCode::new(github_session).boxed());
+    if repository.config().is_github_enabled() {
+        tools.push(tools::CreateOrUpdatePullRequest::new(&repository).boxed());
+        tools.push(tools::GithubSearchCode::new(&repository).boxed());
     }
 
     // web search tool

@@ -3005,7 +3005,6 @@ dependencies = [
  "async-openai 0.28.3",
  "async-trait",
  "backoff",
- "base64 0.22.1",
  "clap",
  "config",
  "copypasta",

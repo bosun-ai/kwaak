@@ -258,11 +258,22 @@ impl From<BackoffConfiguration> for backoff::ExponentialBackoff {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct GitConfiguration {
     // TODO: Repo and owner can probably be derived from the origin url
     // Personally would prefer an onboarding that prefils instead of inferring at runtime
     pub repository: Option<String>,
     pub owner: Option<String>,
+
+    /// If enabled, the agent will clone the repository on start
+    /// instead of using the current working directory.
+    ///
+    /// Or, if the current working directory is initially mounted,
+    /// it will check out and pull the main branch first before switching to the
+    /// work branch.
+    #[serde(default)]
+    pub clone_repository_on_start: bool,
+
     #[serde(default = "default_main_branch")]
     pub main_branch: String,
 
