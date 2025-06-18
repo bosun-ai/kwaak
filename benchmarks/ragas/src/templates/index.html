@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RAGAS Ground Truth Editor</title>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: sans-serif; margin: 2em; }
+        ul { list-style-type: none; padding: 0; }
+        li { margin-bottom: 0.5em; }
+        a { text-decoration: none; color: #1a73e8; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Questions</h1>
+    <ul>
+        {% for qhash, question in questions %}
+            <li><a href="/questions/{{ qhash }}">{{ question }}</a></li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
