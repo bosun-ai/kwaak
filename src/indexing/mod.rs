@@ -1,3 +1,4 @@
+pub mod multi_language_chunker;
 mod progress_updater;
 mod query;
 mod repository;

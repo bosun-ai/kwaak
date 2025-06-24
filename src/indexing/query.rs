@@ -72,7 +72,13 @@ where
         .build()
         .expect("infallible");
 
-    let language = repository.config().language.to_string();
+    let language = repository
+        .config()
+        .languages
+        .iter()
+        .map(std::string::ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(", ");
     let project = repository.config().project_name.clone();
 
     let mut pipeline = query::Pipeline::from_search_strategy(search_strategy);

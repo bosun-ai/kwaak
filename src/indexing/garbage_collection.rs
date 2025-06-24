@@ -24,7 +24,7 @@ pub struct GarbageCollector<'repository> {
 
 impl<'repository> GarbageCollector<'repository> {
     pub fn from_repository(repository: &'repository Repository) -> Self {
-        let mut file_extensions = repository.config().language.file_extensions().to_vec();
+        let mut file_extensions = repository.config().language_extensions();
         file_extensions.push("md");
 
         Self {
