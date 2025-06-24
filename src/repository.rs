@@ -5,7 +5,7 @@ use swiftide::traits::ToolExecutor;
 use swiftide_docker_executor::DockerExecutor;
 use uuid::Uuid;
 
-use tokio::fs;
+use tokio::{fs, sync::OnceCell};
 
 #[cfg(feature = "duckdb")]
 use crate::runtime_settings::RuntimeSettings;
@@ -18,7 +18,9 @@ use crate::{
 pub struct Repository {
     config: Config,
     path: PathBuf,
-    github_session: Option<Arc<GithubSession>>,
+
+    /// Lazy loaded github session if the repository is configured to use github
+    github_session: Arc<OnceCell<Option<GithubSession>>>,
 }
 
 impl Repository {
@@ -30,29 +32,16 @@ impl Repository {
     #[must_use]
     pub fn from_config(config: impl Into<Config>) -> Repository {
         let config = config.into();
-        let mut repository = Self {
+
+        Self {
             config,
             path: PathBuf::from_str(".").expect("Failed to create path from current directory"),
-            github_session: None,
-        };
-
-        if repository.config().is_github_enabled() {
-            let github_session = match GithubSession::from_repository(&repository) {
-                Ok(session) => Some(Arc::new(session)),
-                Err(e) => {
-                    tracing::error!(error = ?e, "Failed to create github session");
-                    None
-                }
-            };
-
-            repository.github_session = github_session;
+            github_session: Arc::new(OnceCell::new()),
         }
-
-        repository
     }
 
-    pub fn with_github_session(&mut self, session: Arc<GithubSession>) -> &mut Self {
-        self.github_session = Some(session);
+    pub fn with_github_session(&mut self, session: &GithubSession) -> &mut Self {
+        self.github_session = Arc::new(OnceCell::from(Some(session.clone())));
 
         self
     }
@@ -122,8 +111,17 @@ impl Repository {
     }
 
     /// Gets a github session for this repository if it is enabled
-    #[must_use]
-    pub fn github_session(&self) -> Option<&Arc<GithubSession>> {
-        self.github_session.as_ref()
+    ///
+    /// Initializes the session lazily, so it will only be created when first accessed.
+    pub async fn github_session(&self) -> Result<Option<&GithubSession>> {
+        self.github_session
+            .get_or_try_init(|| async {
+                if self.config().is_github_enabled() {
+                    return Some(GithubSession::from_repository(self)).transpose();
+                }
+                Ok(None)
+            })
+            .await
+            .map(Option::as_ref)
     }
 }

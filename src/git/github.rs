@@ -1,11 +1,12 @@
 //! This module provides a github session wrapping octocrab
 //!
 //! It is responsible for providing tooling and interaction with github
-use std::fmt::Write as _;
+//!
+//! A github session is cheap to clone, it is expected to have one per repository
 use std::sync::Mutex;
+use std::{fmt::Write as _, sync::Arc};
 
 use anyhow::{Context, Result};
-use base64::{Engine as _, prelude::BASE64_STANDARD};
 use jsonwebtoken::EncodingKey;
 use octocrab::{
     Octocrab, Page,
@@ -17,25 +18,34 @@ use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use swiftide::chat_completion::ChatMessage;
+use tokio::sync::OnceCell;
 use url::Url;
 
 use crate::{
-    config::{ApiKey, Config, defaults::extract_owner_and_repo},
+    config::{Config, defaults::extract_owner_and_repo},
     repository::Repository,
     templates::Templates,
 };
 
-#[derive(Debug)]
-pub struct GithubSession {
-    token: ApiKey,
-    octocrab: Octocrab,
-    active_pull_request: Mutex<Option<PullRequest>>,
+#[derive(Debug, Clone, Deserialize)]
+struct AccessTokenHelper {
+    token: SecretString,
+}
 
-    git_main_branch: String,
-    git_owner: String,
-    git_repository: String,
+#[derive(Debug, Clone)]
+pub struct GithubSession {
+    token: Arc<SecretString>,
+    octocrab: Arc<Octocrab>,
+    active_pull_request: Arc<Mutex<Option<PullRequest>>>,
+
+    git_main_branch: Arc<String>,
+    git_owner: Arc<String>,
+    git_repository: Arc<String>,
+
+    octocrab_repo: Arc<OnceCell<octocrab::models::Repository>>,
 }
 impl GithubSession {
+    #[tracing::instrument(skip_all, err)]
     pub async fn new_for_installation(
         app_id: u64,
         private_key: &SecretString,
@@ -44,6 +54,7 @@ impl GithubSession {
         let jwt = generate_jwt(&private_key)?;
 
         // First authenticate our app with GitHub using the JWT
+        tracing::debug!("Authenticating GitHub App with JWT");
         let octocrab = Octocrab::builder()
             .app(app_id.into(), jwt)
             .build()
@@ -52,25 +63,18 @@ impl GithubSession {
         let (git_owner, git_repository) = extract_owner_and_repo(repository_url.as_str())
             .context("Failed to extract owner and repo")?;
 
+        let repository_name = format!("{git_owner}/{git_repository}");
+        tracing::debug!("Retrieving installation for repository {repository_name}",);
         let installation = octocrab
             .apps()
             .get_repository_installation(&git_owner, &git_repository)
-            .await?;
+            .await
+            .with_context(|| format!("Failed to get installation for {repository_name}"))?;
 
-        // We now have an octocrab instance authenticated as the app for the specified
-        // installation.
-        let octocrab = octocrab
-            .installation(installation.id)
-            .context("Failed to create octocrab installation")?;
-
-        // Retrieve the default branch of the repository
-        let git_main_branch = octocrab
-            .repos(&git_owner, &git_repository)
-            .get()
-            .await?
-            .default_branch
-            .unwrap_or_else(|| "main".to_string());
-
+        tracing::debug!(
+            "Retrieving installation access token for {}",
+            installation.id
+        );
         let create_access_token = CreateInstallationAccessToken::default();
         let access_token_url = Url::parse(
             installation
@@ -79,20 +83,54 @@ impl GithubSession {
                 .context("infallible; installation access tokens url should always be present")?,
         )?;
 
-        let token = octocrab
+        let access_token: AccessTokenHelper = octocrab
             .post(access_token_url.path(), Some(&create_access_token))
-            .await?;
+            .await
+            .with_context(|| format!("Failed to retrieve access token for {repository_name}"))?;
+
+        // We now have an octocrab instance authenticated as the app for the specified
+        // installation.
+        tracing::debug!("Creating octocrab installation for {}", installation.id);
+        let octocrab: Octocrab = octocrab
+            .installation(installation.id)
+            .context("Failed to create octocrab installation")?;
+
+        tracing::debug!(
+            "Successfully authenticated as GitHub App for repository {}/{}",
+            git_owner,
+            git_repository
+        );
+        tracing::debug!(
+            "Retrieving repository information {}/{}",
+            git_owner,
+            git_repository
+        );
+        // Retrieve the default branch of the repository
+        let octocrab_repo = octocrab
+            .repos(&git_owner, &git_repository)
+            .get()
+            .await
+            .with_context(|| format!("Failed to retrieve repository {repository_name}"))?;
+
+        let git_main_branch = octocrab_repo
+            .default_branch
+            .as_deref()
+            .unwrap_or("main")
+            .to_string()
+            .into();
 
         Ok(Self {
-            token,
-            octocrab,
-            active_pull_request: Mutex::new(None),
+            token: Arc::new(access_token.token),
+            octocrab: octocrab.into(),
             git_main_branch,
-            git_owner,
-            git_repository,
+            active_pull_request: Arc::new(Mutex::new(None)),
+            git_owner: git_owner.into(),
+            git_repository: git_repository.into(),
+            octocrab_repo: Arc::new(OnceCell::from(octocrab_repo)),
         })
     }
 
+    #[tracing::instrument(skip_all, err)]
     pub fn from_repository(repository: &Repository) -> Result<Self> {
         if !repository.config().is_github_enabled() {
             return Err(anyhow::anyhow!(
@@ -111,40 +149,66 @@ impl GithubSession {
             .build()?;
 
         Ok(Self {
-            token,
-            octocrab,
-            active_pull_request: Mutex::new(None),
+            token: Arc::new(token.into()),
+            octocrab: octocrab.into(),
+            active_pull_request: Arc::new(Mutex::new(None)),
 
-            git_main_branch: repository.config().git.main_branch.to_string(),
+            git_main_branch: Arc::new(repository.config().git.main_branch.to_string()),
             git_owner: repository
                 .config()
                 .git
                 .owner
                 .as_deref()
                 .context("Expected git owner; infallible")?
-                .to_string(),
+                .to_string()
+                .into(),
             git_repository: repository
                 .config()
                 .git
                 .repository
                 .as_deref()
                 .context("Expected repository; infallible")?
-                .to_string(),
+                .to_string()
+                .into(),
+            octocrab_repo: Arc::new(OnceCell::new()),
         })
     }
 
+    /// Returns a cloneable URL for the repository with the token included
+    pub async fn clone_url(&self) -> Result<SecretString> {
+        let repo_url = self
+            .octocrab_repo()
+            .await?
+            .clone_url
+            .as_ref()
+            .context("No clone URL found")?;
+
+        self.add_token_to_url(repo_url)
+            .context("Failed to add token to clone URL")
+    }
+
     /// Retrieves the `kwaak.toml` configuration file from the repository
+    ///
+    /// TODO: Some values are inferred on parse. These are incorrect and need to be adjusted based
+    /// on the repository.
+    ///
+    /// NOTE: Git will be configured to always checkout the main branch when retrieving the config
+    /// this way.
     pub async fn get_config(&self) -> Result<Config> {
-        self.get_file("kwaak.toml").await?.parse()
+        let mut config: Config = self.get_file("kwaak.toml").await?.parse()?;
+
+        config.git.clone_repository_on_start = true;
+
+        Ok(config)
     }
 
     /// Retrieves a file from the repository
     pub async fn get_file(&self, path: &str) -> Result<String> {
         self.octocrab
-            .repos(&self.git_owner, &self.git_repository)
+            .repos(&*self.git_owner, &*self.git_repository)
             .get_content()
             .path(path)
-            .r#ref(&self.git_main_branch)
+            .r#ref(&*self.git_main_branch)
             .send()
             .await
             .context("Failed to get file from repository")?
@@ -176,6 +240,7 @@ impl GithubSession {
         Ok(SecretString::from(parsed.to_string()))
     }
 
+    #[must_use]
     pub fn main_branch(&self) -> &str {
         &self.git_main_branch
     }
@@ -237,7 +302,7 @@ impl GithubSession {
         if let Some(pull_request) = maybe_pull {
             let pull_request = self
                 .octocrab
-                .pulls(owner, repo)
+                .pulls(owner.as_str(), repo.as_str())
                 .update(pull_request.number)
                 .title(title.as_ref())
                 .body(&body)
@@ -254,7 +319,7 @@ impl GithubSession {
 
         let pull_request = self
             .octocrab
-            .pulls(owner, repo)
+            .pulls(owner.as_str(), repo.as_str())
             .create(
                 title.as_ref(),
                 branch_name.as_ref(),
@@ -271,14 +336,26 @@ impl GithubSession {
 
         Ok(pull_request)
     }
+
+    /// Lazy loads the repository information from GitHub
+    async fn octocrab_repo(&self) -> Result<&octocrab::models::Repository> {
+        self.octocrab_repo
+            .get_or_try_init(|| async {
+                tracing::debug!("Retrieving repository information from GitHub");
+                self.octocrab
+                    .repos(&*self.git_owner, &*self.git_repository)
+                    .get()
+                    .await
+                    .map_err(anyhow::Error::from)
+            })
+            .await
+    }
 }
 
 /// Generates a JWT key for the GitHub App
 fn generate_jwt(app_private_key: &SecretString) -> Result<EncodingKey> {
-    let exposed_key = app_private_key.expose_secret();
-    let app_private_key = String::from_utf8(BASE64_STANDARD.decode(exposed_key)?)?;
-
-    jsonwebtoken::EncodingKey::from_rsa_pem(app_private_key.as_bytes())
+    tracing::debug!("Generating JWT for GitHub App");
+    jsonwebtoken::EncodingKey::from_rsa_pem(app_private_key.expose_secret().as_bytes())
         .context("Could not generate jwt token")
 }
 
@@ -363,14 +440,14 @@ impl GithubSession {
 
         let issue = self
             .octocrab
-            .issues(owner, repo)
+            .issues(owner.as_str(), repo.as_str())
             .get(issue_number)
             .await
             .context("Failed to fetch issue")?;
 
         let comments = self
             .octocrab
-            .issues(owner, repo)
+            .issues(owner.as_str(), repo.as_str())
             .list_comments(issue_number)
             .send()
             .await
