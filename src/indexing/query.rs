@@ -4,7 +4,7 @@ use swiftide::query::search_strategies::HybridSearch;
 use swiftide::traits::EvaluateQuery;
 use swiftide::{
     query::{
-        self, Query, answers, query_transformers, search_strategies::SimilaritySingleEmbedding,
+        self, Query, answers, query_transformers,
         states,
     },
     traits::{EmbeddingModel, Persist, Retrieve, SimplePrompt},
