@@ -14,10 +14,8 @@ use super::garbage_collection::GarbageCollector;
 use super::multi_language_chunker::MultiLanguageChunker;
 use super::progress_updater::ProgressUpdater;
 
-const CODE_CHUNK_RANGE: std::ops::Range<usize> = 100..2048;
-const MARKDOWN_CHUNK_RANGE: std::ops::Range<usize> = 100..1024;
-
-// NOTE: Indexing in parallel guarantees a bad time
+const CODE_CHUNK_RANGE: std::ops::Range<usize> = 100..512;
+const MARKDOWN_CHUNK_RANGE: std::ops::Range<usize> = 100..512;
 
 #[tracing::instrument(skip_all)]
 pub async fn index_repository<S>(
