@@ -4,8 +4,8 @@ use swiftide::traits::ChunkerTransformer;
 
 use swiftide::{
     indexing::{
-        transformers::{self, ChunkCode},
         IndexingStream, Node,
+        transformers::{self, ChunkCode},
     },
     integrations::treesitter::{ChunkSize, SupportedLanguages},
 };
