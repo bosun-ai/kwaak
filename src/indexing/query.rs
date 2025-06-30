@@ -1,5 +1,6 @@
 use anyhow::Result;
 use indoc::formatdoc;
+use swiftide::query::search_strategies::HybridSearch;
 use swiftide::traits::EvaluateQuery;
 use swiftide::{
     query::{
@@ -18,7 +19,7 @@ pub async fn query<S>(
     query: impl AsRef<str>,
 ) -> Result<String>
 where
-    S: Retrieve<SimilaritySingleEmbedding> + Persist + Clone + 'static,
+    S: Retrieve<HybridSearch> + Persist + Clone + 'static,
 {
     tracing::debug!(query = query.as_ref(), "querying repository");
     // Ensure the table exists to avoid dumb errors
@@ -41,9 +42,9 @@ pub fn build_query_pipeline<'b, S>(
     repository: &Repository,
     storage: &S,
     evaluator: Option<Box<dyn EvaluateQuery>>,
-) -> Result<query::Pipeline<'b, SimilaritySingleEmbedding, states::Answered>>
+) -> Result<query::Pipeline<'b, HybridSearch, states::Answered>>
 where
-    S: Retrieve<SimilaritySingleEmbedding> + Clone + 'static,
+    S: Retrieve<HybridSearch> + Clone + 'static,
 {
     let backoff = repository.config().backoff;
     let query_provider: Box<dyn SimplePrompt> = repository
@@ -55,8 +56,9 @@ where
         .embedding_provider()
         .get_embedding_model(backoff)?;
 
-    let search_strategy: SimilaritySingleEmbedding<()> = SimilaritySingleEmbedding::default()
-        .with_top_k(30)
+    let search_strategy = HybridSearch::default()
+        .with_top_n(30)
+        .with_top_k(10)
         .to_owned();
 
     let prompt_template = Templates::from_file("agentic_answer_prompt.md")?;

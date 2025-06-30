@@ -15,6 +15,8 @@ use swiftide::indexing::EmbeddedField;
 
 static DUCK_DB: OnceLock<Duckdb> = OnceLock::new();
 
+const INDEX_VERSION: &str = "v2";
+
 /// Retrieves a static duckdb
 ///
 /// # Panics
@@ -45,7 +47,7 @@ pub(crate) fn build_duckdb(config: &Config) -> Result<Duckdb> {
         )
         .table_name(normalize_table_name(&config.project_name))
         .cache_table(format!(
-            "cache_{}",
+            "cache_{}_{INDEX_VERSION}",
             normalize_table_name(&config.project_name)
         ))
         .build()
@@ -54,7 +56,9 @@ pub(crate) fn build_duckdb(config: &Config) -> Result<Duckdb> {
 
 // Is this enough?
 fn normalize_table_name(name: &str) -> String {
-    name.replace('-', "_")
+    let mut name = name.replace('-', "_");
+    name.push_str(INDEX_VERSION);
+    name
 }
 #[derive(Clone, Debug, Default)]
 pub struct DuckdbIndex {}
