@@ -123,6 +123,8 @@ fn anthropic_questions(context: &mut tera::Context) -> Result<()> {
     println!(
         "\nAnthropic does not provide embeddings.  If you want to use a different provider you can change it in your config later."
     );
+
+    Ok(())
 }
 
 async fn get_open_router_models() -> Option<Vec<HashMap<String, serde_json::Value>>> {
@@ -209,6 +211,8 @@ async fn open_router_questions(context: &mut tera::Context) -> Result<()> {
     println!(
         "\nOpenRouter does not support embeddings yet.  If you want to use a different provider you can change it in your config later."
     );
+
+    Ok(())
 }
 
 fn ollama_questions(context: &mut tera::Context) -> Result<()> {

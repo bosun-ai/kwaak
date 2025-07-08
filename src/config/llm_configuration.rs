@@ -2,7 +2,6 @@ use super::ApiKey;
 use crate::config::BackoffConfiguration;
 use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
 use swiftide::{
     chat_completion::ChatCompletion,
     integrations::{
