@@ -457,7 +457,6 @@ impl Config {
             LLMConfiguration::AzureOpenAI { .. } => num_cpus::get() * 4,
             LLMConfiguration::OpenRouter { .. } => num_cpus::get() * 4,
             LLMConfiguration::Ollama { .. } => num_cpus::get(),
-            LLMConfiguration::FastEmbed { .. } => num_cpus::get(),
             LLMConfiguration::Anthropic { .. } => num_cpus::get() * 4,
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => num_cpus::get(),
@@ -475,7 +474,6 @@ impl Config {
             LLMConfiguration::AzureOpenAI { .. } => 12,
             LLMConfiguration::Ollama { .. } => 256,
             LLMConfiguration::OpenRouter { .. } => 12,
-            LLMConfiguration::FastEmbed { .. } => 256,
             LLMConfiguration::Anthropic { .. } => 12,
             #[cfg(debug_assertions)]
             LLMConfiguration::Testing => 1,
@@ -557,8 +555,8 @@ fn fill_llm(llm: &mut LLMConfiguration, root_key: Option<&ApiKey>) -> Result<()>
             }
             // Nothing to do for OpenRouter
         }
-        LLMConfiguration::Ollama { .. } | LLMConfiguration::FastEmbed { .. } => {
-            // Nothing to do for Ollama / FastEmbed
+        LLMConfiguration::Ollama { .. } => {
+            // Nothing to do for Ollama
         }
         #[cfg(debug_assertions)]
         LLMConfiguration::Testing => {}
