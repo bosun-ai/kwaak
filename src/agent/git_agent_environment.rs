@@ -100,6 +100,7 @@ impl GitAgentEnvironment {
             Command::shell(format!("git config --global user.name \"{name}\"")),
             Command::shell(format!("git config --global user.email \"{email}\"")),
             Command::shell("git config --global push.autoSetupRemote true"),
+            Command::shell("git config --global --add safe.directory /app"),
         ] {
             executor.exec_cmd(cmd).await?;
         }
