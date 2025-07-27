@@ -305,7 +305,6 @@ Supported providers:
 - Anthropic
 - Azure (`AzureOpenAI`)
 - OpenRouter (no embeddings)
-- FastEmbed (embeddings only)
 
 **OpenAI Configuration**:
 
@@ -438,7 +437,7 @@ Possible values: `"shell_command"`, `"read_file"`,
 - **`git.agent_user_name`**: Name which the kwaak agent will make commands with.
   Defaults to "kwaak"`
 - **`git.agent_user_email`**: Email which the kwaak agent will make commits
-  with. Defaults to "kwaak@bosun.ai"
+  with. Defaults to "<kwaak@bosun.ai>"
 
 <!-- ROADMAP -->
 
@@ -537,5 +536,3 @@ Distributed under the MIT License. See `LICENSE` for more information.
 [linkedin-url]: https://www.linkedin.com/company/bosun-ai
 [Crate Badge]: https://img.shields.io/crates/v/kwaak?logo=rust&style=flat-square&logoColor=E05D44&color=E05D44
 [Crate]: https://crates.io/crates/kwaak
-[Docs Badge]: https://img.shields.io/docsrs/kwaak?logo=rust&style=flat-square&logoColor=E05D44
-[API Docs]: https://docs.rs/kwaak

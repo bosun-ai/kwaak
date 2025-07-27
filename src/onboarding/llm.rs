@@ -5,9 +5,7 @@ use serde_json::json;
 use strum::VariantNames as _;
 
 use crate::{
-    config::{
-        AnthropicModel, FastembedModel, LLMConfiguration, OpenAIEmbeddingModel, OpenAIPromptModel,
-    },
+    config::{AnthropicModel, LLMConfiguration, OpenAIEmbeddingModel, OpenAIPromptModel},
     onboarding::util::prompt_text,
 };
 
@@ -20,7 +18,7 @@ pub async fn llm_questions(context: &mut tera::Context) -> Result<()> {
     let valid_llms = LLMConfiguration::VARIANTS
         .iter()
         .map(AsRef::as_ref) // Kinda weird that we need to do this
-        .filter(|v| *v != "FastEmbed" && *v != "AzureOpenAI")
+        .filter(|v| *v != "AzureOpenAI")
         .collect::<Vec<&str>>();
 
     let valid_llm: LLMConfiguration = prompt_select(
@@ -38,9 +36,6 @@ pub async fn llm_questions(context: &mut tera::Context) -> Result<()> {
             println!("{valid_llm} is not selectable yet, skipping configuration");
         }
         LLMConfiguration::Anthropic { .. } => anthropic_questions(context)?,
-        LLMConfiguration::FastEmbed { .. } => {
-            println!("{valid_llm} is not selectable yet, skipping configuration");
-        }
         #[cfg(debug_assertions)]
         LLMConfiguration::Testing => {
             println!("{valid_llm} is not meant for production use, skipping configuration");
@@ -126,9 +121,10 @@ fn anthropic_questions(context: &mut tera::Context) -> Result<()> {
     );
 
     println!(
-        "\nAnthropic does not provide embeddings. Currently we suggest to use FastEmbed. If you want to use a different provider you can change it in your config later."
+        "\nAnthropic does not provide embeddings.  If you want to use a different provider you can change it in your config later."
     );
-    fastembed_questions(context)
+
+    Ok(())
 }
 
 async fn get_open_router_models() -> Option<Vec<HashMap<String, serde_json::Value>>> {
@@ -213,9 +209,10 @@ async fn open_router_questions(context: &mut tera::Context) -> Result<()> {
     );
 
     println!(
-        "\nOpenRouter does not support embeddings yet. Currently we suggest to use FastEmbed. If you want to use a different provider you can change it in your config later."
+        "\nOpenRouter does not support embeddings yet.  If you want to use a different provider you can change it in your config later."
     );
-    fastembed_questions(context)
+
+    Ok(())
 }
 
 fn ollama_questions(context: &mut tera::Context) -> Result<()> {
@@ -269,30 +266,6 @@ fn ollama_questions(context: &mut tera::Context) -> Result<()> {
             "provider": "Ollama",
             "base_url": None::<String>,
             "embedding_model": format!("{{name = \"{embedding_model}\", vector_size = {vector_size}}}")
-        }),
-    );
-
-    Ok(())
-}
-
-pub fn fastembed_questions(context: &mut tera::Context) -> Result<()> {
-    println!(
-        "\nFastEmbed provides embeddings that are generated quickly locally. Unless you have a specific need for a different model, the default is a good choice."
-    );
-
-    let embedding_model: FastembedModel = prompt_select(
-        "Embedding model",
-        FastembedModel::list_supported_models(),
-        Some(FastembedModel::default().to_string()),
-    )?
-    .parse()?;
-
-    context.insert(
-        "embed_llm",
-        &json!({
-            "provider": "FastEmbed",
-            "embedding_model": embedding_model.to_string(),
-            "base_url": None::<String>,
         }),
     );
 

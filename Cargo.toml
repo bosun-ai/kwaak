@@ -31,13 +31,11 @@ swiftide = { version = "0.28.1", features = [
   "ollama",
   "swiftide-agents",
   "open-router",
-  "fastembed",
   "anthropic",
   "mcp",
 
 ] }
 rmcp = { version = "0.1.0", features = ["transport-child-process", "client"] }
-fastembed = "4.9.0"
 toml = "0.8.20"
 serde = { version = "1.0.218", features = ["derive"] }
 serde_json = "1.0.140"
@@ -166,13 +164,13 @@ duckdb = ["dep:duckdb", "dep:libduckdb-sys", "swiftide/duckdb"]
 # swiftide-agents = { path = "../swiftide/swiftide-agents" }
 
 [workspace.metadata.cross.target.aarch64-unknown-linux-gnu]
-image = "rust:1.87.0"
+image = "rust:1.88.0"
 pre-build = [
   "apt-get update && apt-get --assume-yes install libssl-dev git ssh curl libstdc++6 build-essential protobuf-compiler libprotobuf-dev pkg-config iputils-ping make libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev",
 ]
 
 [workspace.metadata.cross.target.x86_64-unknown-linux-gnu]
-image = "rust:1.87.0"
+image = "rust:1.88.0"
 pre-build = [
   "apt-get update && apt-get --assume-yes install libssl-dev git ssh curl libstdc++6 build-essential protobuf-compiler libprotobuf-dev pkg-config iputils-ping make libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev",
 ]
