@@ -33,6 +33,9 @@ jobs:
       # Temporary fix until docker runs properly in ci
       - name: copy fdfind
         run: sudo cp /usr/bin/fdfind /usr/bin/fd
+      - run: docker pull rust:1.87-slim
+      - run: docker pull alpine:latest
+      - run: docker pull bosunai/swiftide-docker-service:0.11.0
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:

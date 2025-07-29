@@ -36,7 +36,7 @@ jobs:
       # Prepull docker images so that buildkit works
       - run: docker pull rust:1.87-slim
       - run: docker pull alpine:latest
-      - run: docker pull bosunai/swiftide-docker-service:0.11
+      - run: docker pull bosunai/swiftide-docker-service:0.11.0
       # Required for copypasta builds on linux
       - name: Install deps
         if: ${{matrix.os == 'ubuntu-latest'}}
