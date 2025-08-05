@@ -15,7 +15,7 @@ name = "kwaak"
 required-features = ["duckdb"]
 
 [dependencies]
-swiftide-docker-executor = { version = "0.11.0", features = ["buildkit"] }
+swiftide-docker-executor = { version = "0.12.0" }
 anyhow = "1.0.98"
 crossterm = "0.28.1"
 ratatui = { version = "0.29.0", features = ["unstable-rendered-line-info"] }
@@ -25,7 +25,7 @@ tokio-util = { version = "0.7.13", features = ["rt"] }
 strum = "0.27.1"
 strum_macros = "0.27.1"
 futures = "0.3.31"
-swiftide = { version = "0.28.1", features = [
+swiftide = { version = "0.29.0", features = [
   "openai",
   "tree-sitter",
   "ollama",
@@ -113,7 +113,7 @@ test-log = { version = "0.2.17", features = ["trace"] }
 insta = "1.42.2"
 assert_cmd = "2.0.17"
 predicates = "3.1.3"
-swiftide = { version = "0.28", features = ["test-utils"] }
+swiftide = { version = "0.29", features = ["test-utils"] }
 mockall = "0.13.1"
 rexpect = "0.6.0"
 
@@ -162,6 +162,7 @@ duckdb = ["dep:duckdb", "dep:libduckdb-sys", "swiftide/duckdb"]
 # swiftide-macros = { path = "../swiftide/swiftide-macros" }
 # swiftide-core = { git = "https://github.com/bosun-ai/swiftide" }
 # swiftide-agents = { path = "../swiftide/swiftide-agents" }
+# swiftide-docker-executor = { path = "../swiftide-docker-executor/swiftide-docker-executor/" }
 
 [workspace.metadata.cross.target.aarch64-unknown-linux-gnu]
 image = "rust:1.88.0"
