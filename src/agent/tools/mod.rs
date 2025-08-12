@@ -173,6 +173,9 @@ impl ResetFile {
     }
 }
 
+/// Maximum number of columns to show in the search results
+const RIPGREP_MAX_COLUMNS: usize = 360;
+
 #[tool(
     description = "Search code in the project with ripgrep. Only searches within the current project. For searching code outside the project, use other tools instead.",
     param(
@@ -181,7 +184,7 @@ impl ResetFile {
     )
 )]
 pub async fn search_code(context: &dyn AgentContext, query: &str) -> Result<ToolOutput, ToolError> {
-    let cmd = Command::Shell(format!("rg -g '!.git' -i. -F '{query}'"));
+    let cmd = Command::Shell(format!("rg -g '!.git' -i. -F -M {RIPGREP_MAX_COLUMNS} --max-columns-preview '{query}'"));
     let output = accept_non_zero_exit(context.executor().exec_cmd(&cmd).await)?;
     Ok(output.into())
 }
