@@ -45,7 +45,8 @@ pub async fn github_issue(app: &mut App<'_>, number: u64, uuid: Uuid) {
     let message = ChatMessage::new_user(prompt);
     app.add_chat_message(uuid, message);
     if let Some(chat) = app.find_chat_mut(uuid)
-        && chat.auto_tail {
-            app.send_ui_event(UIEvent::ScrollEnd);
-        }
+        && chat.auto_tail
+    {
+        app.send_ui_event(UIEvent::ScrollEnd);
+    }
 }

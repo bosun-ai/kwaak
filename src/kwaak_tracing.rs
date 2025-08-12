@@ -21,9 +21,10 @@ impl Drop for Guard {
     fn drop(&mut self) {
         tracing::debug!("shutting down tracing");
         if let Some(provider) = self.otel.take()
-            && let Err(e) = provider.shutdown() {
-                eprintln!("Failed to shutdown OpenTelemetry: {e:?}");
-            }
+            && let Err(e) = provider.shutdown()
+        {
+            eprintln!("Failed to shutdown OpenTelemetry: {e:?}");
+        }
     }
 }
 /// Configures tracing for the app

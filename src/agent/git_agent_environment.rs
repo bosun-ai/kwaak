@@ -117,24 +117,25 @@ impl GitAgentEnvironment {
         if let Ok(output) = executor
             .exec_cmd(&Command::shell("git rev-parse --is-inside-work-tree"))
             .await
-            && output.as_ref() == "true" {
-                Self::setup_github_auth(repository, executor).await?;
+            && output.as_ref() == "true"
+        {
+            Self::setup_github_auth(repository, executor).await?;
 
-                // Stash any changes before pulling, just to be safe
-                let _ = executor
-                    .exec_cmd(&Command::shell("git stash --include-untracked"))
-                    .await;
+            // Stash any changes before pulling, just to be safe
+            let _ = executor
+                .exec_cmd(&Command::shell("git stash --include-untracked"))
+                .await;
 
-                // Check-out the main branch
-                executor
-                    .exec_cmd(&Command::shell(format!(
-                        "git checkout {}",
-                        repository.config().git.main_branch
-                    )))
-                    .await?;
+            // Check-out the main branch
+            executor
+                .exec_cmd(&Command::shell(format!(
+                    "git checkout {}",
+                    repository.config().git.main_branch
+                )))
+                .await?;
 
-                return Ok(());
-            }
+            return Ok(());
+        }
 
         // Otherwise, we clone the repository
 
