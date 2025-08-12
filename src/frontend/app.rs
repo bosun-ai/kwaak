@@ -383,11 +383,10 @@ impl App<'_> {
             UIEvent::ChatMessage(uuid, message) => {
                 self.add_chat_message(*uuid, message.clone());
 
-                if let Some(chat) = self.find_chat_mut(*uuid) {
-                    if chat.auto_tail {
+                if let Some(chat) = self.find_chat_mut(*uuid)
+                    && chat.auto_tail {
                         self.send_ui_event(UIEvent::ScrollEnd);
                     }
-                }
             }
 
             UIEvent::NewChat => {
@@ -564,11 +563,10 @@ impl App<'_> {
 async fn poll_ui_events(ui_tx: mpsc::UnboundedSender<UIEvent>) -> Result<()> {
     loop {
         // Poll for input events
-        if event::poll(Duration::from_millis(TICK_RATE))? {
-            if let crossterm::event::Event::Key(key) = event::read()? {
+        if event::poll(Duration::from_millis(TICK_RATE))?
+            && let crossterm::event::Event::Key(key) = event::read()? {
                 let _ = ui_tx.send(UIEvent::Input(key));
             }
-        }
         // Send a tick event, ignore if the receiver is gone
         if ui_tx.send(UIEvent::Tick).is_err() {
             break Ok(());

@@ -117,8 +117,7 @@ impl GitAgentEnvironment {
         if let Ok(output) = executor
             .exec_cmd(&Command::shell("git rev-parse --is-inside-work-tree"))
             .await
-        {
-            if output.as_ref() == "true" {
+            && output.as_ref() == "true" {
                 Self::setup_github_auth(repository, executor).await?;
 
                 // Stash any changes before pulling, just to be safe
@@ -136,7 +135,6 @@ impl GitAgentEnvironment {
 
                 return Ok(());
             }
-        }
 
         // Otherwise, we clone the repository
 

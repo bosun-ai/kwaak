@@ -82,14 +82,12 @@ pub fn on_key(app: &mut App, key: &KeyEvent) {
         }
         _ => {
             // Hack to get linewrapping to work with tui_textarea
-            if let Some(last_line) = app.text_input.lines().last() {
-                if let Some(input_width) = app.input_width {
-                    if last_line.len() >= input_width as usize && key.code == KeyCode::Char(' ') {
+            if let Some(last_line) = app.text_input.lines().last()
+                && let Some(input_width) = app.input_width
+                    && last_line.len() >= input_width as usize && key.code == KeyCode::Char(' ') {
                         app.text_input.insert_newline();
                         return;
                     }
-                }
-            }
             app.text_input.input(*key);
         }
     }
