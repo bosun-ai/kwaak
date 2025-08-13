@@ -297,7 +297,7 @@ impl HunkLine {
         }
     }
 
-    pub fn as_patch_line(&self) -> Cow<str> {
+    pub fn as_patch_line(&self) -> Cow<'_, str> {
         match self {
             HunkLine::Context(s) => Cow::Owned(format!(" {s}")),
             HunkLine::Added(s) => Cow::Owned(format!("+{s}")),

@@ -109,14 +109,13 @@ impl ConversationSummarizer {
                     // NOTE use code block (```) for the original goal as it may contain markdown
                     // itself which should be distinguished from the markdown in the rest of the
                     // summary
-                    if summary.message().is_some() {
-                        if  let Some(initial_user_message) = initial_user_message {
+                    if summary.message().is_some()
+                        &&  let Some(initial_user_message) = initial_user_message {
                             summary.message = Some(format!(
                                 "# Original Goal for Reference: \n```\n{initial_user_message}\n```\n\n{}",
                                 summary.message.unwrap_or_default()
                             ));
                         }
-                    }
 
                     if let Some(summary) = summary.message() {
                         tracing::debug!(summary = %summary, "Summarized conversation");

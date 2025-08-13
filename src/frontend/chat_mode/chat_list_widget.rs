@@ -27,7 +27,7 @@ impl ChatListWidget {
     }
 }
 
-fn format_chat_in_list(chat: &Chat) -> ListItem {
+fn format_chat_in_list(chat: &Chat) -> ListItem<'_> {
     const LOADING: &str = "";
     const CAN_MESSAGE: &str = "󰍩";
     const NEW_MESSAGE: &str = "󱥁";
