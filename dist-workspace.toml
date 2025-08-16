@@ -5,7 +5,7 @@ members = ["cargo:."]
 [dist]
 github-build-setup = "../build-setup.yml"
 # The preferred dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.28.0"
+cargo-dist-version = "0.29.0"
 # CI backends to support
 ci = "github"
 # The installers to generate for each app
@@ -25,10 +25,9 @@ publish-jobs = ["homebrew"]
 install-updater = true
 # A GitHub repo to push Homebrew formulas to
 tap = "bosun-ai/homebrew-tap"
-# Which actions to run on pull requests
-#pr-run-mode = "upload"
 # Skip checking whether the specified configuration files are up to date
 allow-dirty = ["ci"]
+pr-run-mode = "upload"
 
 [dist.github-custom-runners]
 aarch64-apple-darwin = "macos-latest"
