@@ -502,7 +502,7 @@ pub async fn start_mcp_toolboxes(repository: &Repository) -> Result<Vec<McpToolb
                         }
                     }
 
-                    let service = client_info.serve(TokioChildProcess::new(&mut cmd)?).await?;
+                    let service = client_info.serve(TokioChildProcess::new(cmd)?).await?;
 
                     let mut toolbox = McpToolbox::from_running_service(service)
                         .with_name(name)

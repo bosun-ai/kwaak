@@ -4,7 +4,6 @@ use anyhow::{Context as _, Result};
 use swiftide::{
     agents::{Agent, AgentBuilder, DefaultContext, system_prompt::SystemPrompt},
     chat_completion::{self, ChatCompletion, Tool},
-    prompt::Prompt,
     traits::{AgentContext, Command, SimplePrompt, ToolBox, ToolExecutor},
 };
 
@@ -210,7 +209,7 @@ pub async fn build(
     Ok(builder)
 }
 
-pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
+pub fn build_system_prompt(repository: &Repository) -> Result<SystemPrompt> {
     let mut constraints: Vec<String> = vec![
         // General
         "Research your solution before providing it",
@@ -294,7 +293,7 @@ pub fn build_system_prompt(repository: &Repository) -> Result<Prompt> {
 
     let prompt = SystemPrompt::builder()
         .role(format!("You are an autonomous ai agent tasked with helping a user with a code project. You can solve coding problems yourself and should try to always work towards a full solution. The project is called {} and is written in {}", repository.config().project_name, repository.config().languages.iter().map(std::string::ToString::to_string).collect::<Vec<_>>().join(", ")))
-        .constraints(constraints).build()?.into();
+        .constraints(constraints).build()?;
 
     Ok(prompt)
 }
@@ -312,6 +311,7 @@ mod tests {
 
         assert!(
             prompt
+                .to_prompt()
                 .render()
                 .unwrap()
                 .contains("You cannot ask for feedback and have to try to complete the given task")
@@ -328,7 +328,11 @@ mod tests {
         let (mut repository, _guard) = test_repository();
         repository.config_mut().agent_custom_constraints = Some(custom_constraints);
 
-        let prompt = build_system_prompt(&repository).unwrap().render().unwrap();
+        let prompt = build_system_prompt(&repository)
+            .unwrap()
+            .to_prompt()
+            .render()
+            .unwrap();
         assert!(prompt.contains("Custom constraint 1"));
         assert!(prompt.contains("Custom constraint 2"));
     }
