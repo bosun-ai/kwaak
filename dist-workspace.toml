@@ -28,7 +28,7 @@ tap = "bosun-ai/homebrew-tap"
 # Skip checking whether the specified configuration files are up to date
 allow-dirty = ["ci"]
 # Which actions to run on pull requests
-pr-run-mode = "upload"
+# pr-run-mode = "upload"
 
 [dist.github-custom-runners]
 aarch64-apple-darwin = "macos-latest"
