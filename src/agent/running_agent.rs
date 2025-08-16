@@ -26,7 +26,7 @@ impl RunningAgent {
         self.agent
             .lock()
             .await
-            .query(query)
+            .query(query.to_string())
             .await
             .context("Failed to query agent")
     }

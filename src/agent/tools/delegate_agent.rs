@@ -41,7 +41,7 @@ impl DelegateAgent {
         self.agent.query(task).await?;
 
         tracing::info!("Delegated task to agent");
-        Ok(ToolOutput::Stop)
+        Ok(ToolOutput::stop())
     }
 }
 
@@ -58,7 +58,7 @@ impl Tool for DelegateAgent {
         tool_call: &ToolCall,
     ) -> Result<ToolOutput, ToolError> {
         let Some(args) = tool_call.args() else {
-            return Err(ToolError::MissingArguments(format!(
+            return Err(ToolError::missing_arguments(format!(
                 "No arguments provided for {}",
                 self.name()
             )));

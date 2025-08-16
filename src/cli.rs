@@ -36,10 +36,7 @@ pub enum Commands {
     #[default]
     Tui,
     /// Query the indexed project
-    Query {
-        #[arg(short, long)]
-        query: String,
-    },
+    Query { query: String },
     /// Run an agent directly
     RunAgent {
         #[arg(short, long)]
