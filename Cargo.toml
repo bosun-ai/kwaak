@@ -9,6 +9,7 @@ homepage = "https://github.com/bosun-ai/kwaak"
 keywords = ["terminal", "swiftide", "tui", "ai", "llm"]
 description = "Run a team of autonomous agents on your code, right from your terminal"
 license = "MIT"
+rust-version = "1.89"
 
 [[bin]]
 name = "kwaak"
