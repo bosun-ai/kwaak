@@ -53,7 +53,9 @@ impl ProgressUpdater {
         }))
     }
 
-    pub fn count_processed_fn(&self) -> impl Transformer + WithIndexingDefaults + 'static {
+    pub fn count_processed_fn(
+        &self,
+    ) -> impl Transformer<Input = String, Output = String> + WithIndexingDefaults + 'static {
         let processed_chunks = Arc::clone(&self.processed_chunks);
         let total_chunks = Arc::clone(&self.total_chunks);
         let updater = self
@@ -77,7 +79,9 @@ impl ProgressUpdater {
         }
     }
 
-    pub fn count_total_fn(&self) -> impl Transformer + WithIndexingDefaults + 'static {
+    pub fn count_total_fn(
+        &self,
+    ) -> impl Transformer<Input = String, Output = String> + WithIndexingDefaults + 'static {
         let processed_chunks = Arc::clone(&self.processed_chunks);
         let total_chunks = Arc::clone(&self.total_chunks);
         let updater = self
@@ -111,7 +115,7 @@ impl ProgressUpdater {
 #[cfg(test)]
 mod tests {
     use mockall::predicate;
-    use swiftide::indexing::Node;
+    use swiftide::indexing::TextNode;
 
     use crate::commands::{MockResponder, Response};
 
@@ -149,14 +153,14 @@ mod tests {
 
         let transformer = updater.count_processed_fn();
 
-        let node = Node::default();
+        let node = TextNode::default();
         let result = transformer.transform_node(node).await.unwrap();
 
         // Give the task some time to process
         tokio::task::yield_now().await;
 
         assert_eq!(updater.processed_chunks.load(Ordering::Relaxed), 1);
-        assert_eq!(result, Node::default());
+        assert_eq!(result, TextNode::default());
     }
 
     #[tokio::test]
@@ -172,13 +176,13 @@ mod tests {
         let _handle = updater.spawn();
         let transformer = updater.count_total_fn();
 
-        let node = Node::default();
+        let node = TextNode::default();
         let result = transformer.transform_node(node).await.unwrap();
 
         // Give the task some time to process
         tokio::task::yield_now().await;
 
         assert_eq!(updater.total_chunks.load(Ordering::Relaxed), 1);
-        assert_eq!(result, Node::default());
+        assert_eq!(result, TextNode::default());
     }
 }

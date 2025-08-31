@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::commands::Responder;
 use crate::repository::Repository;
 use anyhow::Result;
-use swiftide::indexing::Node;
+use swiftide::indexing::TextNode;
 use swiftide::indexing::loaders;
 use swiftide::indexing::transformers;
 use swiftide::traits::EmbeddingModel;
@@ -24,7 +24,7 @@ pub async fn index_repository<S>(
     responder: Option<Arc<dyn Responder>>,
 ) -> Result<()>
 where
-    S: Persist + NodeCache + Clone + 'static,
+    S: Persist<Input = String, Output = String> + NodeCache<Input = String> + Clone + 'static,
 {
     let mut updater = ProgressUpdater::from(responder);
 
@@ -80,7 +80,7 @@ where
         .log_errors()
         .filter_errors()
         .then_in_batch(transformers::Embed::new(embedding_provider).with_batch_size(batch_size))
-        .then(|mut chunk: Node| {
+        .then(|mut chunk: TextNode| {
             chunk
                 .metadata
                 .insert("path", chunk.path.display().to_string());

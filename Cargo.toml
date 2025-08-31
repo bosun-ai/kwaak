@@ -164,6 +164,9 @@ duckdb = ["dep:duckdb", "dep:libduckdb-sys", "swiftide/duckdb"]
 # swiftide-core = { git = "https://github.com/bosun-ai/swiftide" }
 # swiftide-agents = { path = "../swiftide/swiftide-agents" }
 # swiftide-docker-executor = { git = "https://github.com/bosun-ai/swiftide-docker-executor" }
+swiftide = { git = "https://github.com/bosun-ai/swiftide", package = "swiftide" }
+swiftide-core = { git = "https://github.com/bosun-ai/swiftide", package = "swiftide-core" }
+swiftide-docker-executor = { git = "https://github.com/bosun-ai/swiftide-docker-executor", package = "swiftide-docker-executor", branch = "chore/prep-generic-indexing" }
 
 [workspace.metadata.cross.target.aarch64-unknown-linux-gnu]
 image = "rust:1.88.0"

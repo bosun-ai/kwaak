@@ -1,10 +1,11 @@
 use anyhow::Result;
 use std::collections::HashMap;
+use swiftide::indexing::TextNode;
 use swiftide::traits::ChunkerTransformer;
 
 use swiftide::{
     indexing::{
-        IndexingStream, Node,
+        IndexingStream,
         transformers::{self, ChunkCode},
     },
     integrations::treesitter::{ChunkSize, SupportedLanguages},
@@ -36,7 +37,7 @@ impl MultiLanguageChunker {
         Ok(Self { chunkers })
     }
 
-    fn find_chunker(&self, node: &Node) -> Option<&transformers::ChunkCode> {
+    fn find_chunker(&self, node: &TextNode) -> Option<&transformers::ChunkCode> {
         let node_extensions = node.path.extension()?.to_string_lossy().to_string();
 
         self.chunkers.iter().find_map(|(extensions, chunker)| {
@@ -51,7 +52,10 @@ impl MultiLanguageChunker {
 
 #[async_trait::async_trait]
 impl ChunkerTransformer for MultiLanguageChunker {
-    async fn transform_node(&self, node: swiftide::indexing::Node) -> IndexingStream {
+    type Input = String;
+    type Output = String;
+
+    async fn transform_node(&self, node: TextNode) -> IndexingStream<String> {
         if let Some(chunker) = self.find_chunker(&node) {
             chunker.transform_node(node).await
         } else {

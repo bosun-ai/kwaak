@@ -280,7 +280,7 @@ mod tests {
     use std::time::Duration;
 
     use swiftide::{
-        indexing::{EmbeddedField, Node, transformers::metadata_qa_code},
+        indexing::{EmbeddedField, TextNode, transformers::metadata_qa_code},
         traits::{NodeCache, Persist},
     };
 
@@ -290,8 +290,8 @@ mod tests {
 
     struct TestContext {
         duckdb: Duckdb,
-        node: Node,
         subject: GarbageCollector<'static>,
+        node: TextNode,
         _guard: TestGuard,
         repository: Repository,
     }
@@ -308,7 +308,7 @@ mod tests {
             .unwrap()
             .display()
             .to_string();
-        let mut node = Node::builder()
+        let mut node = TextNode::builder()
             .chunk("Test node")
             .path(relative_path.as_str())
             .vectors([(EmbeddedField::Combined, vec![0.0; 1])])
