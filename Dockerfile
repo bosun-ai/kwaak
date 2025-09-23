@@ -1,5 +1,5 @@
 # Always build against latest stable
-ARG RUST_VERSION=1.85
+ARG RUST_VERSION=1.90
 FROM rust:${RUST_VERSION}
 
 # Install rust tools
