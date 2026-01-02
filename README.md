@@ -1,3 +1,6 @@
+> [!WARNING]
+> Back when we released kwaak, we were early, before Codex, before Claude. Ofcourse, that landscape changed drasticly and those, and many others, are amazing products. Because of that, kwaak is no longer actively maintained.
+
 <details>
   <summary>Table of Contents</summary>
 
